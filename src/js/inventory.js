@@ -1,161 +1,289 @@
 /**
- * inventory.js — управление инвентарём и экипировкой
- * Рендеринг экрана инвентаря, экипировка предметов
+ * inventory.js — экран дома, экипировка и статы персонажа
+ * Рендерит wizard-экран: кликабельные зоны экипировки,
+ * правую панель со статами и выпадающие списки выбора предметов.
  */
 
-import { getState, ITEMS_DATA, equipItem, getBonusPower } from './state.js';
+import { getState, ITEMS_DATA, equipItem, getBonusPower, getStats } from './state.js';
 import { updateHUD, showNotification } from './ui.js';
 
 // Иконки слотов
 const SLOT_ICONS = {
   staff: '🪄',
-  hat: '🎩',
+  hat:   '🎩',
   cloak: '🧣'
 };
 
 // Названия слотов на русском
 const SLOT_NAMES = {
   staff: 'Посох',
-  hat: 'Шляпа',
+  hat:   'Шляпа',
   cloak: 'Накидка'
 };
 
 // Цвета редкостей
 const RARITY_COLORS = {
-  starter: '#6b6b6b',
-  common: '#e8e0d0',
-  uncommon: '#2ecc71',
-  rare: '#4a90d9',
-  epic: '#9b59b6',
+  starter:   '#6b6b6b',
+  common:    '#e8e0d0',
+  uncommon:  '#2ecc71',
+  rare:      '#4a90d9',
+  epic:      '#9b59b6',
   legendary: '#f39c12'
 };
 
 /**
- * Рендерит полный экран инвентаря
+ * Главная функция отрисовки экрана дома.
+ * Вызывается при каждом переходе на screen-home.
  */
-export function renderInventory() {
-  renderEquipmentSlots();
-  renderInventoryItems();
-  renderBonusPowerDisplay();
+export function renderHomeScreen() {
+  renderStatsPanel();
+  renderEquipmentList();
+  initEquipmentZones();
 }
 
 /**
- * Рендерит слоты экипировки (3 слота)
+ * Обновляет правую панель: имя, уровень, прогресс-бары статов, золото.
  */
-function renderEquipmentSlots() {
-  const container = document.getElementById('equipment-slots');
+function renderStatsPanel() {
+  const state = getState();
+  const stats = getStats();
+
+  // Имя и уровень
+  const nameEl  = document.getElementById('home-char-name');
+  const levelEl = document.getElementById('home-char-level');
+  if (nameEl)  nameEl.textContent  = state.name;
+  if (levelEl) levelEl.textContent = `Уровень ${state.level}`;
+
+  // Прогресс-бар силы
+  const strengthBar = document.getElementById('stat-strength-bar');
+  const strengthVal = document.getElementById('stat-strength-val');
+  if (strengthBar) {
+    const pct = Math.min(100, Math.round((stats.strength / stats.maxStrength) * 100));
+    strengthBar.style.width = `${pct}%`;
+  }
+  if (strengthVal) strengthVal.textContent = stats.strength;
+
+  // Прогресс-бар интеллекта
+  const intBar = document.getElementById('stat-int-bar');
+  const intVal = document.getElementById('stat-int-val');
+  if (intBar) {
+    const pct = Math.min(100, Math.round((stats.intelligence / stats.maxIntelligence) * 100));
+    intBar.style.width = `${pct}%`;
+  }
+  if (intVal) intVal.textContent = stats.intelligence;
+
+  // Золото
+  const goldEl = document.getElementById('home-gold');
+  if (goldEl) goldEl.textContent = `🪙 ${state.gold}`;
+}
+
+/**
+ * Рендерит список текущего снаряжения в правой панели.
+ */
+function renderEquipmentList() {
+  const container = document.getElementById('home-equip-list');
   if (!container) return;
 
   const state = getState();
   container.innerHTML = '';
 
   for (const slot of ['staff', 'hat', 'cloak']) {
-    const equippedId = state.equipment[slot];
-    const item = ITEMS_DATA[equippedId];
+    const itemId = state.equipment[slot];
+    const item   = ITEMS_DATA[itemId];
 
-    const slotEl = document.createElement('div');
-    slotEl.className = 'equipment-slot';
+    const row = document.createElement('div');
+    row.className = 'home-equip-row';
 
-    slotEl.innerHTML = `
-      <div class="slot-icon">${SLOT_ICONS[slot]}</div>
-      <div class="slot-info">
-        <div class="slot-label">${SLOT_NAMES[slot]}</div>
-        <div class="slot-item-name" style="color: ${item ? RARITY_COLORS[item.rarity] : '#6b6b6b'}">
-          ${item ? item.name : 'Пусто'}
-        </div>
-        ${item && item.bonus > 0 ? `<div class="slot-bonus">+${item.bonus} Сила</div>` : ''}
-        ${item ? `<div class="slot-desc">${item.desc}</div>` : ''}
-      </div>
-    `;
+    const slotLabel = document.createElement('span');
+    slotLabel.className = 'home-equip-slot';
+    slotLabel.textContent = SLOT_NAMES[slot] + ':';
 
-    container.appendChild(slotEl);
+    const itemName = document.createElement('span');
+    itemName.className = 'home-equip-name';
+    itemName.textContent = item ? item.name : 'Пусто';
+    if (item) itemName.style.color = RARITY_COLORS[item.rarity];
+
+    row.appendChild(slotLabel);
+    row.appendChild(itemName);
+    container.appendChild(row);
   }
 }
 
 /**
- * Рендерит список предметов в инвентаре
+ * Инициализирует кликабельные зоны на маге.
+ * При клике на зону — закрывает другие дропдауны, открывает свой.
+ * При клике вне — закрывает все.
  */
-function renderInventoryItems() {
-  const container = document.getElementById('inventory-items');
-  if (!container) return;
+export function initEquipmentZones() {
+  const slots = ['hat', 'staff', 'cloak'];
 
-  const state = getState();
-  container.innerHTML = '';
+  slots.forEach(slot => {
+    const zone     = document.getElementById(`zone-${slot}`);
+    const dropdown = document.getElementById(`dropdown-${slot}`);
+    if (!zone || !dropdown) return;
 
-  // Фильтруем предметы которые есть у игрока
-  const ownedItems = Object.entries(state.inventory)
-    .filter(([id, count]) => count > 0)
-    .map(([id, count]) => ({ id, count, data: ITEMS_DATA[id] }))
-    .filter(item => item.data);
+    // Клик по зоне: переключаем дропдаун
+    zone.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.contains('visible');
 
-  if (ownedItems.length === 0) {
-    const emptyEl = document.createElement('div');
-    emptyEl.className = 'inventory-empty';
-    emptyEl.textContent = 'Инвентарь пуст. Выиграй бой чтобы получить предметы!';
-    container.appendChild(emptyEl);
-    return;
-  }
+      // Закрываем все дропдауны
+      closeAllDropdowns();
 
-  ownedItems.forEach(({ id, count, data }) => {
-    const itemEl = createInventoryItemElement(id, count, data, state);
-    container.appendChild(itemEl);
+      // Если был закрыт — открываем и рендерим
+      if (!isOpen) {
+        populateDropdown(slot, dropdown, zone);
+        dropdown.classList.add('visible');
+      }
+    });
+  });
+
+  // Клик вне зон — закрыть все дропдауны
+  document.addEventListener('click', closeAllDropdowns);
+}
+
+/**
+ * Закрывает все выпадающие списки экипировки.
+ */
+function closeAllDropdowns() {
+  document.querySelectorAll('.equip-dropdown').forEach(d => {
+    d.classList.remove('visible');
   });
 }
 
 /**
- * Создаёт DOM-элемент для предмета в инвентаре
+ * Заполняет выпадающий список предметами доступного слота.
+ * Показывает: текущий экипированный + предметы с count > 0 в инвентаре.
+ *
+ * @param {string} slot - 'hat' | 'staff' | 'cloak'
+ * @param {HTMLElement} dropdown
+ * @param {HTMLElement} zone - зона на маге для позиционирования
  */
-function createInventoryItemElement(id, count, data, state) {
-  const el = document.createElement('div');
-  el.className = 'inventory-item';
-  el.dataset.itemId = id;
+function populateDropdown(slot, dropdown, zone) {
+  const state = getState();
+  dropdown.innerHTML = '';
 
-  // Проверяем экипирован ли предмет
-  const isEquipped = state.equipment[data.slot] === id;
+  // Заголовок
+  const title = document.createElement('div');
+  title.className = 'dropdown-title';
+  title.textContent = `Выбрать: ${SLOT_NAMES[slot]}`;
+  dropdown.appendChild(title);
 
-  // Можно ли экипировать (не расходник)
-  const canEquip = data.slot !== 'consumable' && !isEquipped;
+  // Собираем список: текущий экипированный + предметы слота в инвентаре
+  const equippedId = state.equipment[slot];
 
-  el.style.borderColor = RARITY_COLORS[data.rarity];
+  // Группа всех предметов этого слота (стартовые + те что есть в инвентаре)
+  const slotItems = Object.values(ITEMS_DATA).filter(item => {
+    if (item.slot !== slot) return false;
+    if (item.id === equippedId) return true; // всегда показываем экипированный
+    // Показываем только если есть в инвентаре
+    return (state.inventory[item.id] || 0) > 0;
+  });
 
-  el.innerHTML = `
-    <div class="item-header">
-      <span class="item-name" style="color: ${RARITY_COLORS[data.rarity]}">${data.name}</span>
-      <span class="item-count">x${count}</span>
-    </div>
-    <div class="item-slot">${data.slot !== 'consumable' ? SLOT_NAMES[data.slot] : 'Расходник'}</div>
-    <div class="item-desc">${data.desc}</div>
-    ${data.bonus > 0 ? `<div class="item-bonus">+${data.bonus} Бонус силы</div>` : ''}
-    ${isEquipped ? '<div class="item-equipped-badge">Надето</div>' : ''}
-    ${canEquip ? `<button class="item-equip-btn" onclick="window.equipItemFromUI('${id}')">Надеть</button>` : ''}
-  `;
+  if (slotItems.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'dropdown-item';
+    empty.style.color = 'var(--color-text-muted)';
+    empty.textContent = 'Нет доступных предметов';
+    dropdown.appendChild(empty);
+  } else {
+    slotItems.forEach(item => {
+      const isEquipped = equippedId === item.id;
+      const count = state.inventory[item.id] || 0;
 
-  return el;
+      const itemEl = document.createElement('div');
+      itemEl.className = `dropdown-item${isEquipped ? ' is-equipped' : ''}`;
+
+      // Название с бонусом
+      const nameSpan = document.createElement('span');
+      nameSpan.style.color = RARITY_COLORS[item.rarity];
+      nameSpan.textContent = item.name;
+      if (!isEquipped && count > 0) {
+        nameSpan.textContent += ` [x${count}]`;
+      }
+
+      itemEl.appendChild(nameSpan);
+
+      // Бонус силы
+      if (item.bonus > 0) {
+        const bonusSpan = document.createElement('span');
+        bonusSpan.className = 'dropdown-item-bonus';
+        bonusSpan.textContent = `+${item.bonus}`;
+        itemEl.appendChild(bonusSpan);
+      }
+
+      // Клик на предмет — экипируем и закрываем
+      if (!isEquipped) {
+        itemEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const success = equipItem(item.id);
+          if (success) {
+            showNotification(`Надет: ${item.name}`, 'success');
+            closeAllDropdowns();
+            // Перерисовываем панель статов и список снаряжения
+            renderStatsPanel();
+            renderEquipmentList();
+            updateHUD();
+          }
+        });
+      } else {
+        // Уже надето — не кликабельно
+        itemEl.style.cursor = 'default';
+        itemEl.title = 'Уже надето';
+      }
+
+      dropdown.appendChild(itemEl);
+    });
+  }
+
+  // Позиционируем дропдаун рядом с зоной (справа от неё или у правой панели)
+  positionDropdown(dropdown, zone);
 }
 
 /**
- * Глобальная функция для экипировки из HTML onclick
+ * Позиционирует выпадающий список относительно зоны клика.
+ * Старается показать список правее зоны, ближе к правой панели статов.
+ *
+ * @param {HTMLElement} dropdown
+ * @param {HTMLElement} zone
  */
-window.equipItemFromUI = function(itemId) {
-  const success = equipItem(itemId);
-  if (success) {
-    const item = ITEMS_DATA[itemId];
-    showNotification(`Надет: ${item.name}`, 'success');
-    renderInventory();
-    updateHUD();
+function positionDropdown(dropdown, zone) {
+  const zoneRect   = zone.getBoundingClientRect();
+  const screenW    = window.innerWidth;
+  const screenH    = window.innerHeight;
+
+  // Дропдаун — абсолютный внутри #screen-home,
+  // поэтому координаты берём относительно #screen-home
+  const homeEl     = document.getElementById('screen-home');
+  const homeRect   = homeEl ? homeEl.getBoundingClientRect() : { left: 0, top: 0 };
+
+  // Целевая позиция: правее зоны, вертикально по центру
+  let left = zoneRect.right - homeRect.left + 12;
+  let top  = zoneRect.top  - homeRect.top  + (zoneRect.height / 2) - 60;
+
+  // Проверяем выход за правый край (правая панель занимает 30%)
+  const panelLeft = screenW * 0.7;
+  if (left + 240 > panelLeft - 8) {
+    // Смещаем левее зоны
+    left = zoneRect.left - homeRect.left - 252;
   }
-};
+
+  // Не выходим за нижний край
+  if (top + 200 > screenH - homeRect.top) {
+    top = screenH - homeRect.top - 208;
+  }
+  // Не выходим за верхний
+  if (top < 8) top = 8;
+
+  dropdown.style.left = `${Math.max(8, left)}px`;
+  dropdown.style.top  = `${top}px`;
+}
 
 /**
- * Обновляет отображение суммарного BonusPower
+ * Устаревшая функция — оставлена для совместимости с возможными внешними вызовами.
+ * Используй renderHomeScreen() вместо неё.
  */
-function renderBonusPowerDisplay() {
-  const el = document.getElementById('total-bonus-power');
-  if (!el) return;
-
-  const bonus = getBonusPower();
-  el.textContent = `Суммарная сила: +${bonus}`;
-
-  // Подсвечиваем если есть бонусы
-  el.style.color = bonus > 0 ? '#c9a84c' : '#8a7a6a';
+export function renderInventory() {
+  // Перенаправляем на новый рендер домашнего экрана
+  renderHomeScreen();
 }

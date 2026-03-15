@@ -197,53 +197,7 @@ body {
   line-height: 1;
 }
 
-/* === НИЖНЯЯ НАВИГАЦИЯ === */
-#bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  z-index: 100;
-  background: linear-gradient(0deg, rgba(10, 14, 39, 0.98) 0%, rgba(10, 14, 39, 0.85) 100%);
-  border-top: 1px solid var(--color-border-gold);
-  display: none;
-  align-items: stretch;
-  backdrop-filter: blur(8px);
-}
-
-.nav-btn {
-  flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 180px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 10px 20px;
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  font-family: var(--font-title);
-  font-size: 10px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border-right: 1px solid rgba(255,255,255,0.05);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.nav-btn:last-child { border-right: none; }
-
-.nav-btn:hover, .nav-btn.active {
-  color: var(--color-gold);
-  background: rgba(201, 168, 76, 0.08);
-}
-
-.nav-btn .nav-icon {
-  font-size: 20px;
-  line-height: 1;
-}
+/* === НИЖНЯЯ НАВИГАЦИЯ (удалена, оставлен пустой блок для совместимости) === */
 
 /* === ЭКРАН ЗАГРУЗКИ === */
 #screen-loading {
@@ -627,4 +581,441 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 2px;
+}
+
+/* ============================================================
+   LOCATION SCREEN — экран текущей локации с полноэкранным фоном
+   ============================================================ */
+
+#screen-location {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Фон-картинка текущей локации */
+.location-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+
+/* Градиентный оверлей для читаемости текста */
+.location-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.35) 0%,
+    transparent 25%,
+    transparent 65%,
+    rgba(0,0,0,0.65) 100%
+  );
+  z-index: 1;
+}
+
+/* HUD левый верхний угол */
+.location-hud {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  z-index: 20;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-family: 'Cinzel', serif;
+}
+
+.loc-hud-name {
+  color: var(--color-gold);
+  font-size: 15px;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.6);
+}
+
+.loc-hud-level {
+  color: var(--color-arcane);
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid rgba(74,144,217,0.5);
+  border-radius: 12px;
+  background: rgba(10,14,39,0.6);
+  backdrop-filter: blur(4px);
+}
+
+.loc-hud-gold {
+  color: var(--color-gold);
+  font-size: 13px;
+  text-shadow: 0 0 8px rgba(0,0,0,0.8);
+}
+
+/* Кнопки правый верхний угол (вертикально) */
+.location-top-right {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Золотая кнопка (Награды) */
+.loc-btn-gold {
+  background: linear-gradient(135deg, #e8c46a, #c9a84c);
+  color: #000;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+/* Контурная кнопка (Карта) */
+.loc-btn-outline {
+  background: rgba(0,0,0,0.5);
+  color: var(--color-gold);
+  border: 1px solid rgba(201,168,76,0.5);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.loc-btn-gold:hover,
+.loc-btn-outline:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(201,168,76,0.4);
+}
+
+/* Кнопки действий внизу по центру */
+.location-actions {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  gap: 16px;
+}
+
+/* Кнопка действия локации */
+.location-action-btn {
+  background: rgba(0,0,0,0.6);
+  color: var(--color-gold);
+  border: 1px solid rgba(201,168,76,0.6);
+  padding: 14px 32px;
+  border-radius: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.location-action-btn:hover {
+  background: rgba(201,168,76,0.15);
+  box-shadow: 0 0 25px rgba(201,168,76,0.5);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   HOME SCREEN — экран дома с магом и статами
+   ============================================================ */
+
+#screen-home {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Фон — изображение мага */
+.home-wizard-bg {
+  position: absolute;
+  inset: 0;
+  background: url('../../from_user/wizard.jpeg') center/cover no-repeat;
+  z-index: 0;
+}
+
+/* Градиент: слева прозрачно, справа тёмный фон для панели статов */
+.home-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.1) 0%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(10,14,39,0.92) 75%,
+    rgba(10,14,39,0.97) 100%
+  );
+  z-index: 1;
+}
+
+/* Кликабельная зона на маге */
+.equip-zone {
+  position: absolute;
+  z-index: 10;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.equip-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: rgba(201,168,76,0);
+  transition: background 0.3s ease;
+}
+
+.equip-zone:hover::before {
+  background: rgba(201,168,76,0.15);
+  box-shadow: 0 0 20px rgba(201,168,76,0.3);
+}
+
+/* Подсказка при hover на зону */
+.equip-zone-hint {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  color: rgba(201,168,76,0.9);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: rgba(0,0,0,0.75);
+  padding: 2px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.equip-zone:hover .equip-zone-hint {
+  opacity: 1;
+}
+
+/* Выпадающий список экипировки */
+.equip-dropdown {
+  position: absolute;
+  z-index: 50;
+  background: linear-gradient(160deg, #1f1040, #0d1230);
+  border: 1px solid rgba(201,168,76,0.5);
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 220px;
+  display: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+}
+
+.equip-dropdown.visible {
+  display: block;
+  animation: popupSlideIn 0.2s ease;
+}
+
+.dropdown-title {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 6px;
+}
+
+.dropdown-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Crimson Text', serif;
+  font-size: 14px;
+  color: var(--color-text);
+  transition: background 0.15s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdown-item:hover {
+  background: rgba(201,168,76,0.1);
+}
+
+.dropdown-item.is-equipped {
+  color: var(--color-emerald);
+}
+
+.dropdown-item.is-equipped::after {
+  content: '✓';
+  color: var(--color-emerald);
+  font-size: 12px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.dropdown-item-bonus {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: var(--color-gold);
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* Правая панель статов */
+.home-stats-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  z-index: 20;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.home-char-name {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  color: var(--color-gold);
+  text-shadow: 0 0 15px rgba(201,168,76,0.5);
+  line-height: 1.2;
+}
+
+.home-char-level {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: var(--color-arcane);
+  letter-spacing: 2px;
+}
+
+/* Строка стата */
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  font-size: 16px;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.stat-name {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  width: 76px;
+  flex-shrink: 0;
+}
+
+/* Обёртка прогресс-бара */
+.stat-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Заливка прогресс-бара */
+.stat-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+#stat-strength-bar {
+  background: linear-gradient(90deg, #e74c3c, #e67e22);
+}
+
+#stat-int-bar {
+  background: linear-gradient(90deg, #4a90d9, #9b59b6);
+}
+
+.stat-value {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  color: var(--color-text);
+  min-width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Золото в правой панели */
+.home-gold {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  color: var(--color-gold);
+  margin-top: 4px;
+}
+
+/* Список снаряжения */
+.home-equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 12px;
+}
+
+.home-equip-row {
+  font-family: 'Crimson Text', serif;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.home-equip-slot {
+  color: var(--color-text-muted);
+  min-width: 64px;
+  flex-shrink: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+}
+
+.home-equip-name {
+  color: var(--color-text);
+}
+
+/* Кнопка назад на карту */
+.home-back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 30;
+  background: rgba(0,0,0,0.6);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+}
+
+.home-back-btn:hover {
+  border-color: var(--color-border-gold);
+  color: var(--color-gold);
 }

@@ -24,22 +24,8 @@ export function showScreen(screenId) {
     currentScreen = screenId;
   }
 
-  // Обновляем HUD при переходе на основные экраны
-  if (screenId !== 'screen-loading') {
-    updateHUD();
-  }
-
-  // Скрываем нижнее меню на экране боя и загрузки
-  const bottomNav = document.getElementById('bottom-nav');
-  if (bottomNav) {
-    bottomNav.style.display = (screenId === 'screen-combat' || screenId === 'screen-loading') ? 'none' : 'flex';
-  }
-
-  // Скрываем HUD на экране загрузки
-  const hud = document.getElementById('hud');
-  if (hud) {
-    hud.style.display = screenId === 'screen-loading' ? 'none' : 'flex';
-  }
+  // HUD и нижняя навигация удалены из DOM —
+  // каждый экран содержит свои элементы управления встроенно
 }
 
 /**

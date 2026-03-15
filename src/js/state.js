@@ -196,6 +196,23 @@ export function getBonusPower() {
 }
 
 /**
+ * Вычисляет производные статы персонажа на основе уровня и экипировки.
+ * Возвращает текущие значения и максимумы для прогресс-баров.
+ */
+export function getStats() {
+  const state = getState();
+  const bp = getBonusPower();
+
+  return {
+    strength:       5 + (state.level - 1) * 2 + Math.floor(bp * 0.4),
+    intelligence:   5 + (state.level - 1) * 3 + bp,
+    // Примерные максимумы: уровень 10, BiS Common (+21 bonusPower)
+    maxStrength:    31,
+    maxIntelligence: 53
+  };
+}
+
+/**
  * Формула XP до следующего уровня
  */
 export function xpForLevel(level) {

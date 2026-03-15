@@ -29,19 +29,6 @@
 <!-- Главный контейнер -->
 <div id="game-container">
 
-  <!-- ===== HUD (верхняя панель) ===== -->
-  <div id="hud">
-    <div class="hud-top">
-      <span class="hud-name" id="hud-name">Безымянный маг</span>
-      <span class="hud-level" id="hud-level">Ур. 1</span>
-      <span class="hud-gold" id="hud-gold">0</span>
-    </div>
-    <div class="hud-xp-bar-container">
-      <div id="hud-xp-bar" style="width: 0%"></div>
-      <span class="hud-xp-text" id="hud-xp-text">0 / 100 XP</span>
-    </div>
-  </div>
-
   <!-- ===== ЭКРАН ЗАГРУЗКИ ===== -->
   <div id="screen-loading" class="screen active">
     <div class="loading-logo">
@@ -74,20 +61,111 @@
     <button id="btn-start">⚔ Войти в Veyra</button>
   </div>
 
-  <!-- ===== ЭКРАН КАРТЫ ===== -->
-  <div id="screen-map" class="screen">
-    <div class="map-header">
-      <div class="map-title">✦ Карта мира ✦</div>
+  <!-- ===== ЭКРАН ЛОКАЦИИ ===== -->
+  <div id="screen-location" class="screen">
+    <!-- Полноэкранный фон текущей локации -->
+    <div id="location-bg" class="location-bg"></div>
+    <!-- Градиентный оверлей для читаемости текста -->
+    <div class="location-overlay"></div>
+
+    <!-- HUD: имя, уровень, золото (левый верхний угол) -->
+    <div class="location-hud">
+      <span id="loc-hud-name" class="loc-hud-name">Маг</span>
+      <span id="loc-hud-level" class="loc-hud-level">Ур. 1</span>
+      <span id="loc-hud-gold" class="loc-hud-gold">🪙 0</span>
     </div>
 
-    <!-- Изометрическая карта -->
-    <div class="map-iso-wrapper">
-      <div class="map-iso-plane">
-        <div id="map-grid">
-          <!-- Локации генерируются через JS -->
-        </div>
-      </div>
+    <!-- Кнопки правый верхний угол (вертикально) -->
+    <div class="location-top-right">
+      <button class="loc-btn-gold" id="btn-loc-daily">🎁 Награды</button>
+      <button class="loc-btn-outline" id="btn-loc-map">🗺️ Карта</button>
     </div>
+
+    <!-- Кнопки действий внизу по центру (динамические) -->
+    <div class="location-actions" id="location-actions"></div>
+  </div>
+
+  <!-- ===== ЭКРАН КАРТЫ ===== -->
+  <div id="screen-map" class="screen">
+    <!-- Полноэкранная картинка карты -->
+    <div class="map-fullscreen-bg"></div>
+
+    <!-- Хотспот: Городская площадь (замок, топ-левый угол) -->
+    <div class="map-hotspot" id="hotspot-square"
+         style="left:2%;top:3%;width:30%;height:42%">
+      <div class="map-hotspot-label">Городская площадь</div>
+    </div>
+
+    <!-- Хотспот: Дом (домик с огнями, боттом-левый угол) -->
+    <div class="map-hotspot" id="hotspot-home"
+         style="left:2%;top:52%;width:22%;height:38%">
+      <div class="map-hotspot-label">Твой дом</div>
+    </div>
+
+    <!-- Кнопка назад -->
+    <button class="map-back-btn" id="btn-map-back">← Назад</button>
+  </div>
+
+  <!-- ===== ЭКРАН ДОМА / ИНВЕНТАРЯ ===== -->
+  <div id="screen-home" class="screen">
+    <!-- Полноэкранный фон — изображение мага -->
+    <div class="home-wizard-bg"></div>
+    <!-- Градиент: слева прозрачно, справа тёмный фон для панели статов -->
+    <div class="home-overlay"></div>
+
+    <!-- Кликабельные зоны экипировки поверх мага -->
+    <div class="equip-zone" id="zone-hat"
+         style="left:32%;top:2%;width:36%;height:30%"
+         data-slot="hat">
+      <div class="equip-zone-hint">Шляпа</div>
+    </div>
+    <div class="equip-zone" id="zone-staff"
+         style="left:7%;top:8%;width:20%;height:78%"
+         data-slot="staff">
+      <div class="equip-zone-hint">Посох</div>
+    </div>
+    <div class="equip-zone" id="zone-cloak"
+         style="left:18%;top:38%;width:64%;height:58%"
+         data-slot="cloak">
+      <div class="equip-zone-hint">Накидка</div>
+    </div>
+
+    <!-- Выпадающие списки экипировки (скрыты по умолчанию) -->
+    <div class="equip-dropdown" id="dropdown-hat"   data-slot="hat"></div>
+    <div class="equip-dropdown" id="dropdown-staff" data-slot="staff"></div>
+    <div class="equip-dropdown" id="dropdown-cloak" data-slot="cloak"></div>
+
+    <!-- Правая панель: статы и снаряжение -->
+    <div class="home-stats-panel">
+      <div class="home-char-name" id="home-char-name">Маг</div>
+      <div class="home-char-level" id="home-char-level">Уровень 1</div>
+
+      <div class="stat-row">
+        <span class="stat-icon">💪</span>
+        <span class="stat-name">Сила</span>
+        <div class="stat-bar-wrap">
+          <div class="stat-bar" id="stat-strength-bar" style="width:0%"></div>
+        </div>
+        <span class="stat-value" id="stat-strength-val">5</span>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-icon">🧠</span>
+        <span class="stat-name">Интеллект</span>
+        <div class="stat-bar-wrap">
+          <div class="stat-bar" id="stat-int-bar" style="width:0%"></div>
+        </div>
+        <span class="stat-value" id="stat-int-val">5</span>
+      </div>
+
+      <div class="home-gold" id="home-gold">🪙 0</div>
+
+      <!-- Список текущего снаряжения (генерируется через JS) -->
+      <div class="home-equipment-list" id="home-equip-list"></div>
+    </div>
+
+    <!-- Кнопка назад на карту -->
+    <button class="home-back-btn" id="btn-home-back">← На карту</button>
   </div>
 
   <!-- ===== ЭКРАН БОЯ ===== -->
@@ -139,50 +217,6 @@
 
   </div>
 
-  <!-- ===== ЭКРАН ИНВЕНТАРЯ ===== -->
-  <div id="screen-inventory" class="screen">
-    <div class="screen-content">
-
-      <div class="inventory-header">
-        <h2>Снаряжение</h2>
-      </div>
-
-      <!-- Слоты экипировки -->
-      <div class="equipment-section">
-        <div class="section-title">Надето</div>
-        <div id="equipment-slots">
-          <!-- Слоты генерируются через JS -->
-        </div>
-        <div id="total-bonus-power">Суммарная сила: +0</div>
-      </div>
-
-      <!-- Предметы в инвентаре -->
-      <div class="inventory-section">
-        <div class="section-title">Инвентарь</div>
-        <div id="inventory-items">
-          <!-- Предметы генерируются через JS -->
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ===== НИЖНЯЯ НАВИГАЦИЯ ===== -->
-  <nav id="bottom-nav">
-    <button class="nav-btn" id="nav-map">
-      <span class="nav-icon">🗺️</span>
-      Карта
-    </button>
-    <button class="nav-btn" id="nav-inventory">
-      <span class="nav-icon">🎒</span>
-      Сумка
-    </button>
-    <button class="nav-btn" id="nav-daily">
-      <span class="nav-icon">🎁</span>
-      Награда
-    </button>
-  </nav>
-
 </div><!-- /game-container -->
 
 <!-- ===== POPUP: DAILY LOGIN ===== -->
@@ -232,7 +266,7 @@
   </div>
 </div>
 
-<!-- ===== POPUP: ПРОСМОТР ЛОКАЦИИ ===== -->
+<!-- ===== POPUP: ПРОСМОТР ЛОКАЦИИ (сохранён для совместимости) ===== -->
 <div class="popup-overlay" id="popup-location">
   <div class="location-view-window">
     <button class="popup-close-btn" id="btn-close-location">✕</button>

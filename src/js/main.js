@@ -1,13 +1,13 @@
 /**
  * main.js — точка входа игры
- * Инициализация всех модулей, навигация между экранами,
- * обработка результатов боя и popup-ов
+ * Навигация между экранами, обработка результатов боя,
+ * управление локациями и popup-ами.
  */
 
 import { loadState, getState, saveState } from './state.js';
 import { initBattle, castSpell, getFightsRemaining, SPELLS, setOnBattleEnd } from './combat.js';
-import { renderInventory } from './inventory.js';
-import { initMap, refreshMapBadges } from './map.js';
+import { renderHomeScreen, initEquipmentZones } from './inventory.js';
+import { initMapScreen, refreshMapBadges } from './map.js';
 import { checkAndShowDailyLogin, showDailyLoginPopup, hideDailyLoginPopup, handleClaimDaily } from './dailylogin.js';
 import {
   showScreen, updateHUD, showNotification,
@@ -15,15 +15,85 @@ import {
   showPopupLevelUp, hidePopupLevelUp
 } from './ui.js';
 
-// Отслеживание текущего активного экрана (для hotkeys)
+// Текущая локация (используется для восстановления экрана после боя)
+let currentLocation = 'square';
+
+// Текущий активный экран (для горячих клавиш)
 let activeScreen = 'screen-loading';
 
 /**
- * Обёртка над showScreen — отслеживает текущий экран
+ * Обёртка над showScreen — отслеживает текущий активный экран
  */
 function navigateTo(screenId) {
   activeScreen = screenId;
   showScreen(screenId);
+}
+
+/**
+ * Переход к локации по id.
+ * Устанавливает фон и показывает нужный экран.
+ *
+ * @param {string} locationId - 'square' | 'home'
+ */
+function goToLocation(locationId) {
+  currentLocation = locationId;
+
+  // Дом — отдельный экран с персонажем мага
+  if (locationId === 'home') {
+    navigateTo('screen-home');
+    renderHomeScreen();
+    return;
+  }
+
+  // Все остальные локации — экран с полноэкранным фоном
+  const backgrounds = {
+    square: 'from_user/sqare.png'
+  };
+
+  // Устанавливаем фон текущей локации
+  const bgEl = document.getElementById('location-bg');
+  if (bgEl && backgrounds[locationId]) {
+    bgEl.style.backgroundImage = `url('${backgrounds[locationId]}')`;
+  }
+
+  navigateTo('screen-location');
+  updateLocationHUD();
+  updateLocationActions(locationId);
+}
+
+/**
+ * Обновляет HUD внутри экрана локации (имя, уровень, золото).
+ */
+function updateLocationHUD() {
+  const state = getState();
+
+  const nameEl  = document.getElementById('loc-hud-name');
+  const levelEl = document.getElementById('loc-hud-level');
+  const goldEl  = document.getElementById('loc-hud-gold');
+
+  if (nameEl)  nameEl.textContent  = state.name;
+  if (levelEl) levelEl.textContent = `Ур. ${state.level}`;
+  if (goldEl)  goldEl.textContent  = `🪙 ${state.gold}`;
+}
+
+/**
+ * Обновляет кнопки действий внизу экрана локации в зависимости от текущей локации.
+ *
+ * @param {string} locationId
+ */
+function updateLocationActions(locationId) {
+  const actionsEl = document.getElementById('location-actions');
+  if (!actionsEl) return;
+  actionsEl.innerHTML = '';
+
+  if (locationId === 'square') {
+    // На площади — кнопка тренировки
+    const btn = document.createElement('button');
+    btn.className = 'location-action-btn';
+    btn.textContent = '⚔️ Тренировка';
+    btn.addEventListener('click', enterCombatScreen);
+    actionsEl.appendChild(btn);
+  }
 }
 
 /**
@@ -56,19 +126,25 @@ function init() {
 }
 
 /**
- * Переход от экрана загрузки к игре
+ * Переход от экрана загрузки к игре.
+ * После загрузки игрок попадает на Площадь.
  */
 function startGame() {
-  navigateTo('screen-map');
   updateHUD();
 
-  // Инициализируем карту с колбеками навигации
-  initMap({
-    onEnterCombat: enterCombatScreen,
-    onEnterTown: () => showNotification('Городская площадь — используй меню внизу экрана', 'info')
+  // Инициализируем хотспоты карты
+  initMapScreen({
+    onGoToSquare: () => goToLocation('square'),
+    onGoToHome:   () => goToLocation('home')
   });
 
-  // Popup Daily Login с задержкой для плавности
+  // Инициализируем зоны экипировки (один раз при старте)
+  initEquipmentZones();
+
+  // Сразу переходим на площадь
+  goToLocation('square');
+
+  // Daily Login popup с задержкой для плавности
   setTimeout(checkAndShowDailyLogin, 700);
 }
 
@@ -88,7 +164,7 @@ function enterCombatScreen() {
   const started = initBattle();
   if (!started) {
     showNotification('Лимит боёв исчерпан!', 'warning');
-    navigateTo('screen-map');
+    goToLocation('square');
   }
 }
 
@@ -106,8 +182,10 @@ function updateFightsCounter() {
  * Колбек результата боя — вызывается из combat.js
  */
 function handleBattleEnd(result) {
-  // Обновляем HUD с новыми данными (золото, xp)
+  // Обновляем HUD (золото, xp)
   updateHUD();
+  // Обновляем HUD локации если вернёмся на location-экран
+  updateLocationHUD();
 
   // Показываем popup результата
   showPopupResult(result);
@@ -133,7 +211,7 @@ function initSpellButtons() {
     const btn = document.createElement('button');
     btn.className = `spell-btn spell-btn-${spell.animClass}`;
     btn.dataset.spellId = spell.id;
-    btn.dataset.key = index + 1; // горячая клавиша
+    btn.dataset.key = index + 1;
 
     btn.style.setProperty('--spell-color', spell.color);
     btn.style.setProperty('--spell-glow', spell.glowColor);
@@ -156,6 +234,8 @@ function initSpellButtons() {
  * Привязывает все обработчики событий
  */
 function bindEvents() {
+  // --- Загрузочный экран ---
+
   // Старт игры
   document.getElementById('btn-start')?.addEventListener('click', startGame);
 
@@ -184,28 +264,43 @@ function bindEvents() {
     }
   });
 
-  // Нижняя навигация
-  document.getElementById('nav-map')?.addEventListener('click', () => {
+  // --- Экран локации ---
+
+  // Кнопка карты
+  document.getElementById('btn-loc-map')?.addEventListener('click', () => {
     navigateTo('screen-map');
-    refreshMapBadges();
   });
 
-  document.getElementById('nav-inventory')?.addEventListener('click', () => {
-    navigateTo('screen-inventory');
-    renderInventory();
+  // Кнопка наград (daily login)
+  document.getElementById('btn-loc-daily')?.addEventListener('click', showDailyLoginPopup);
+
+  // --- Экран карты ---
+
+  // Кнопка "Назад" на карте — возвращаемся на текущую локацию
+  document.getElementById('btn-map-back')?.addEventListener('click', () => {
+    goToLocation(currentLocation);
   });
 
-  document.getElementById('nav-daily')?.addEventListener('click', showDailyLoginPopup);
+  // --- Экран дома ---
 
-  // Daily Login popup
-  document.getElementById('btn-claim-daily')?.addEventListener('click', handleClaimDaily);
+  // Кнопка "Назад на карту" из дома
+  document.getElementById('btn-home-back')?.addEventListener('click', () => {
+    navigateTo('screen-map');
+  });
+
+  // --- Daily Login popup ---
+  document.getElementById('btn-claim-daily')?.addEventListener('click', () => {
+    handleClaimDaily();
+    // Обновляем золото в HUD локации
+    updateLocationHUD();
+  });
   document.getElementById('btn-close-daily')?.addEventListener('click', hideDailyLoginPopup);
 
-  // Результат боя
+  // --- Результат боя ---
   document.getElementById('btn-result-back')?.addEventListener('click', () => {
     hidePopupResult();
-    navigateTo('screen-map');
-    refreshMapBadges();
+    // Возвращаемся на площадь после боя
+    goToLocation('square');
   });
 
   document.getElementById('btn-result-replay')?.addEventListener('click', () => {
@@ -214,23 +309,21 @@ function bindEvents() {
       enterCombatScreen();
     } else {
       showNotification('На сегодня боёв больше нет!', 'warning');
-      navigateTo('screen-map');
-      refreshMapBadges();
+      goToLocation('square');
     }
   });
 
-  // Level Up
+  // --- Level Up ---
   document.getElementById('btn-levelup-close')?.addEventListener('click', hidePopupLevelUp);
 
-  // Просмотр локации
+  // --- Просмотр локации (popup, совместимость) ---
   document.getElementById('btn-close-location')?.addEventListener('click', () => {
     document.getElementById('popup-location')?.classList.remove('visible');
   });
 
-  // Возврат с боевого экрана
+  // --- Боевой экран ---
   document.getElementById('btn-combat-back')?.addEventListener('click', () => {
-    navigateTo('screen-map');
-    refreshMapBadges();
+    goToLocation('square');
   });
 
   // Закрытие popup по клику на затемнённый оверлей
