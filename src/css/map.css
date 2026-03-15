@@ -53,7 +53,7 @@
   bottom: -30px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Cinzel', serif;
+  font-family: 'Playfair Display', serif;
   font-size: 12px;
   color: #e8c46a;
   white-space: nowrap;
@@ -82,7 +82,7 @@
   border: 1px solid var(--color-border);
   padding: 8px 16px;
   border-radius: 8px;
-  font-family: 'Cinzel', serif;
+  font-family: 'Playfair Display', serif;
   font-size: 12px;
   cursor: pointer;
   backdrop-filter: blur(4px);

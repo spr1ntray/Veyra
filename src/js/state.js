@@ -6,82 +6,82 @@
 // Ключ для localStorage
 const STORAGE_KEY = 'veyra_player';
 
-// Данные всех предметов игры
+// Данные всех предметов игры (названия и описания на английском)
 export const ITEMS_DATA = {
   // Стартовые предметы (BonusPower: 0, нельзя снять)
   starter_staff: {
-    id: 'starter_staff', name: 'Ученический посох',
+    id: 'starter_staff', name: 'Apprentice Staff',
     slot: 'staff', bonus: 0, rarity: 'starter',
-    desc: 'Первый посох каждого мага', canUnequip: false
+    desc: 'Every mage\'s first staff', canUnequip: false
   },
   starter_hat: {
-    id: 'starter_hat', name: 'Потрёпанная шляпа',
+    id: 'starter_hat', name: 'Worn Hat',
     slot: 'hat', bonus: 0, rarity: 'starter',
-    desc: 'Видавшая виды, но всё ещё держится', canUnequip: false
+    desc: 'Seen better days, but still holds', canUnequip: false
   },
   starter_cloak: {
-    id: 'starter_cloak', name: 'Выцветшая накидка',
+    id: 'starter_cloak', name: 'Faded Cloak',
     slot: 'cloak', bonus: 0, rarity: 'starter',
-    desc: 'Цвет давно потерял яркость', canUnequip: false
+    desc: 'The color faded long ago', canUnequip: false
   },
 
   // Common предметы (белый цвет)
   oak_staff: {
-    id: 'oak_staff', name: 'Дубовый посох',
+    id: 'oak_staff', name: 'Oak Staff',
     slot: 'staff', bonus: 3, rarity: 'common',
-    desc: 'Крепкий и надёжный', canUnequip: true
+    desc: 'Sturdy and reliable', canUnequip: true
   },
   amethyst_staff: {
-    id: 'amethyst_staff', name: 'Посох с аметистом',
+    id: 'amethyst_staff', name: 'Amethyst Staff',
     slot: 'staff', bonus: 5, rarity: 'common',
-    desc: 'Фиолетовый камень слабо мерцает', canUnequip: true
+    desc: 'The purple gem faintly glimmers', canUnequip: true
   },
   swampfire_staff: {
-    id: 'swampfire_staff', name: 'Посох болотного огня',
+    id: 'swampfire_staff', name: 'Swampfire Staff',
     slot: 'staff', bonus: 7, rarity: 'common',
-    desc: 'Навершие тлеет зелёным', canUnequip: true
+    desc: 'The tip smolders green', canUnequip: true
   },
   novice_hat: {
-    id: 'novice_hat', name: 'Шляпа послушника',
+    id: 'novice_hat', name: 'Novice Hat',
     slot: 'hat', bonus: 3, rarity: 'common',
-    desc: 'Простая, но целая', canUnequip: true
+    desc: 'Simple, but intact', canUnequip: true
   },
   stargazer_hat: {
-    id: 'stargazer_hat', name: 'Шляпа звездочёта',
+    id: 'stargazer_hat', name: 'Stargazer Hat',
     slot: 'hat', bonus: 5, rarity: 'common',
-    desc: 'Вышитые звёзды на полях', canUnequip: true
+    desc: 'Stars embroidered on the brim', canUnequip: true
   },
   nightwind_hat: {
-    id: 'nightwind_hat', name: 'Шляпа ночного ветра',
+    id: 'nightwind_hat', name: 'Nightwind Hat',
     slot: 'hat', bonus: 7, rarity: 'common',
-    desc: 'Лёгкая, будто сшита из тумана', canUnequip: true
+    desc: 'Light as if sewn from mist', canUnequip: true
   },
   road_cloak: {
-    id: 'road_cloak', name: 'Дорожная накидка',
+    id: 'road_cloak', name: 'Road Cloak',
     slot: 'cloak', bonus: 3, rarity: 'common',
-    desc: 'Пахнет дымом костра', canUnequip: true
+    desc: 'Smells of campfire smoke', canUnequip: true
   },
   forestguard_cloak: {
-    id: 'forestguard_cloak', name: 'Накидка лесного стража',
+    id: 'forestguard_cloak', name: 'Forest Guard Cloak',
     slot: 'cloak', bonus: 5, rarity: 'common',
-    desc: 'Тёмно-зелёная, с капюшоном', canUnequip: true
+    desc: 'Dark green, with a hood', canUnequip: true
   },
   dusk_cloak: {
-    id: 'dusk_cloak', name: 'Накидка сумерек',
+    id: 'dusk_cloak', name: 'Dusk Cloak',
     slot: 'cloak', bonus: 7, rarity: 'common',
-    desc: 'Фиолетовые отблески на ткани', canUnequip: true
+    desc: 'Purple sheen on the fabric', canUnequip: true
   },
 
   // Расходники-заглушки
   mana_elixir: {
-    id: 'mana_elixir', name: 'Эликсир маны',
+    id: 'mana_elixir', name: 'Mana Elixir',
     slot: 'consumable', bonus: 0, rarity: 'common',
-    desc: 'Пригодится позже...', canUnequip: false
+    desc: 'Will come in handy later...', canUnequip: false
   },
   crystal_shard: {
-    id: 'crystal_shard', name: 'Осколок кристалла',
+    id: 'crystal_shard', name: 'Crystal Shard',
     slot: 'consumable', bonus: 0, rarity: 'common',
-    desc: 'Мерцает внутренним светом. Ценность неизвестна.', canUnequip: false
+    desc: 'Glimmers with inner light. Value unknown.', canUnequip: false
   }
 };
 
@@ -97,7 +97,7 @@ function getDefaultState() {
   const now = Date.now();
   return {
     version: 1,
-    name: 'Безымянный маг',
+    name: 'Unnamed Wizard',
     level: 1,
     xp: 0,
     gold: 0,
@@ -155,7 +155,7 @@ export function loadState() {
       _state = getDefaultState();
     }
   } catch (e) {
-    console.error('Ошибка загрузки состояния:', e);
+    console.error('State load error:', e);
     _state = getDefaultState();
   }
   return _state;
@@ -168,7 +168,7 @@ export function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
   } catch (e) {
-    console.error('Ошибка сохранения состояния:', e);
+    console.error('State save error:', e);
   }
 }
 
@@ -327,16 +327,16 @@ export function canClaimDailyLogin() {
 }
 
 /**
- * Данные наград Daily Login (7 дней)
+ * Данные наград Daily Login (7 дней) — переведены на английский
  */
 export const DAILY_REWARDS = [
-  { day: 1, gold: 10, item: null, label: '10 золота' },
-  { day: 2, gold: 20, item: null, label: '20 золота' },
-  { day: 3, gold: 30, item: 'mana_elixir', label: '30 золота + Эликсир маны' },
-  { day: 4, gold: 50, item: null, label: '50 золота' },
-  { day: 5, gold: 40, item: 'crystal_shard', label: '40 золота + Осколок кристалла' },
-  { day: 6, gold: 75, item: null, label: '75 золота' },
-  { day: 7, gold: 0, item: 'chest', label: 'Сундук тренировки' }
+  { day: 1, gold: 10, item: null, label: '10 gold' },
+  { day: 2, gold: 20, item: null, label: '20 gold' },
+  { day: 3, gold: 30, item: 'mana_elixir', label: '30 gold + Mana Elixir' },
+  { day: 4, gold: 50, item: null, label: '50 gold' },
+  { day: 5, gold: 40, item: 'crystal_shard', label: '40 gold + Crystal Shard' },
+  { day: 6, gold: 75, item: null, label: '75 gold' },
+  { day: 7, gold: 0, item: 'chest', label: 'Training Chest' }
 ];
 
 /**

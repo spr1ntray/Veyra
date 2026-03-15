@@ -72,7 +72,7 @@ function updateLocationHUD() {
   const goldEl  = document.getElementById('loc-hud-gold');
 
   if (nameEl)  nameEl.textContent  = state.name;
-  if (levelEl) levelEl.textContent = `Ур. ${state.level}`;
+  if (levelEl) levelEl.textContent = `Lv. ${state.level}`;
   if (goldEl)  goldEl.textContent  = `🪙 ${state.gold}`;
 }
 
@@ -90,7 +90,7 @@ function updateLocationActions(locationId) {
     // На площади — кнопка тренировки
     const btn = document.createElement('button');
     btn.className = 'location-action-btn';
-    btn.textContent = '⚔️ Тренировка';
+    btn.textContent = '⚔️ Training';
     btn.addEventListener('click', enterCombatScreen);
     actionsEl.appendChild(btn);
   }
@@ -154,7 +154,7 @@ function startGame() {
 function enterCombatScreen() {
   const remaining = getFightsRemaining();
   if (remaining <= 0) {
-    showNotification('Боёв на сегодня больше нет. Возвращайся завтра!', 'warning');
+    showNotification('No battles left for today. Come back tomorrow!', 'warning');
     return;
   }
 
@@ -163,7 +163,7 @@ function enterCombatScreen() {
 
   const started = initBattle();
   if (!started) {
-    showNotification('Лимит боёв исчерпан!', 'warning');
+    showNotification('Battle limit reached!', 'warning');
     goToLocation('square');
   }
 }
@@ -175,7 +175,7 @@ function updateFightsCounter() {
   const el = document.getElementById('fights-remaining');
   if (!el) return;
   const remaining = getFightsRemaining();
-  el.textContent = `Боёв сегодня: ${remaining} / 5`;
+  el.textContent = `Battles today: ${remaining} / 5`;
 }
 
 /**
@@ -220,7 +220,7 @@ function initSpellButtons() {
       <span class="spell-emoji">${spell.emoji}</span>
       <div class="spell-info">
         <div class="spell-name">${spell.name}</div>
-        <div class="spell-stats">${spell.type === 'defensive' ? spell.typeLabel : spell.minDmg + '–' + spell.maxDmg + ' урона'}</div>
+        <div class="spell-stats">${spell.type === 'defensive' ? spell.typeLabel : spell.minDmg + '–' + spell.maxDmg + ' dmg'}</div>
         <div class="spell-type-label">${spell.typeLabel}</div>
       </div>
     `;
@@ -251,9 +251,9 @@ function bindEvents() {
       const display = document.getElementById('hero-name-display');
       if (display) display.textContent = newName;
       updateHUD();
-      showNotification(`Имя сохранено: ${newName}`, 'success');
+      showNotification(`Name saved: ${newName}`, 'success');
     } else {
-      showNotification('Имя: от 2 до 20 символов', 'warning');
+      showNotification('Name: 2 to 20 characters', 'warning');
     }
   });
 
@@ -308,7 +308,7 @@ function bindEvents() {
     if (getFightsRemaining() > 0) {
       enterCombatScreen();
     } else {
-      showNotification('На сегодня боёв больше нет!', 'warning');
+      showNotification('No more battles today!', 'warning');
       goToLocation('square');
     }
   });

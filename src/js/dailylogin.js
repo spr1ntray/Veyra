@@ -53,7 +53,7 @@ function renderDailyLoginGrid() {
   const claimBtn = document.getElementById('btn-claim-daily');
   if (claimBtn) {
     claimBtn.disabled = claimedToday;
-    claimBtn.textContent = claimedToday ? '✓ Уже получено' : '✦ Забрать';
+    claimBtn.textContent = claimedToday ? '✓ Already claimed' : '✦ Claim';
     claimBtn.style.opacity = claimedToday ? '0.5' : '1';
   }
 
@@ -82,12 +82,12 @@ function renderDailyLoginGrid() {
     const label = getDayLabel(reward);
 
     dayEl.innerHTML = `
-      <div class="day-number">День ${reward.day}</div>
+      <div class="day-number">Day ${reward.day}</div>
       <div class="day-icon">${icon}</div>
       <div class="day-label">${label}</div>
       ${status === 'past' ? '<div class="day-check">✓</div>' : ''}
-      ${status === 'active' ? '<div class="day-active-badge">Сегодня</div>' : ''}
-      ${status === 'next' ? '<div class="day-active-badge day-tomorrow-badge">Завтра</div>' : ''}
+      ${status === 'active' ? '<div class="day-active-badge">Today</div>' : ''}
+      ${status === 'next' ? '<div class="day-active-badge day-tomorrow-badge">Tomorrow</div>' : ''}
     `;
 
     grid.appendChild(dayEl);
@@ -108,7 +108,7 @@ function getDayIcon(reward) {
  * Возвращает текстовое описание награды дня
  */
 function getDayLabel(reward) {
-  if (reward.item === 'chest') return 'Сундук';
+  if (reward.item === 'chest') return 'Chest';
   let label = '';
   if (reward.gold > 0) label += `${reward.gold}g`;
   if (reward.item) {
@@ -126,7 +126,7 @@ export function handleClaimDaily() {
   const alreadyClaimed = !canClaimDailyLogin();
 
   if (alreadyClaimed) {
-    showNotification('Уже получено сегодня. Возвращайся завтра!', 'info');
+    showNotification('Already claimed today. Come back tomorrow!', 'info');
     hideDailyLoginPopup();
     return;
   }
@@ -162,7 +162,7 @@ function showClaimAnimation(result) {
     if (item) rewardText += `+ ${item.name}`;
   }
 
-  rewardEl.textContent = rewardText || 'Награда получена!';
+  rewardEl.textContent = rewardText || 'Reward received!';
   rewardEl.classList.add('reward-animate');
   setTimeout(() => rewardEl.classList.remove('reward-animate'), 1000);
 }

@@ -10,56 +10,56 @@ import {
   rollItemDrop, checkDailyReset
 } from './state.js';
 
-// Данные заклинаний
+// Данные заклинаний (названия и описания переведены на английский)
 export const SPELLS = {
   arcane_bolt: {
     id: 'arcane_bolt',
-    name: 'Чародейский разряд',
+    name: 'Arcane Bolt',
     minDmg: 25, maxDmg: 40,
     color: '#4a90d9',
     glowColor: 'rgba(74, 144, 217, 0.6)',
     emoji: '⚡',
     animClass: 'spell-arcane',
     type: 'attack',
-    typeLabel: 'Атака'
+    typeLabel: 'Attack'
   },
   arcane_focus: {
     id: 'arcane_focus',
-    name: 'Концентрация',
+    name: 'Focus',
     minDmg: 0, maxDmg: 0,
     color: '#c9a84c',
     glowColor: 'rgba(201, 168, 76, 0.6)',
     emoji: '🛡️',
     animClass: 'spell-focus',
     type: 'defensive',
-    typeLabel: 'Защита — следующая атака ×2'
+    typeLabel: 'Defense — next attack ×2'
   },
   shadow_pulse: {
     id: 'shadow_pulse',
-    name: 'Теневой импульс',
+    name: 'Shadow Pulse',
     minDmg: 15, maxDmg: 55,
     color: '#9b59b6',
     glowColor: 'rgba(155, 89, 182, 0.6)',
     emoji: '🌑',
     animClass: 'spell-shadow',
     type: 'attack_alt',
-    typeLabel: 'Альт. атака'
+    typeLabel: 'Alt. Attack'
   }
 };
 
-// Константы боя
-const DUMMY_MAX_HP = 100;
-const ROUNDS_TOTAL = 3;
+// Константы боя — увеличены HP и лимит действий вместо раундов
+const DUMMY_MAX_HP = 200;
+const ACTIONS_TOTAL = 10;
 const FIGHTS_LIMIT = 5;
 
 // Состояние текущего боя
 let battleState = {
   active: false,
-  round: 1,
+  action: 1,           // номер текущего действия
   dummyHP: DUMMY_MAX_HP,
   totalDamage: 0,
-  roundsHistory: [],
-  focusCharged: false  // true если Концентрация заряжена
+  actionsHistory: [],
+  focusCharged: false  // true если концентрация заряжена
 };
 
 // Колбек вызывается по окончании боя с результатами
@@ -87,10 +87,10 @@ export function initBattle() {
   // Сбрасываем состояние боя
   battleState = {
     active: true,
-    round: 1,
+    action: 1,
     dummyHP: DUMMY_MAX_HP,
     totalDamage: 0,
-    roundsHistory: [],
+    actionsHistory: [],
     focusCharged: false
   };
 
@@ -126,10 +126,11 @@ function calcDamage(spell) {
 }
 
 /**
- * Игрок выбирает заклинание — основная функция раунда
+ * Игрок выбирает заклинание — основная функция действия
+ * Бой продолжается пока HP манекена > 0 или не исчерпаны все 10 действий
  */
 export async function castSpell(spellId) {
-  if (!battleState.active || battleState.round > ROUNDS_TOTAL) return;
+  if (!battleState.active) return;
 
   const spell = SPELLS[spellId];
   if (!spell) return;
@@ -140,14 +141,16 @@ export async function castSpell(spellId) {
   // Защитное заклинание Концентрация — особая логика
   if (spell.id === 'arcane_focus') {
     battleState.focusCharged = true;
-    battleState.roundsHistory.push({ spell, damage: 0, round: battleState.round, isFocus: true });
+    battleState.actionsHistory.push({ spell, damage: 0, action: battleState.action, isFocus: true });
     await playFocusAnimation();
-    addCombatLog(spell, 0, battleState.round, true);
-    battleState.round++;
-    if (battleState.round > ROUNDS_TOTAL) {
+    addCombatLog(spell, 0, battleState.action, true);
+    battleState.action++;
+
+    // Проверяем не исчерпаны ли действия
+    if (battleState.action > ACTIONS_TOTAL) {
       await endBattle();
     } else {
-      updateRoundDisplay();
+      updateActionDisplay();
       setSpellButtonsDisabled(false);
     }
     return;
@@ -156,7 +159,7 @@ export async function castSpell(spellId) {
   const damage = calcDamage(spell);
   battleState.dummyHP -= damage;
   battleState.totalDamage += damage;
-  battleState.roundsHistory.push({ spell, damage, round: battleState.round });
+  battleState.actionsHistory.push({ spell, damage, action: battleState.action });
 
   // Анимация заклинания
   await playSpellAnimation(spell, damage);
@@ -165,16 +168,18 @@ export async function castSpell(spellId) {
   updateDummyHP();
 
   // Лог
-  addCombatLog(spell, damage, battleState.round);
+  addCombatLog(spell, damage, battleState.action);
 
-  battleState.round++;
+  battleState.action++;
 
-  if (battleState.round > ROUNDS_TOTAL) {
-    // Все раунды сыграны — завершаем бой
+  // Проверяем условия окончания боя:
+  // победа — манекен убит; поражение — закончились действия
+  if (battleState.dummyHP <= 0) {
+    await endBattle();
+  } else if (battleState.action > ACTIONS_TOTAL) {
     await endBattle();
   } else {
-    // Следующий раунд
-    updateRoundDisplay();
+    updateActionDisplay();
     setSpellButtonsDisabled(false);
   }
 }
@@ -240,7 +245,7 @@ async function endBattle() {
       droppedItem,
       bonusTriggered,
       fightsLeft: FIGHTS_LIMIT - state.combat.fightsToday,
-      rounds: battleState.roundsHistory,
+      actions: battleState.actionsHistory,
       levelUps
     });
   }
@@ -266,7 +271,7 @@ async function playFocusAnimation() {
   const indicator = document.createElement('div');
   indicator.className = 'focus-charged-indicator';
   indicator.id = 'focus-indicator';
-  indicator.textContent = '⚡ КОНЦЕНТРАЦИЯ';
+  indicator.textContent = '⚡ FOCUS';
   mageEl.appendChild(indicator);
 
   await delay(900);
@@ -360,7 +365,7 @@ function updateDummyHP() {
 /**
  * Добавляет строку в лог боя
  */
-function addCombatLog(spell, damage, round, isFocus = false) {
+function addCombatLog(spell, damage, action, isFocus = false) {
   const logEl = document.getElementById('combat-log');
   if (!logEl) return;
 
@@ -368,11 +373,11 @@ function addCombatLog(spell, damage, round, isFocus = false) {
   entry.className = 'log-entry';
 
   const damageHtml = isFocus
-    ? `<span class="log-focus">→ Следующая атака ×2</span>`
+    ? `<span class="log-focus">→ Next attack ×2</span>`
     : `<span class="log-damage">-${damage}</span>`;
 
   entry.innerHTML = `
-    <span class="log-round">Раунд ${round}</span>
+    <span class="log-round">Action ${action}</span>
     <span class="log-spell" style="color: ${spell.color}">${spell.emoji} ${spell.name}</span>
     ${damageHtml}
   `;
@@ -381,12 +386,12 @@ function addCombatLog(spell, damage, round, isFocus = false) {
 }
 
 /**
- * Обновляет счётчик раундов
+ * Обновляет счётчик действий
  */
-function updateRoundDisplay() {
+function updateActionDisplay() {
   const el = document.getElementById('combat-round');
   if (el) {
-    el.textContent = `Раунд ${battleState.round} / ${ROUNDS_TOTAL}`;
+    el.textContent = `Action ${battleState.action} / ${ACTIONS_TOTAL}`;
   }
 }
 
@@ -412,8 +417,8 @@ function renderBattleUI() {
   }
   if (hpText) hpText.textContent = `${DUMMY_MAX_HP} / ${DUMMY_MAX_HP}`;
 
-  // Сброс раунда
-  updateRoundDisplay();
+  // Сброс счётчика действий
+  updateActionDisplay();
 
   // Очистка лога
   const logEl = document.getElementById('combat-log');
@@ -427,7 +432,7 @@ function renderBattleUI() {
   const fightCountEl = document.getElementById('fights-remaining');
   if (fightCountEl) {
     const remaining = FIGHTS_LIMIT - state.combat.fightsToday;
-    fightCountEl.textContent = `Боёв сегодня: ${remaining} / ${FIGHTS_LIMIT}`;
+    fightCountEl.textContent = `Battles today: ${remaining} / ${FIGHTS_LIMIT}`;
   }
 }
 

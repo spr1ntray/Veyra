@@ -14,11 +14,11 @@ const SLOT_ICONS = {
   cloak: '🧣'
 };
 
-// Названия слотов на русском
+// Названия слотов
 const SLOT_NAMES = {
-  staff: 'Посох',
-  hat:   'Шляпа',
-  cloak: 'Накидка'
+  staff: 'Staff',
+  hat:   'Hat',
+  cloak: 'Cloak'
 };
 
 // Цвета редкостей
@@ -52,7 +52,7 @@ function renderStatsPanel() {
   const nameEl  = document.getElementById('home-char-name');
   const levelEl = document.getElementById('home-char-level');
   if (nameEl)  nameEl.textContent  = state.name;
-  if (levelEl) levelEl.textContent = `Уровень ${state.level}`;
+  if (levelEl) levelEl.textContent = `Level ${state.level}`;
 
   // Прогресс-бар силы
   const strengthBar = document.getElementById('stat-strength-bar');
@@ -100,7 +100,7 @@ function renderEquipmentList() {
 
     const itemName = document.createElement('span');
     itemName.className = 'home-equip-name';
-    itemName.textContent = item ? item.name : 'Пусто';
+    itemName.textContent = item ? item.name : 'Empty';
     if (item) itemName.style.color = RARITY_COLORS[item.rarity];
 
     row.appendChild(slotLabel);
@@ -166,7 +166,7 @@ function populateDropdown(slot, dropdown, zone) {
   // Заголовок
   const title = document.createElement('div');
   title.className = 'dropdown-title';
-  title.textContent = `Выбрать: ${SLOT_NAMES[slot]}`;
+  title.textContent = `Choose: ${SLOT_NAMES[slot]}`;
   dropdown.appendChild(title);
 
   // Собираем список: текущий экипированный + предметы слота в инвентаре
@@ -184,7 +184,7 @@ function populateDropdown(slot, dropdown, zone) {
     const empty = document.createElement('div');
     empty.className = 'dropdown-item';
     empty.style.color = 'var(--color-text-muted)';
-    empty.textContent = 'Нет доступных предметов';
+    empty.textContent = 'No items available';
     dropdown.appendChild(empty);
   } else {
     slotItems.forEach(item => {
@@ -218,7 +218,7 @@ function populateDropdown(slot, dropdown, zone) {
           e.stopPropagation();
           const success = equipItem(item.id);
           if (success) {
-            showNotification(`Надет: ${item.name}`, 'success');
+            showNotification(`Equipped: ${item.name}`, 'success');
             closeAllDropdowns();
             // Перерисовываем панель статов и список снаряжения
             renderStatsPanel();
@@ -229,7 +229,7 @@ function populateDropdown(slot, dropdown, zone) {
       } else {
         // Уже надето — не кликабельно
         itemEl.style.cursor = 'default';
-        itemEl.title = 'Уже надето';
+        itemEl.title = 'Already equipped';
       }
 
       dropdown.appendChild(itemEl);

@@ -39,7 +39,7 @@ export function updateHUD() {
   if (nameEl) nameEl.textContent = state.name;
 
   const levelEl = document.getElementById('hud-level');
-  if (levelEl) levelEl.textContent = `Ур. ${state.level}`;
+  if (levelEl) levelEl.textContent = `Lv. ${state.level}`;
 
   // Золото
   const goldEl = document.getElementById('hud-gold');
@@ -55,7 +55,7 @@ export function updateHUD() {
   const xpText = document.getElementById('hud-xp-text');
   if (xpText) {
     if (state.level >= 10) {
-      xpText.textContent = 'МАКС';
+      xpText.textContent = 'MAX';
     } else {
       xpText.textContent = `${state.xp} / ${xpNeeded} XP`;
     }
@@ -74,26 +74,26 @@ export function showPopupResult(data) {
   const statsEl = document.getElementById('result-stats');
 
   if (titleEl) {
-    titleEl.textContent = data.won ? '⚔️ Победа!' : '💀 Поражение';
+    titleEl.textContent = data.won ? '⚔️ Victory!' : '💀 Defeat';
     titleEl.style.color = data.won ? '#c9a84c' : '#e74c3c';
   }
 
   if (statusEl) {
     statusEl.textContent = data.won
-      ? `Манекен сломан! Нанесено ${data.totalDamage || data.damage} урона.`
-      : `Манекен устоял. Осталось HP: ${data.dummyHP}`;
+      ? `Dummy destroyed! Dealt ${data.totalDamage || data.damage} damage.`
+      : `Dummy held. HP remaining: ${data.dummyHP}`;
   }
 
   if (statsEl) {
     let html = `
       <div class="result-stat">
         <span class="stat-icon">🪙</span>
-        <span class="stat-label">Золото:</span>
+        <span class="stat-label">Gold:</span>
         <span class="stat-value">+${data.goldEarned}</span>
       </div>
       <div class="result-stat">
         <span class="stat-icon">✨</span>
-        <span class="stat-label">Опыт:</span>
+        <span class="stat-label">XP:</span>
         <span class="stat-value">+${data.xpEarned}</span>
       </div>
     `;
@@ -103,7 +103,7 @@ export function showPopupResult(data) {
       html += `
         <div class="result-stat result-drop">
           <span class="stat-icon">🎁</span>
-          <span class="stat-label">Дроп:</span>
+          <span class="stat-label">Drop:</span>
           <span class="stat-value">${item ? item.name : data.droppedItem}</span>
         </div>
       `;
@@ -113,7 +113,7 @@ export function showPopupResult(data) {
       html += `
         <div class="result-stat result-bonus">
           <span class="stat-icon">🏆</span>
-          <span class="stat-label">Бонус 5 побед!</span>
+          <span class="stat-label">5-win bonus!</span>
           <span class="stat-value">+25🪙 +50✨</span>
         </div>
       `;
@@ -121,7 +121,7 @@ export function showPopupResult(data) {
 
     html += `
       <div class="result-fights-left">
-        Боёв осталось сегодня: ${data.fightsLeft}
+        Battles left today: ${data.fightsLeft}
       </div>
     `;
 
@@ -152,12 +152,12 @@ export function showPopupLevelUp(newLevel) {
   const rewardEl = document.getElementById('levelup-reward');
   if (rewardEl) {
     const goldReward = 5 * newLevel;
-    let rewardText = `+${goldReward} 🪙 золота`;
+    let rewardText = `+${goldReward} 🪙 gold`;
 
     // Особые награды на определённых уровнях
-    if (newLevel === 5) rewardText += '\n⚡ Звание "Адепт" получено!';
-    if (newLevel === 10) rewardText += '\n👑 Звание "Маг Veyra" получено!';
-    if (newLevel === 4 || newLevel === 7) rewardText += '\n🎁 Сундук тренировки!';
+    if (newLevel === 5) rewardText += '\n⚡ Title "Adept" unlocked!';
+    if (newLevel === 10) rewardText += '\n👑 Title "Mage of Veyra" unlocked!';
+    if (newLevel === 4 || newLevel === 7) rewardText += '\n🎁 Training Chest!';
 
     rewardEl.textContent = rewardText;
   }
