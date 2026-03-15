@@ -283,22 +283,48 @@
 }
 
 /* === POPUP LEVEL UP === */
+/* [LOW 7.5] Улучшенный попап повышения уровня — максимальная торжественность */
 #popup-levelup {
   overflow: hidden;
 }
 
 #popup-levelup .popup-window {
-  background: linear-gradient(160deg, #1f1040, #0d1230, #1a0a1a);
+  background: linear-gradient(160deg, #251050, #0d1230, #1a0a1a);
   border-color: var(--color-gold);
+  border-width: 1px;
   text-align: center;
   overflow: hidden;
+  box-shadow:
+    0 0 30px rgba(201,168,76,0.3),
+    0 0 80px rgba(201,168,76,0.15),
+    0 30px 100px rgba(0,0,0,0.8);
+}
+
+/* Верхняя золотая линия с анимацией — праздничный акцент */
+#popup-levelup .popup-window::before {
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(201,168,76,0.6) 30%,
+    rgba(255,240,150,1) 50%,
+    rgba(201,168,76,0.6) 70%,
+    transparent
+  );
+  animation: levelupShimmer 2s ease-in-out infinite;
+}
+
+@keyframes levelupShimmer {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
 }
 
 .levelup-crown {
-  font-size: 52px;
+  font-size: 56px;
   margin-bottom: 8px;
   animation: crownBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: block;
+  filter: drop-shadow(0 0 20px rgba(201,168,76,0.7));
 }
 
 @keyframes crownBounce {
@@ -318,10 +344,13 @@
 
 #levelup-number {
   font-family: var(--font-title);
-  font-size: 56px;
-  font-weight: 700;
+  font-size: 72px;
+  font-weight: 900;
   color: var(--color-gold);
-  text-shadow: var(--glow-gold), 0 0 60px rgba(201, 168, 76, 0.4);
+  text-shadow:
+    0 0 20px rgba(201,168,76,0.9),
+    0 0 60px rgba(201,168,76,0.5),
+    0 0 100px rgba(201,168,76,0.2);
   line-height: 1;
   display: block;
   animation: levelNumPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
