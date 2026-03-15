@@ -1,0 +1,12 @@
+# Референсные фото (не нужны в репо)
+*.jpg
+*.jpeg
+*.png
+
+# Claude Code служебные файлы
+.claude/
+skills-lock.json
+
+# OS
+.DS_Store
+Thumbs.db

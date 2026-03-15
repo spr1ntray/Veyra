@@ -1,0 +1,574 @@
+/**
+ * combat.css — стили боевого экрана
+ * Арена, маг, манекен, анимации заклинаний
+ */
+
+/* === БОЕВОЙ ЭКРАН === */
+#screen-combat {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(26, 10, 46, 0.8) 0%, transparent 60%),
+    linear-gradient(180deg, #08071a 0%, #0d0a20 40%, #0a1510 100%);
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Каменный пол — имитация через градиенты */
+#screen-combat::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 48px,
+      rgba(255,255,255,0.015) 48px,
+      rgba(255,255,255,0.015) 49px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 48px,
+      rgba(255,255,255,0.015) 48px,
+      rgba(255,255,255,0.015) 49px
+    ),
+    linear-gradient(180deg, transparent 0%, rgba(30, 20, 10, 0.4) 100%);
+  pointer-events: none;
+}
+
+/* Факелы — декоративные светящиеся пятна */
+#screen-combat::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(201, 168, 76, 0.3) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(201, 168, 76, 0.3) 100%
+  );
+  box-shadow:
+    -20px 0 30px rgba(201, 168, 76, 0.2),
+    20px 0 30px rgba(201, 168, 76, 0.2);
+  pointer-events: none;
+}
+
+/* === ВЕРХНЯЯ ПАНЕЛЬ БОЯ === */
+.combat-header {
+  padding: 16px 16px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 10;
+}
+
+.combat-round-display {
+  font-family: var(--font-title);
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--color-gold);
+  text-shadow: var(--glow-gold);
+}
+
+#fights-remaining {
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+}
+
+#btn-combat-back {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 5px 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+}
+
+#btn-combat-back:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-gold);
+}
+
+/* === АРЕНА (маг + манекен) === */
+.combat-arena {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 20px;
+  position: relative;
+  z-index: 10;
+}
+
+/* === МАГ === */
+#combat-mage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.3s ease;
+}
+
+.mage-figure {
+  font-size: 72px;
+  line-height: 1;
+  filter:
+    drop-shadow(0 0 10px rgba(46, 204, 113, 0.6))
+    drop-shadow(0 0 25px rgba(46, 204, 113, 0.3))
+    hue-rotate(20deg);
+  animation: mageFloat 4s ease-in-out infinite;
+}
+
+@keyframes mageFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.mage-label {
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--color-emerald);
+  text-shadow: var(--glow-emerald);
+  text-transform: uppercase;
+}
+
+/* Анимация каста заклинания */
+#combat-mage.mage-casting .mage-figure {
+  animation: mageCast 0.4s ease;
+  filter:
+    drop-shadow(0 0 20px rgba(46, 204, 113, 0.9))
+    drop-shadow(0 0 40px rgba(155, 89, 182, 0.6))
+    hue-rotate(20deg);
+}
+
+@keyframes mageCast {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(8px) scale(1.05); }
+  60% { transform: translateX(20px) scale(1.1) rotate(5deg); }
+  100% { transform: translateX(0) scale(1) rotate(0); }
+}
+
+/* === СНАРЯД ЗАКЛИНАНИЯ === */
+#spell-projectile {
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  z-index: 20;
+  transform: translate(-50%, -50%);
+}
+
+/* Arcane Bolt — синий шар, летит прямо */
+.spell-arcane {
+  animation: projectileArcane 0.6s cubic-bezier(0.2, 0, 0.8, 1) forwards;
+}
+
+@keyframes projectileArcane {
+  0% {
+    left: 25%;
+    top: 48%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    left: 72%;
+    top: 48%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+}
+
+/* Verdant Flame — зелёный огонь, дуга */
+.spell-verdant {
+  animation: projectileVerdant 0.6s ease-in-out forwards;
+  border-radius: 40% 60% 60% 40% / 60% 30% 70% 40%;
+}
+
+@keyframes projectileVerdant {
+  0% {
+    left: 25%;
+    top: 55%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  40% {
+    left: 48%;
+    top: 30%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3) rotate(120deg);
+  }
+  100% {
+    left: 72%;
+    top: 52%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6) rotate(240deg);
+  }
+}
+
+/* Shadow Strike — фиолетовая тень снизу */
+.spell-shadow {
+  animation: projectileShadow 0.6s ease forwards;
+  border-radius: 20%;
+}
+
+@keyframes projectileShadow {
+  0% {
+    left: 72%;
+    top: 100%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) scaleY(3);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2) scaleY(1);
+  }
+  100% {
+    left: 72%;
+    top: 45%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5) scaleY(0.5);
+  }
+}
+
+/* === МАНЕКЕН === */
+#combat-dummy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.dummy-figure {
+  width: 64px;
+  height: 100px;
+  background: linear-gradient(180deg, #4a3020 0%, #3a2010 60%, #2a1505 100%);
+  border-radius: 8px 8px 4px 4px;
+  border: 2px solid rgba(201, 168, 76, 0.3);
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.05);
+}
+
+/* Голова манекена */
+.dummy-figure::before {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(180deg, #4a3020, #3a2010);
+  border-radius: 50%;
+  border: 2px solid rgba(201, 168, 76, 0.3);
+}
+
+/* Крестовина рук */
+.dummy-figure::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: -16px;
+  right: -16px;
+  height: 10px;
+  background: linear-gradient(180deg, #5a3a20, #3a2010);
+  border-radius: 4px;
+  border: 1px solid rgba(201, 168, 76, 0.25);
+}
+
+.dummy-label {
+  font-family: var(--font-title);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* HP бар манекена */
+.dummy-hp-container {
+  width: 80px;
+  height: 8px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-top: 2px;
+}
+
+#dummy-hp-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+  border-radius: 4px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+#dummy-hp-text {
+  font-family: var(--font-title);
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* Анимация попадания */
+#combat-dummy.dummy-hit .dummy-figure {
+  animation: dummyHit 0.4s ease;
+}
+
+@keyframes dummyHit {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg) translateX(-4px); filter: brightness(2) saturate(0); }
+  75% { transform: rotate(8deg) translateX(4px); }
+  100% { transform: rotate(0deg); }
+}
+
+/* === ЦИФРЫ УРОНА === */
+.damage-number {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-title);
+  font-size: 24px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 30;
+  animation: damageFloat 1.2s ease forwards;
+  white-space: nowrap;
+}
+
+@keyframes damageFloat {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-10px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-50px) scale(0.8);
+  }
+}
+
+/* === ЛОГ БОЕВЫХ ДЕЙСТВИЙ === */
+.combat-log-container {
+  padding: 0 16px;
+  height: 80px;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+#combat-log {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: none;
+}
+
+#combat-log::-webkit-scrollbar {
+  display: none;
+}
+
+.log-entry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  border-left: 2px solid rgba(201, 168, 76, 0.2);
+  animation: logEntryIn 0.2s ease;
+}
+
+@keyframes logEntryIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.log-round {
+  font-family: var(--font-title);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  min-width: 54px;
+}
+
+.log-spell {
+  font-family: var(--font-body);
+  flex: 1;
+}
+
+.log-damage {
+  font-family: var(--font-title);
+  font-size: 11px;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* === КНОПКИ ЗАКЛИНАНИЙ === */
+.combat-spells-panel {
+  padding: 12px 12px 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.spells-label {
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--color-text-muted);
+  text-align: center;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+#spell-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.spell-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Светящаяся граница цвета заклинания */
+.spell-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid var(--spell-color, #fff);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.spell-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, var(--spell-color, #fff) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.spell-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--spell-color, #fff);
+  box-shadow: 0 0 20px var(--spell-glow, rgba(255,255,255,0.3)), 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.spell-btn:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.spell-btn:hover:not(:disabled)::after {
+  opacity: 0.08;
+}
+
+.spell-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.spell-btn:disabled {
+  cursor: not-allowed;
+}
+
+.spell-emoji {
+  font-size: 28px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 6px var(--spell-color, #fff));
+  transition: filter 0.2s ease;
+}
+
+.spell-btn:hover:not(:disabled) .spell-emoji {
+  filter: drop-shadow(0 0 12px var(--spell-color, #fff));
+}
+
+.spell-info {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.spell-name {
+  font-family: var(--font-title);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+  line-height: 1.2;
+}
+
+.spell-btn:hover:not(:disabled) .spell-name {
+  color: var(--spell-color, #fff);
+}
+
+.spell-stats {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Цветовые варианты кнопок */
+.spell-btn-spell-arcane { --spell-color: #4a90d9; --spell-glow: rgba(74, 144, 217, 0.4); }
+.spell-btn-spell-verdant { --spell-color: #2ecc71; --spell-glow: rgba(46, 204, 113, 0.4); }
+.spell-btn-spell-shadow { --spell-color: #9b59b6; --spell-glow: rgba(155, 89, 182, 0.4); }
+
+/* Горячие клавиши */
+.spell-btn::after {
+  content: attr(data-key);
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: var(--font-title);
+  font-size: 9px;
+  color: rgba(255,255,255,0.2);
+  z-index: 2;
+}
