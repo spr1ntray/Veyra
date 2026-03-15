@@ -125,7 +125,7 @@
 }
 
 .mage-figure {
-  font-size: 72px;
+  font-size: 100px;
   line-height: 1;
   filter:
     drop-shadow(0 0 10px rgba(46, 204, 113, 0.6))
@@ -266,8 +266,8 @@
 }
 
 .dummy-figure {
-  width: 64px;
-  height: 100px;
+  width: 90px;
+  height: 140px;
   background: linear-gradient(180deg, #4a3020 0%, #3a2010 60%, #2a1505 100%);
   border-radius: 8px 8px 4px 4px;
   border: 2px solid rgba(201, 168, 76, 0.3);
@@ -313,7 +313,7 @@
 
 /* HP бар манекена */
 .dummy-hp-container {
-  width: 80px;
+  width: 120px;
   height: 8px;
   background: rgba(0,0,0,0.5);
   border-radius: 4px;
@@ -558,8 +558,63 @@
 
 /* Цветовые варианты кнопок */
 .spell-btn-spell-arcane { --spell-color: #4a90d9; --spell-glow: rgba(74, 144, 217, 0.4); }
-.spell-btn-spell-verdant { --spell-color: #2ecc71; --spell-glow: rgba(46, 204, 113, 0.4); }
+.spell-btn-spell-focus  { --spell-color: #c9a84c; --spell-glow: rgba(201, 168, 76, 0.4); }
 .spell-btn-spell-shadow { --spell-color: #9b59b6; --spell-glow: rgba(155, 89, 182, 0.4); }
+
+/* Подпись типа скилла */
+.spell-type-label {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+/* Анимация Концентрации */
+#combat-mage.mage-focusing .mage-figure {
+  animation: mageFocusCharge 0.9s ease forwards;
+}
+
+@keyframes mageFocusCharge {
+  0%   { filter: drop-shadow(0 0 10px rgba(201, 168, 76, 0.2)) hue-rotate(20deg); }
+  50%  { filter: drop-shadow(0 0 50px rgba(201, 168, 76, 1.0)) drop-shadow(0 0 30px rgba(255,255,200,0.8)) hue-rotate(0deg); transform: scale(1.08); }
+  100% { filter: drop-shadow(0 0 20px rgba(201, 168, 76, 0.7)) hue-rotate(20deg); transform: scale(1); }
+}
+
+/* Индикатор заряда Концентрации */
+.focus-charged-indicator {
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--color-gold);
+  text-shadow: var(--glow-gold);
+  background: rgba(201, 168, 76, 0.12);
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  padding: 4px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  animation: focusPulse 1s ease-in-out infinite;
+  z-index: 20;
+}
+
+@keyframes focusPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(201, 168, 76, 0.3); opacity: 0.8; }
+  50%       { box-shadow: 0 0 16px rgba(201, 168, 76, 0.7); opacity: 1; }
+}
+
+/* Лог: строка с фокусом */
+.log-focus {
+  font-family: var(--font-title);
+  font-size: 11px;
+  color: var(--color-gold);
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(201, 168, 76, 0.5);
+}
 
 /* Горячие клавиши */
 .spell-btn::after {

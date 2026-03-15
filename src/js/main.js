@@ -142,7 +142,8 @@ function initSpellButtons() {
       <span class="spell-emoji">${spell.emoji}</span>
       <div class="spell-info">
         <div class="spell-name">${spell.name}</div>
-        <div class="spell-stats">${spell.minDmg}–${spell.maxDmg} урона</div>
+        <div class="spell-stats">${spell.type === 'defensive' ? spell.typeLabel : spell.minDmg + '–' + spell.maxDmg + ' урона'}</div>
+        <div class="spell-type-label">${spell.typeLabel}</div>
       </div>
     `;
 
@@ -220,6 +221,11 @@ function bindEvents() {
 
   // Level Up
   document.getElementById('btn-levelup-close')?.addEventListener('click', hidePopupLevelUp);
+
+  // Просмотр локации
+  document.getElementById('btn-close-location')?.addEventListener('click', () => {
+    document.getElementById('popup-location')?.classList.remove('visible');
+  });
 
   // Возврат с боевого экрана
   document.getElementById('btn-combat-back')?.addEventListener('click', () => {

@@ -15,29 +15,35 @@ export const SPELLS = {
   arcane_bolt: {
     id: 'arcane_bolt',
     name: 'Чародейский разряд',
-    minDmg: 25, maxDmg: 35,
+    minDmg: 25, maxDmg: 40,
     color: '#4a90d9',
     glowColor: 'rgba(74, 144, 217, 0.6)',
     emoji: '⚡',
-    animClass: 'spell-arcane'
+    animClass: 'spell-arcane',
+    type: 'attack',
+    typeLabel: 'Атака'
   },
-  verdant_flame: {
-    id: 'verdant_flame',
-    name: 'Зелёное пламя',
-    minDmg: 20, maxDmg: 60,
-    color: '#2ecc71',
-    glowColor: 'rgba(46, 204, 113, 0.6)',
-    emoji: '🔥',
-    animClass: 'spell-verdant'
+  arcane_focus: {
+    id: 'arcane_focus',
+    name: 'Концентрация',
+    minDmg: 0, maxDmg: 0,
+    color: '#c9a84c',
+    glowColor: 'rgba(201, 168, 76, 0.6)',
+    emoji: '🛡️',
+    animClass: 'spell-focus',
+    type: 'defensive',
+    typeLabel: 'Защита — следующая атака ×2'
   },
-  shadow_strike: {
-    id: 'shadow_strike',
-    name: 'Теневой удар',
-    minDmg: 30, maxDmg: 40,
+  shadow_pulse: {
+    id: 'shadow_pulse',
+    name: 'Теневой импульс',
+    minDmg: 15, maxDmg: 55,
     color: '#9b59b6',
     glowColor: 'rgba(155, 89, 182, 0.6)',
     emoji: '🌑',
-    animClass: 'spell-shadow'
+    animClass: 'spell-shadow',
+    type: 'attack_alt',
+    typeLabel: 'Альт. атака'
   }
 };
 
@@ -52,7 +58,8 @@ let battleState = {
   round: 1,
   dummyHP: DUMMY_MAX_HP,
   totalDamage: 0,
-  roundsHistory: []
+  roundsHistory: [],
+  focusCharged: false  // true если Концентрация заряжена
 };
 
 // Колбек вызывается по окончании боя с результатами
@@ -83,7 +90,8 @@ export function initBattle() {
     round: 1,
     dummyHP: DUMMY_MAX_HP,
     totalDamage: 0,
-    roundsHistory: []
+    roundsHistory: [],
+    focusCharged: false
   };
 
   renderBattleUI();
@@ -98,12 +106,23 @@ function randInt(min, max) {
 }
 
 /**
- * Вычисляет финальный урон: base * (1 + bonusPower/100)
+ * Вычисляет финальный урон: base * (1 + bonusPower/100) * focusMultiplier
  */
 function calcDamage(spell) {
   const bonusPower = getBonusPower();
   const base = randInt(spell.minDmg, spell.maxDmg);
-  return Math.floor(base * (1 + bonusPower / 100));
+  let multiplier = 1 + bonusPower / 100;
+
+  // Если заряжена Концентрация — удваиваем урон и снимаем заряд
+  if (battleState.focusCharged) {
+    multiplier *= 2.0;
+    battleState.focusCharged = false;
+    // Убираем индикатор заряда
+    const indicator = document.getElementById('focus-indicator');
+    if (indicator) indicator.remove();
+  }
+
+  return Math.floor(base * multiplier);
 }
 
 /**
@@ -117,6 +136,22 @@ export async function castSpell(spellId) {
 
   // Блокируем кнопки на время анимации
   setSpellButtonsDisabled(true);
+
+  // Защитное заклинание Концентрация — особая логика
+  if (spell.id === 'arcane_focus') {
+    battleState.focusCharged = true;
+    battleState.roundsHistory.push({ spell, damage: 0, round: battleState.round, isFocus: true });
+    await playFocusAnimation();
+    addCombatLog(spell, 0, battleState.round, true);
+    battleState.round++;
+    if (battleState.round > ROUNDS_TOTAL) {
+      await endBattle();
+    } else {
+      updateRoundDisplay();
+      setSpellButtonsDisabled(false);
+    }
+    return;
+  }
 
   const damage = calcDamage(spell);
   battleState.dummyHP -= damage;
@@ -219,6 +254,26 @@ function delay(ms) {
 }
 
 /**
+ * Анимация Концентрации — маг заряжается, снаряда нет
+ */
+async function playFocusAnimation() {
+  const mageEl = document.getElementById('combat-mage');
+  if (!mageEl) return;
+
+  mageEl.classList.add('mage-focusing');
+
+  // Показываем индикатор заряда
+  const indicator = document.createElement('div');
+  indicator.className = 'focus-charged-indicator';
+  indicator.id = 'focus-indicator';
+  indicator.textContent = '⚡ КОНЦЕНТРАЦИЯ';
+  mageEl.appendChild(indicator);
+
+  await delay(900);
+  mageEl.classList.remove('mage-focusing');
+}
+
+/**
  * Проигрывает визуальную анимацию заклинания
  */
 async function playSpellAnimation(spell, damage) {
@@ -305,16 +360,21 @@ function updateDummyHP() {
 /**
  * Добавляет строку в лог боя
  */
-function addCombatLog(spell, damage, round) {
+function addCombatLog(spell, damage, round, isFocus = false) {
   const logEl = document.getElementById('combat-log');
   if (!logEl) return;
 
   const entry = document.createElement('div');
   entry.className = 'log-entry';
+
+  const damageHtml = isFocus
+    ? `<span class="log-focus">→ Следующая атака ×2</span>`
+    : `<span class="log-damage">-${damage}</span>`;
+
   entry.innerHTML = `
     <span class="log-round">Раунд ${round}</span>
     <span class="log-spell" style="color: ${spell.color}">${spell.emoji} ${spell.name}</span>
-    <span class="log-damage">-${damage}</span>
+    ${damageHtml}
   `;
   logEl.appendChild(entry);
   logEl.scrollTop = logEl.scrollHeight;

@@ -140,8 +140,17 @@ export function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Мерджим с дефолтом для совместимости версий
-      _state = Object.assign(getDefaultState(), parsed);
+      const defaults = getDefaultState();
+      // Глубокий мёрдж: гарантируем наличие всех вложенных ключей
+      _state = {
+        ...defaults,
+        ...parsed,
+        dailyLogin:  { ...defaults.dailyLogin,  ...(parsed.dailyLogin  || {}) },
+        combat:      { ...defaults.combat,       ...(parsed.combat      || {}) },
+        timestamps:  { ...defaults.timestamps,   ...(parsed.timestamps  || {}) },
+        equipment:   { ...defaults.equipment,    ...(parsed.equipment   || {}) },
+        inventory:   { ...defaults.inventory,    ...(parsed.inventory   || {}) }
+      };
     } else {
       _state = getDefaultState();
     }

@@ -45,10 +45,17 @@ function renderDailyLoginGrid() {
   if (!grid) return;
 
   const state = getState();
-  // currentDay уже указывает на следующий день для получения
-  // Но нам нужен текущий день (который сейчас активен)
-  const activeDayIndex = (state.dailyLogin.currentDay - 1) % 7; // индекс от 0
-  const claimed = !canClaimDailyLogin(); // уже заклаймили сегодня
+  const claimedToday = !canClaimDailyLogin();
+  // nextDayIndex — индекс (0-6) дня, который нужно заклаймить следующим
+  const nextDayIndex = (state.dailyLogin.currentDay - 1) % 7;
+
+  // Обновляем кнопку "Забрать"
+  const claimBtn = document.getElementById('btn-claim-daily');
+  if (claimBtn) {
+    claimBtn.disabled = claimedToday;
+    claimBtn.textContent = claimedToday ? '✓ Уже получено' : '✦ Забрать';
+    claimBtn.style.opacity = claimedToday ? '0.5' : '1';
+  }
 
   grid.innerHTML = '';
 
@@ -56,10 +63,18 @@ function renderDailyLoginGrid() {
     const dayEl = document.createElement('div');
     dayEl.className = 'daily-day';
 
-    // Определяем статус дня
-    let status = 'future'; // будущие дни
-    if (index < activeDayIndex) status = 'past'; // прошедшие
-    if (index === activeDayIndex) status = claimed ? 'claimed' : 'active'; // текущий
+    let status;
+    if (claimedToday) {
+      // Сегодня уже получено: прошедшие дни — past, следующий — next (завтра), остальные — future
+      if (index < nextDayIndex) status = 'past';
+      else if (index === nextDayIndex) status = 'next';
+      else status = 'future';
+    } else {
+      // Можно получить сейчас
+      if (index < nextDayIndex) status = 'past';
+      else if (index === nextDayIndex) status = 'active';
+      else status = 'future';
+    }
 
     dayEl.classList.add(`day-${status}`);
 
@@ -70,8 +85,9 @@ function renderDailyLoginGrid() {
       <div class="day-number">День ${reward.day}</div>
       <div class="day-icon">${icon}</div>
       <div class="day-label">${label}</div>
-      ${status === 'claimed' ? '<div class="day-check">✓</div>' : ''}
+      ${status === 'past' ? '<div class="day-check">✓</div>' : ''}
       ${status === 'active' ? '<div class="day-active-badge">Сегодня</div>' : ''}
+      ${status === 'next' ? '<div class="day-active-badge day-tomorrow-badge">Завтра</div>' : ''}
     `;
 
     grid.appendChild(dayEl);

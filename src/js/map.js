@@ -176,9 +176,37 @@ function handleLocationClick(loc) {
       if (onEnterCombat) onEnterCombat();
       break;
     case 'town':
-      if (onEnterTown) onEnterTown();
+      showLocationPopup(loc);
       break;
   }
+}
+
+/**
+ * Показывает popup с изображением локации
+ */
+function showLocationPopup(loc) {
+  const popup = document.getElementById('popup-location');
+  const img = document.getElementById('location-view-img');
+  const name = document.getElementById('location-view-name');
+  const desc = document.getElementById('location-view-desc');
+  if (!popup) return;
+
+  name.textContent = loc.nameShort;
+  desc.textContent = loc.description;
+
+  // Картинки по локациям
+  const locationImages = {
+    town_square: 'from_user/sqare.png'
+  };
+  const imgSrc = locationImages[loc.id];
+  if (imgSrc) {
+    img.src = imgSrc;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+  }
+
+  popup.classList.add('visible');
 }
 
 /**

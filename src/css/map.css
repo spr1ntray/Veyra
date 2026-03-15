@@ -44,9 +44,9 @@
 /* === СЕТКА КАРТЫ === */
 #map-grid {
   display: grid;
-  grid-template-columns: repeat(5, 96px);
-  grid-template-rows: repeat(4, 88px);
-  gap: 12px;
+  grid-template-columns: repeat(5, 130px);
+  grid-template-rows: repeat(4, 115px);
+  gap: 16px;
   position: relative;
 }
 
@@ -112,7 +112,7 @@
 
 /* === ИКОНКА ЛОКАЦИИ === */
 .location-icon {
-  font-size: 26px;
+  font-size: 34px;
   line-height: 1;
   margin-bottom: 4px;
   filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.5));
@@ -126,7 +126,7 @@
 /* === НАЗВАНИЕ ЛОКАЦИИ === */
 .location-name {
   font-family: var(--font-title);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.5px;
   color: var(--color-text-muted);
   text-transform: uppercase;

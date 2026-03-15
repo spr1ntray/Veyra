@@ -1,7 +1,6 @@
 # Референсные фото (не нужны в репо)
-*.jpg
-*.jpeg
-*.png
+photo_2026-03-15_*.jpg
+photo_2026-03-15_*.jpeg
 
 # Claude Code служебные файлы
 .claude/

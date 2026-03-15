@@ -77,6 +77,18 @@
   opacity: 0.4;
 }
 
+/* Завтрашний день (следующий к получению, но сегодня уже получено) */
+.daily-day.day-next {
+  background: rgba(74, 144, 217, 0.06);
+  border-color: rgba(74, 144, 217, 0.3);
+  opacity: 0.8;
+}
+
+.day-tomorrow-badge {
+  background: rgba(74, 144, 217, 0.2) !important;
+  color: var(--color-arcane) !important;
+}
+
 .day-number {
   font-family: var(--font-title);
   font-size: 9px;
@@ -572,4 +584,48 @@
   background: rgba(201, 168, 76, 0.2);
   box-shadow: var(--glow-gold);
   transform: translateY(-1px);
+}
+
+/* === POPUP: ПРОСМОТР ЛОКАЦИИ === */
+.location-view-window {
+  background: linear-gradient(160deg, #1f1040 0%, #0d1230 100%);
+  border: 1px solid var(--color-border-gold);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--glow-purple), 0 20px 60px rgba(0,0,0,0.7);
+  animation: popupSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.location-view-name {
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-gold);
+  text-align: center;
+  padding: 20px 48px 16px;
+  text-shadow: var(--glow-gold);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border-gold);
+}
+
+.location-view-img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.location-view-desc {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 16px 32px 24px;
+  font-size: 15px;
+  line-height: 1.6;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
