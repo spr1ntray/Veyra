@@ -4,12 +4,12 @@
  */
 
 /* === БОЕВОЙ ЭКРАН === */
+/* Не переопределяем position — наследуем position: absolute; inset: 0 из .screen */
 #screen-combat {
   background:
     radial-gradient(ellipse at 50% 30%, rgba(26, 10, 46, 0.8) 0%, transparent 60%),
     linear-gradient(180deg, #08071a 0%, #0d0a20 40%, #0a1510 100%);
   flex-direction: column;
-  position: relative;
   overflow: hidden;
 }
 
@@ -616,14 +616,4 @@
   text-shadow: 0 0 8px rgba(201, 168, 76, 0.5);
 }
 
-/* Горячие клавиши */
-.spell-btn::after {
-  content: attr(data-key);
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-family: var(--font-title);
-  font-size: 9px;
-  color: rgba(255,255,255,0.2);
-  z-index: 2;
-}
+/* Горячие клавиши (data-key) отображаются через span внутри кнопки */

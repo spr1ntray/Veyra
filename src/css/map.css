@@ -5,8 +5,8 @@
  */
 
 /* === ЭКРАН КАРТЫ === */
+/* Не переопределяем position — наследуем position: absolute; inset: 0 из .screen */
 #screen-map {
-  position: relative;
   overflow: hidden;
 }
 

@@ -587,8 +587,8 @@ body {
    LOCATION SCREEN — экран текущей локации с полноэкранным фоном
    ============================================================ */
 
+/* Не переопределяем position — наследуем position: absolute; inset: 0 из .screen */
 #screen-location {
-  position: relative;
   overflow: hidden;
 }
 
@@ -734,8 +734,8 @@ body {
    HOME SCREEN — экран дома с магом и статами
    ============================================================ */
 
+/* Не переопределяем position — наследуем position: absolute; inset: 0 из .screen */
 #screen-home {
-  position: relative;
   overflow: hidden;
 }
 
