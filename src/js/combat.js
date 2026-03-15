@@ -348,6 +348,12 @@ function updateDummyHP() {
 
   if (hpBar) {
     hpBar.style.width = `${percent}%`;
+    // Add/remove critical class at 25% HP
+    if (percent <= 25) {
+      hpBar.classList.add('hp-critical');
+    } else {
+      hpBar.classList.remove('hp-critical');
+    }
     if (percent > 60) {
       hpBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
     } else if (percent > 30) {

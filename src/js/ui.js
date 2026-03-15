@@ -24,6 +24,13 @@ export function showScreen(screenId) {
     currentScreen = screenId;
   }
 
+  // Trigger fade-in animation
+  if (target) {
+    target.classList.remove('screen-enter');
+    void target.offsetWidth; // reflow
+    target.classList.add('screen-enter');
+  }
+
   // HUD и нижняя навигация удалены из DOM —
   // каждый экран содержит свои элементы управления встроенно
 }
@@ -242,5 +249,15 @@ export function initStarBackground() {
     star.style.height = size + 'px';
 
     starsEl.appendChild(star);
+  }
+
+  // Generate 10 ember particles for atmosphere
+  for (let i = 0; i < 10; i++) {
+    const ember = document.createElement('div');
+    ember.className = 'ember-particle';
+    ember.style.left = Math.random() * 100 + '%';
+    ember.style.animationDelay = (Math.random() * 6) + 's';
+    ember.style.animationDuration = (4 + Math.random() * 4) + 's';
+    starsEl.appendChild(ember);
   }
 }
