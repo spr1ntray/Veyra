@@ -1,0 +1,540 @@
+/**
+ * inventory.css — экран инвентаря и кнопка доступа к нему
+ */
+
+/* ===== КНОПКА ИНВЕНТАРЯ (на экране локации) ===== */
+.inv-top-btn {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: 54%;
+  padding: 13px 0; /* +30%: 10 → 13 */
+  background: rgba(10, 7, 30, 0.75);
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  border-radius: 6px;
+  color: rgba(232, 213, 160, 0.9); /* тёплый золотистый вместо фиолетового */
+  font-family: var(--font-title);
+  font-size: 17px; /* +30%: 13 → 17 */
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  box-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
+}
+.inv-top-btn:hover {
+  border-color: rgba(201, 168, 76, 0.9);
+  color: #e8d5a0;
+  box-shadow: 0 0 30px rgba(201, 168, 76, 0.4);
+}
+
+/* ===== ЭКРАН ИНВЕНТАРЯ ===== */
+#screen-home {
+  /* display намеренно убран — управляется через .screen / .screen.active в main.css */
+  background: linear-gradient(135deg, #0a0a0e 0%, #0d0b08 100%); /* тёмный коричневый вместо фиолетового */
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Шапка */
+.inv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 26px; /* +30%: 12→16, 20→26 */
+  border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+  flex-shrink: 0;
+}
+.inv-back-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--color-text-muted);
+  font-family: var(--font-title);
+  font-size: 17px; /* +30%: 13 → 17 */
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 9px 18px; /* +30%: 7→9, 14→18 */
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.inv-back-btn:hover { border-color: rgba(201,168,76,0.5); color: #e8d5a0; }
+
+.inv-header-title {
+  font-family: var(--font-title);
+  font-size: var(--fs-xl); /* Page title */
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(232,213,160,0.7);
+}
+.inv-header-gold {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 24px; /* +30%: 18 → 24 */
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gold);
+}
+
+/* ===== ОСНОВНОЙ LAYOUT ===== */
+.inv-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0; /* flex-дети не растягивают родителя за пределы экрана */
+}
+
+/* ===== ЛЕВАЯ ЧАСТЬ (40%): вешалка ===== */
+.inv-left {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  padding: 21px 21px 21px 26px; /* +30%: 16→21, 20→26 */
+  overflow: hidden;
+  min-height: 0; /* предотвращает схлопывание flex-колонки */
+}
+
+.inv-section-label {
+  font-family: var(--font-title);
+  font-size: var(--fs-md); /* Section title */
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(201, 168, 76, 0.6);
+  margin-bottom: 14px;
+}
+
+/* ===== ИНТЕРАКТИВНАЯ ВЕШАЛКА ===== */
+.inv-hanger-interactive {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Wrapper — sized to image, circles positioned inside via % */
+.hanger-img-wrapper {
+  position: relative;
+  display: block;
+  width: 47%;
+}
+
+/* Крупное изображение вешалки */
+.hanger-main-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  opacity: 0.9;
+  pointer-events: none;
+  filter: drop-shadow(0 0 12px rgba(201, 168, 76, 0.3)); /* золото вместо фиолетового */
+}
+
+/* ===== YELLOW CIRCLE INDICATORS ===== */
+
+/* Clickable circle positioned over hanger image via inline top/left % */
+.hanger-circle {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(201, 168, 76, 0.55);
+  border: 2px solid #c9a84c;
+  cursor: pointer;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  transition: all 0.25s ease;
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.6);
+}
+
+.hanger-circle:hover {
+  background: rgba(201, 168, 76, 0.35);
+  border-color: rgba(201, 168, 76, 1);
+  box-shadow: 0 0 16px rgba(201, 168, 76, 0.5);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* Active filter state — bright pulsing circle */
+.hanger-circle.is-active-filter {
+  background: rgba(201, 168, 76, 0.4);
+  border-color: #e8d5a0;
+  box-shadow: 0 0 20px rgba(201, 168, 76, 0.6), 0 0 40px rgba(201, 168, 76, 0.2);
+  animation: circleActivePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes circleActivePulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(201, 168, 76, 0.4); }
+  50%      { box-shadow: 0 0 24px rgba(201, 168, 76, 0.7), 0 0 48px rgba(201, 168, 76, 0.2); }
+}
+
+/* Статы персонажа */
+.inv-char-block {
+  padding-top: 12px;
+  border-top: 1px solid rgba(201, 168, 76, 0.15);
+  margin-top: 8px;
+}
+.inv-char-name {
+  font-family: var(--font-title);
+  font-size: 22px; /* минимум 22px согласно заданию, было 17 */
+  color: rgba(232, 213, 160, 0.9);
+  margin-bottom: 2px;
+}
+.inv-char-level {
+  font-family: var(--font-ui); /* числовой уровень персонажа — UI */
+  font-size: 18px; /* минимум 18px согласно заданию, было 14 */
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--color-gold);
+  margin-bottom: 10px;
+}
+.inv-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.inv-stat-label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs); /* Caption */
+  letter-spacing: 1px;
+  color: rgba(201, 168, 76, 0.7);
+  width: auto;
+  min-width: 75px;
+  flex-shrink: 0;
+}
+.inv-stat-bar-wrap {
+  flex: 1;
+  height: 7px; /* +30%: 5 → 7 */
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.inv-stat-bar {
+  height: 100%;
+  background: linear-gradient(to right, #c9a84c, #e8c46a);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.inv-stat-val {
+  font-size: 18px; /* +30%: 14 → 18 */
+  color: rgba(232,213,160,0.7);
+  width: 24px;
+  text-align: right;
+}
+
+/* ===== РАЗДЕЛИТЕЛЬ ===== */
+.inv-divider {
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(201, 168, 76, 0.4) 15%,
+    rgba(201, 168, 76, 0.6) 50%,
+    rgba(201, 168, 76, 0.4) 85%,
+    transparent 100%
+  );
+  flex-shrink: 0;
+}
+
+/* ===== ПРАВАЯ ЧАСТЬ (60%): сетка предметов ===== */
+.inv-right {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 21px 26px 21px 21px;
+  overflow-y: auto;
+}
+
+/* Сетка: 4 колонки, ячейки квадратные через aspect-ratio */
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  column-gap: 14px;
+  row-gap: 8px;
+  width: 100%;
+}
+
+/* ===== ПАГИНАЦИЯ ===== */
+.inv-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0 4px;
+  flex-shrink: 0;
+}
+
+.inv-pagination:empty { display: none; }
+
+.inv-page-btn {
+  background: rgba(10, 7, 30, 0.75);
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  color: rgba(232, 213, 160, 0.85);
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.inv-page-btn:hover {
+  border-color: rgba(201, 168, 76, 0.9);
+  color: #e8d5a0;
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.3);
+}
+.inv-page-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  box-shadow: none;
+}
+
+.inv-page-counter {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: rgba(201, 168, 76, 0.7);
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Ячейка предмета */
+.inv-cell {
+  aspect-ratio: 1;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: default;
+  transition: all 0.15s ease;
+}
+
+/* Фон BG_SELL через ::before — не переопределяется inline background из JS */
+.inv-cell.has-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/generated/pixel/BG_SELL.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.55;
+  z-index: 0;
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+/* Контент ячейки поверх псевдоэлемента */
+.inv-cell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Пустые ячейки получают дефолтный тёмный фон; заполненные — только rarityBg из JS */
+.inv-cell:not(.has-item) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.inv-cell.has-item {
+  border-color: rgba(201, 168, 76, 0.3);
+  cursor: pointer;
+}
+.inv-cell.has-item:hover {
+  border-color: rgba(201, 168, 76, 0.9);
+  background-color: rgba(20, 15, 10, 0.8);
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.3), inset 0 0 8px rgba(201, 168, 76, 0.05);
+}
+.inv-cell.is-equipped {
+  border-color: var(--color-gold);
+  box-shadow: inset 0 0 8px rgba(201, 168, 76, 0.1);
+}
+.inv-cell.is-equipped::after {
+  content: '✓';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: var(--color-gold);
+  z-index: 2;
+}
+
+.cell-emoji { font-size: 52px; }
+.cell-count {
+  position: absolute;
+  bottom: 2px;
+  right: 5px;
+  font-size: 16px; /* +30%: 12 → 16 */
+  color: rgba(201, 168, 76, 0.6); /* золото вместо фиолетового */
+  font-family: var(--font-ui); /* счётчик — UI элемент, Inter */
+  font-weight: 600;
+}
+.cell-rarity-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 0 0 6px 6px;
+}
+
+/* Цвета редкости */
+.rarity-starter  { background: #555; }
+.rarity-common   { background: #888; }
+.rarity-uncommon { background: #2ecc71; }
+.rarity-rare     { background: #4a90d9; }
+.rarity-epic     { background: #9b59b6; }
+.rarity-legendary{ background: #f39c12; }
+
+/* ===== TOOLTIP ===== */
+.inv-item-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 7, 30, 0.95);
+  border: 1px solid rgba(201, 168, 76, 0.6);
+  border-radius: 8px;
+  padding: 16px 21px; /* +30%: 12→16, 16→21 */
+  min-width: 220px; /* +30%: 180 → 220 */
+  text-align: center;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 30px rgba(201, 168, 76, 0.3);
+}
+.inv-item-tooltip.visible { display: block; }
+
+.tooltip-name {
+  font-family: var(--font-title);
+  font-size: var(--fs-sm); /* Item label */
+  letter-spacing: 1px;
+  color: rgba(232, 213, 160, 0.95);
+  margin-bottom: 4px;
+}
+.tooltip-type {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs); /* Caption */
+  color: rgba(201, 168, 76, 0.8);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.tooltip-bonus {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs); /* Caption / stat */
+  font-weight: 600;
+  color: var(--color-gold);
+  margin-bottom: 10px;
+}
+.tooltip-equip-btn {
+  background: rgba(201, 168, 76, 0.2);
+  border: 1px solid rgba(201, 168, 76, 0.6);
+  color: #e8d5a0;
+  font-family: var(--font-title);
+  font-size: 18px; /* +30%: 14 → 18 */
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 20px; /* +30%: 6→8, 16→20 */
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tooltip-equip-btn:hover {
+  background: rgba(201, 168, 76, 0.4);
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+}
+
+/* Tooltip button row */
+.tooltip-btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* Use button for consumables */
+.tooltip-use-btn {
+  background: rgba(201, 168, 76, 0.15); /* золото вместо синего */
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  color: #e8d5a0;
+  font-family: var(--font-title);
+  font-size: 18px; /* +30%: 14 → 18 */
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 20px; /* +30%: 6→8, 16→20 */
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tooltip-use-btn:hover {
+  background: rgba(201, 168, 76, 0.3);
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+}
+
+/* ===== BUFF PILLS (inventory screen) ===== */
+.inv-buffs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.1);
+}
+
+.buff-pill-inv {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px; /* +30%: 3→4, 8→10 */
+  border-radius: 10px;
+  border: 1px solid;
+  font-family: var(--font-ui); /* UI-элемент: Inter вместо лорного шрифта */
+  font-size: 16px; /* +30%: 12 → 16 */
+}
+.buff-pill-label {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 15px; /* +30%: 11 → 15 */
+}
+.buff-pill-text {
+  color: rgba(232, 224, 208, 0.8);
+  font-size: 16px; /* +30%: 12 → 16 */
+}
+.buff-pill-count {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: rgba(232, 224, 208, 0.5);
+  margin-left: 2px;
+}
+.buff-pill-count::before { content: '('; }
+.buff-pill-count::after  { content: ')'; }
+
+/* Пустая ячейка инвентаря — пунктирная рамка */
+.cell-empty-inner {
+  width: 60%;
+  height: 60%;
+  border: 1px dashed rgba(201, 168, 76, 0.15);
+  border-radius: 4px;
+}
+
+/* ===== ФИЛЬТР ПО СЛОТАМ ===== */
+
+/* Активный слот вешалки — для обратной совместимости (старые .hanger-slot) */
+/* Новые стили фильтра определены в .hanger-zone.is-active-filter выше */
+
+/* Метка текущего фильтра рядом с заголовком Items */
+.inv-filter-label {
+  font-family: var(--font-title);
+  font-size: 17px; /* +30%: 13 → 17 */
+  letter-spacing: 2px;
+  color: rgba(201, 168, 76, 0.8);
+  text-transform: uppercase;
+  margin-left: 6px;
+}

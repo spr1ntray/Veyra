@@ -35,6 +35,52 @@ export function initMapScreen(callbacks) {
       if (_onGoToHome) _onGoToHome();
     });
   }
+
+  window.addEventListener('resize', positionMapMarkers);
+}
+
+/**
+ * Вызывать при каждом показе карты (после того как экран стал visible).
+ */
+export function showMapScreen() {
+  positionMapMarkers();
+}
+
+/**
+ * Вычисляет экранные координаты маркеров с учётом background-size: cover.
+ * Изображение карты: 711×400 px. Маркеры задаются в долях от размера изображения.
+ */
+function positionMapMarkers() {
+  const screenEl = document.getElementById('screen-map');
+  if (!screenEl) return;
+
+  const W = screenEl.offsetWidth;
+  const H = screenEl.offsetHeight;
+
+  // Натуральные размеры изображения карты
+  const imgW = 711, imgH = 400;
+
+  // cover: единый масштаб = max(scaleX, scaleY)
+  const scale = Math.max(W / imgW, H / imgH);
+  const renderedW = imgW * scale;
+  const renderedH = imgH * scale;
+
+  // Смещение при центрировании (cover может обрезать края)
+  const offX = (renderedW - W) / 2;
+  const offY = (renderedH - H) / 2;
+
+  const markers = [
+    { id: 'hotspot-square', ix: 0.505, iy: 0.507 },
+    { id: 'hotspot-home',   ix: 0.577, iy: 0.785 }
+  ];
+
+  markers.forEach(({ id, ix, iy }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Координаты левого верхнего угла маркера (центрирование через margin в CSS)
+    el.style.left = (ix * renderedW - offX) + 'px';
+    el.style.top  = (iy * renderedH - offY) + 'px';
+  });
 }
 
 /**

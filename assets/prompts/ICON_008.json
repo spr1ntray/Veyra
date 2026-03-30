@@ -1,0 +1,22 @@
+{
+  "asset_id": "ICON_008",
+  "asset_name": "Staff — Epic (Shadow Aura)",
+  "type": "item_icon",
+  "rarity": "epic",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, dark shadowy staff with mystical aura, obsidian or void-touched staff radiating dark purple and cyan ethereal energy, charcoal background (#1a1a24), purple neon aura (#b700ff) dominant with cyan highlights (#00d9ff), clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered diagonal composition, eldritch power emanating",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, oversaturated glowing, bright solid colors, cluttered background, illegible, too many particles, metallic shine, wooden appearance",
+  "style_notes": "Epic rarity staff. Emphasizes shadow and void with purple neon aura as primary accent, cyan as secondary. Creates sense of immense magical power. Maintains 64x64 readability while conveying highest rarity tier.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#0a0a0e",
+    "accent_primary": "#b700ff",
+    "accent_secondary": "#00d9ff"
+  }
+}

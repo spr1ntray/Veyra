@@ -1,0 +1,13 @@
+{
+  "asset_id": "LOADSCREEN_003",
+  "asset_name": "Loading Screen — Ruined Archway & Starfield",
+  "type": "loading_screen_background",
+  "target_model": "Midjourney",
+  "prompt_en": "An ancient stone archway partially in ruins, silhouetted against a vast starfield, pixel art style, dark fantasy, minimalist aesthetic, vertical composition (9:16). The archway is constructed of weathered stone in deep navy blue (#1a2d4d) and dark indigo (#0f1b33), with cracks and age visible but not detailed. Arcane symbols and runes are faintly etched into the stone, glowing subtly in gold (#d4af37). The background reveals a cosmic starry sky in deep twilight purple (#3d2a47) and navy, with countless small stars scattered across. In the middle distance, a flat misty plain stretches beneath the archway in muted violet tones. The foreground hints at stone steps or scattered ruins in shadow. Pale silver (#b8c5d6) light filters through the archway as if from another realm. No bright colors, desaturated and cool-toned throughout. Retro RPG aesthetic, 16-bit sprite art quality, mysterious and transcendent mood. Clear dark zone in lower third for text overlay. Resolution: 512x768 pixels.",
+  "negative_prompt": "bright colors, neon, photorealistic, detailed textures, modern architecture, cute style, 3D rendering, oversaturated, comic illustration, cheerful mood, daylight, gradients, smooth shading, legible text, watermarks, realistic vegetation, complex details",
+  "style_notes": "This variant focuses on cosmic/celestial atmosphere through the starfield background, suggesting a connection to higher magical forces. The ruined archway symbolizes ancient magical civilization without being grotesque. The focus on runes reinforces arcane lore while using restrained gold highlights per style guide. Vertical composition with clear text area. Pixel art specificity critical. This appeals to the mage protagonist theme through celestial/arcane imagery.",
+  "aspect_ratio": "9:16",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

@@ -1,0 +1,538 @@
+/**
+ * grimoire.css — стили экрана подготовки гримуара
+ * Dark fantasy стиль: пожелтевшие страницы, рунные узоры
+ */
+
+/* === ЭКРАН ГРИМУАРА === */
+#screen-grimoire {
+  background:
+    linear-gradient(to bottom, rgba(10,7,30,0.6) 0%, rgba(5,3,15,0.8) 100%),
+    url('../../assets/generated/pixel/тренировочная площадка.png') center/cover no-repeat;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* === ХЕДЕР === */
+.grimoire-header {
+  padding: 16px 24px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 10;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  background: rgba(0,0,0,0.3);
+}
+
+.grimoire-header-title {
+  font-family: var(--font-title);
+  font-size: var(--fs-xl);
+  letter-spacing: 4px;
+  color: var(--color-gold);
+  text-shadow: var(--glow-gold);
+  text-transform: uppercase;
+}
+
+#btn-grimoire-back {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 7px 16px;
+  color: var(--color-text-muted);
+  font-family: var(--font-title);
+  font-size: var(--fs-sm);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+}
+
+#btn-grimoire-back:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-gold);
+}
+
+.grimoire-header-right {
+  min-width: 100px;
+  text-align: right;
+}
+
+.enemy-badge-name {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 2px;
+  color: rgba(200,180,140,0.7);
+  text-transform: uppercase;
+}
+
+/* === КНИГА ГРИМУАРА === */
+.grimoire-book {
+  flex: 1;
+  display: flex;
+  padding: 16px 20px 10px;
+  gap: 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+/* Страницы гримуара — имитация пожелтевшей бумаги */
+.grimoire-page {
+  flex: 1;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.04) 0%, transparent 60%),
+    linear-gradient(160deg, rgba(30,22,10,0.8) 0%, rgba(15,10,5,0.9) 100%);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 4px;
+  padding: 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,168,76,0.2) transparent;
+  position: relative;
+}
+
+/* Рунный узор на краях страниц */
+.grimoire-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(201,168,76,0.06);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.grimoire-page-title {
+  font-family: var(--font-title);
+  font-size: var(--fs-md);
+  letter-spacing: 3px;
+  color: rgba(201,168,76,0.6);
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+
+/* === ПОЗВОНОЧНИК КНИГИ === */
+.grimoire-spine {
+  width: 12px;
+  background: linear-gradient(180deg,
+    rgba(201,168,76,0.15) 0%,
+    rgba(201,168,76,0.08) 50%,
+    rgba(201,168,76,0.15) 100%
+  );
+  border-left: 1px solid rgba(201,168,76,0.2);
+  border-right: 1px solid rgba(201,168,76,0.2);
+  flex-shrink: 0;
+}
+
+/* === СЛОТЫ ГРИМУАРА (левая страница) === */
+.grimoire-slots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.grimoire-slot {
+  width: 132px;
+  height: 163px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 6px;
+  border: 1px dashed rgba(201,168,76,0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  background: rgba(0,0,0,0.3);
+  padding: 6px;
+}
+
+.grimoire-slot-filled {
+  border-style: solid;
+  border-color: var(--spell-color, rgba(201,168,76,0.5));
+  background: rgba(0,0,0,0.5);
+  box-shadow: 0 0 8px rgba(0,0,0,0.5), inset 0 0 12px rgba(0,0,0,0.3);
+}
+
+.grimoire-slot-filled:hover {
+  transform: scale(1.05);
+  border-color: #e74c3c;
+  box-shadow: 0 0 12px rgba(231,76,60,0.3);
+}
+
+.grimoire-slot-empty:hover {
+  border-color: rgba(201,168,76,0.6);
+  background: rgba(201,168,76,0.05);
+}
+
+.grimoire-slot.drag-over {
+  border-color: var(--color-gold) !important;
+  background: rgba(201,168,76,0.1) !important;
+  box-shadow: 0 0 16px rgba(201,168,76,0.3) !important;
+}
+
+.grimoire-slot-num {
+  font-family: var(--font-title);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: rgba(201,168,76,0.4);
+  position: absolute;
+  top: 4px;
+  left: 6px;
+}
+
+.grimoire-slot-icon {
+  width: 83px;
+  height: 83px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+  background: rgba(0,0,0,0.4);
+}
+
+.grimoire-slot-icon-empty {
+  font-size: 2.75em;
+  color: rgba(201,168,76,0.3);
+  border-color: rgba(201,168,76,0.2);
+}
+
+.grimoire-slot-spell-name {
+  font-family: var(--font-title);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.5px;
+  text-align: center;
+  text-transform: uppercase;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grimoire-slot-time {
+  font-family: var(--font-body);
+  font-size: var(--fs-2xs);
+  color: rgba(138,122,106,0.6);
+}
+
+.grimoire-slot-empty-label {
+  font-family: var(--font-title);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  color: rgba(201,168,76,0.25);
+  text-transform: uppercase;
+}
+
+/* Подсказка ротации */
+.grimoire-rotation-hint {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--fs-xs);
+  color: rgba(138,122,106,0.5);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+/* Превью DPS */
+.grimoire-dps-preview {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.dps-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.dps-row:last-child {
+  margin-bottom: 0;
+}
+
+.dps-label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  color: rgba(138,122,106,0.7);
+  text-transform: uppercase;
+}
+
+.dps-value {
+  font-family: var(--font-title);
+  font-size: var(--fs-xs);
+  color: var(--color-gold);
+  text-shadow: var(--glow-gold);
+}
+
+/* === ПРАВАЯ СТРАНИЦА: ПУЛ ЗАКЛИНАНИЙ === */
+.grimoire-spell-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spell-pool-group {}
+
+.spell-pool-school-label {
+  font-family: var(--font-title);
+  font-size: var(--fs-xs);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
+.spell-pool-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.spell-pool-card {
+  width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 2px solid var(--spell-color, rgba(255,255,255,0.15));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.spell-pool-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--spell-color, rgba(255,255,255,0.3));
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  background: rgba(10,10,20,0.8);
+}
+
+.spell-pool-card-selected {
+  border-color: var(--color-gold) !important;
+  background: rgba(201,168,76,0.08) !important;
+  box-shadow: 0 0 12px rgba(201,168,76,0.3) !important;
+}
+
+.spell-pool-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.9);
+}
+
+.pool-card-icon {
+  width: 83px;
+  height: 83px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+  background: rgba(0,0,0,0.4);
+}
+
+.pool-card-name {
+  font-family: var(--font-title);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 118px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pool-card-stats {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  color: rgba(138,122,106,0.6);
+  text-align: center;
+}
+
+/* === КАРТОЧКА ВРАГА === */
+.grimoire-enemy-card {
+  padding: 10px 20px;
+  position: relative;
+  z-index: 10;
+  border-top: 1px solid rgba(201,168,76,0.1);
+}
+
+.enemy-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: 6px;
+  padding: 8px 14px;
+}
+
+.enemy-card-name {
+  font-family: var(--font-title);
+  font-size: var(--fs-md);
+  letter-spacing: 2px;
+  color: rgba(200,180,140,0.9);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.enemy-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.enemy-card-stat {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  color: rgba(138,122,106,0.7);
+}
+
+.enemy-card-label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  color: rgba(138,122,106,0.5);
+  text-transform: uppercase;
+  margin-left: 4px;
+}
+
+.enemy-weak-tag {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  color: #e74c3c;
+  background: rgba(231,76,60,0.12);
+  border: 1px solid rgba(231,76,60,0.3);
+}
+
+.enemy-resist-tag {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  color: #3498db;
+  background: rgba(52,152,219,0.12);
+  border: 1px solid rgba(52,152,219,0.3);
+}
+
+/* === ПОДВАЛ С КНОПКОЙ === */
+.grimoire-footer {
+  padding: 14px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 10;
+  background: rgba(0,0,0,0.3);
+  border-top: 1px solid rgba(201,168,76,0.1);
+}
+
+.grimoire-warning {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--fs-xs);
+  color: #e67e22;
+  text-align: center;
+  min-height: 22px;
+}
+
+.grimoire-begin-btn {
+  font-family: var(--font-title);
+  font-size: var(--fs-lg);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 18px 72px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.08) 100%);
+  border: 1px solid rgba(201,168,76,0.5);
+  border-radius: 4px;
+  color: var(--color-gold);
+  text-shadow: var(--glow-gold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 16px rgba(201,168,76,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.grimoire-begin-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%);
+  border-color: var(--color-gold);
+  box-shadow: 0 0 30px rgba(201,168,76,0.25), 0 4px 12px rgba(0,0,0,0.3);
+  transform: translateY(-2px);
+}
+
+.grimoire-begin-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(201,168,76,0.15);
+}
+
+.grimoire-begin-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(50%);
+}
+
+/* === ЛОР-ПОДСКАЗКИ === */
+
+/* Всплывающая подсказка при пустом гримуаре */
+.grimoire-lore-hint {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--fs-xs);
+  color: rgba(201,168,76,0.75);
+  text-align: center;
+  padding: 10px 14px;
+  background: rgba(201,168,76,0.04);
+  border: 1px solid rgba(201,168,76,0.12);
+  border-radius: 6px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  animation: loreHintFadeIn 0.6s ease;
+}
+
+@keyframes loreHintFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Подписи под страницами гримуара */
+.grimoire-page-lore {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--fs-xs);
+  color: rgba(138,122,106,0.55);
+  text-align: center;
+  margin-top: 10px;
+  line-height: 1.5;
+  padding: 0 4px;
+}
+
+/* Tooltip на кнопке Begin Battle */
+.grimoire-begin-btn[title] {
+  position: relative;
+}
+
+/* Кнопка с тултипом — cursor pointer даже в disabled когда tooltip нужен */
+.grimoire-begin-btn:disabled[title] {
+  cursor: help;
+}

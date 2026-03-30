@@ -1,0 +1,22 @@
+{
+  "asset_id": "ICON_012",
+  "asset_name": "Cloak — Epic (Shadow-Woven)",
+  "type": "item_icon",
+  "rarity": "epic",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, shadow-woven mystical cloak, ethereal flowing garment with void energy and eldritch aura, charcoal background (#1a1a24), purple neon aura (#b700ff) with cyan accents (#00d9ff), flowing dynamic silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, transcendent power",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, oversaturated glowing, bright solid colors, cluttered background, illegible, too many particles, metallic shine, rigid folds, organic lifelike movement",
+  "style_notes": "Epic rarity cloak. Transforms tattered common cloak into mystical shadow-woven garment with neon aura. Uses purple and cyan accents (#b700ff, #00d9ff) to convey highest rarity. Dynamic flowing appearance indicates magical nature. Maintains 64x64 readability.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#2a2a3a",
+    "accent_primary": "#b700ff",
+    "accent_secondary": "#00d9ff"
+  }
+}

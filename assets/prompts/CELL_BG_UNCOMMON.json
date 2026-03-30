@@ -1,0 +1,14 @@
+{
+  "asset_id": "CELL_BG_002",
+  "asset_name": "Inventory Cell Background — Uncommon",
+  "type": "ui_tile_seamless",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "64x64 pixel art seamless tile, uncommon rarity inventory background, dark green tones #2d5a3d #1a4d2e mixed with charcoal, subtle mystical glow soft luminescence, faint rune patterns or nature motifs, magical but understated, minimal flat style, retro RPG feel, dark fantasy, cool tone, tileable repeating texture no visible seams",
+  "negative_prompt": "bright green, neon, oversaturated, realistic detail, photorealistic, high contrast, gold accents, cyan, excessive sparkle, ornate complexity, modern elements, gradient shading",
+  "style_notes": "Uncommon = minor magical properties hinted by muted green (arcane/nature affinity) and soft glow. Rune patterns suggest enchantment without overwhelming. Must stay within pixel art minimal aesthetic and dark fantasy palette. Seamless tile critical.",
+  "aspect_ratio": "1:1",
+  "resolution": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

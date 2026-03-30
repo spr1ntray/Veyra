@@ -1,0 +1,14 @@
+{
+  "asset_id": "CELL_BG_001",
+  "asset_name": "Inventory Cell Background — Common",
+  "type": "ui_tile_seamless",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "64x64 pixel art seamless tile, dark stone or wooden texture, common rarity background for inventory slot, muted grays and charcoal tones #5a5a5a #3a3a3a, no glow no sparkle no magical effects, flat minimal style, retro RPG aesthetic, dark fantasy atmosphere, realistic stone or wood grain pattern, tileable repeating texture",
+  "negative_prompt": "bright colors, glow, sparkle, shine, magical effects, neon, oversaturated, high contrast, photorealistic, detailed, ornate patterns, gold accents, cyan, blue, gradient",
+  "style_notes": "Common rarity = plain, utilitarian materials. Grayscale/muted grays match base inventory UI. No magical indicators. Stone or weathered wood fits dark fantasy medieval setting. Seamless tile constraint is critical — edges must repeat without visible seams.",
+  "aspect_ratio": "1:1",
+  "resolution": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

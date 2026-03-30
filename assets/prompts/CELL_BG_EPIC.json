@@ -1,0 +1,14 @@
+{
+  "asset_id": "CELL_BG_004",
+  "asset_name": "Inventory Cell Background — Epic",
+  "type": "ui_tile_seamless",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "64x64 pixel art seamless tile, epic rarity inventory background, dark purple and void violet tones #2d1a3d #1a0f2e, swirling vortex or void energy patterns, dark wisps and ethereal smoke, mystical glow subtle luminescence, dark fantasy arcane aesthetic, minimal pixel art style, mysterious atmosphere, flat design, tileable repeating texture, no visible seams",
+  "negative_prompt": "bright purple, neon violet, oversaturated, photorealistic, realistic smoke, excessive detail, golden accents, cyan blue, green, warm tones, cheerful mood, gradient shading, clarity",
+  "style_notes": "Epic = powerful void/dark magic. Purple palette from style guide (#2d1a3d). Dark wisps evoke otherworldly energy without being overly grimdark. Void motif suggests high power level. Pixel art minimalism required. Seamless tile constraint.",
+  "aspect_ratio": "1:1",
+  "resolution": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

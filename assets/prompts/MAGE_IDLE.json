@@ -1,0 +1,14 @@
+{
+  "asset_id": "MAGE_001",
+  "asset_name": "Mage Combat Animation — Idle",
+  "type": "character_animation_frame",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art character sprite, male dark fantasy mage in idle stance, resting pose facing right 3/4 view, wearing long dark tattered robe cloak #1a1a2e with cyan blue trim and rune accents #20b2aa, pale skin blue eyes, black hair, holding arcane staff with crystalline tip, standing relaxed with staff grounded, mist swirling gently around feet, subtle magical aura, 16-bit retro RPG animation frame, dark fantasy atmosphere, mysterious mood, minimal flat pixel art style, dark navy background #1a2d4d, high contrast silhouette",
+  "negative_prompt": "photorealistic, detailed textures, gradients, shading, bright colors, neon, oversaturated, modern elements, multiple characters, text, watermark, action pose, dynamic movement, sword, gun, realistic anatomy, gore, cartoon style",
+  "style_notes": "Idle = calm, grounded, contemplative. Matches current mage sprite (dark robe, cyan trim, staff). Resting posture. Subtle mist/aura hints at magical nature without overwhelming animation. Right-facing 3/4 view matches combat UI perspective. Pixel art minimalism. Dark navy background per style guide.",
+  "aspect_ratio": "1:1",
+  "resolution": "512x512",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

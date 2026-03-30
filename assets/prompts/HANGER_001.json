@@ -1,0 +1,14 @@
+{
+  "asset_id": "HANGER_001",
+  "asset_name": "Inventory UI — Wizard Hanger (Wooden, Silhouettes)",
+  "type": "ui_element_inventory",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A vertical pixel art wooden hanger with a hook at the top, rendered in dark fantasy minimalist style. The hanger is dark brown (#3d2a47 to #2d1a3d tones) with visible wood grain texture. Three silhouettes of wizard items hang from the hanger: a pointed hat (left), a flowing cloak/robe (center), and a magical staff with a glowing orb tip (right). The background is transparent. The overall composition is vertical (approximately 200×350 pixels), dark fantasy RPG aesthetic, retro pixel art style, 16-bit sprite quality. The silhouettes are rendered in desaturated navy blue (#1a2d4d) with subtle gold (#d4af37) accents on the staff's orb and hat brim. Dark, mysterious mood, minimalist design, no detail overdone. Suitable for game inventory UI.",
+  "negative_prompt": "bright colors, neon, photorealistic, 3D render, detailed shading, smooth gradients, modern design, cute style, colorful background, oversaturated, complex patterns, legible text, watermark, non-transparent background, contemporary aesthetic, comic illustration, cheerful mood, ornate embellishments, realistic lighting, shadows with depth, busy composition",
+  "style_notes": "This prompt emphasizes silhouette simplicity and minimalist pixel art aesthetic. The transparent background requirement and vertical orientation fit the left-side inventory panel layout. Gold accents are used sparingly only on the staff's magical element (orb), consistent with style guide rules. The desaturated navy and dark purple tones maintain dark fantasy atmosphere while keeping silhouettes readable at small UI sizes.",
+  "aspect_ratio": "custom_vertical",
+  "resolution": "200x350",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

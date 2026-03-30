@@ -1,0 +1,14 @@
+{
+  "asset_id": "CELL_BG_005",
+  "asset_name": "Inventory Cell Background — Legendary",
+  "type": "ui_tile_seamless",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "64x64 pixel art seamless tile, legendary rarity inventory slot, gold and amber tones #d4af37 #b8860b with deep navy base #1a2d4d, celestial fire patterns and radiant glow, bright luminescence magical aura, heavenly light rays, dark fantasy arcane aesthetic, pixel art flat minimal style, mystical powerful energy, tileable repeating texture, no visible seams",
+  "negative_prompt": "oversaturated gold, neon yellow, orange, realistic flames, photorealistic detail, excessive sparkle, modern elements, purple void tones, cyan, desaturated appearance, gradient shading, busy composition",
+  "style_notes": "Legendary = ultimate power. Gold (#d4af37) from style guide is primary accent here (sparingly used per rules, but justified for highest rarity). Celestial/fire motif suggests divine or primordial power. Navy base keeps it grounded in dark fantasy palette. Pixel art minimalism. Seamless tile critical.",
+  "aspect_ratio": "1:1",
+  "resolution": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

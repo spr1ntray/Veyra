@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_005",
+  "asset_name": "Staff — Common (Wooden)",
+  "type": "item_icon",
+  "rarity": "common",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, simple wooden staff, weathered wood texture with minimal detail, charcoal background (#1a1a24), no glowing effects, plain wood browns and grays, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered diagonal composition, humble craftsmanship",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, glowing effects, neon accents, magical aura, bright colors, cluttered background, illegible, crystalline features, metallic shine",
+  "style_notes": "Common rarity staff. Uses minimal coloring (wood browns and grays) on dark background to convey ordinary item. No magical effects or glows. Sharp pixel art for 64x64 scale. Clean silhouette shows simple wooden construction.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#8b7355",
+    "accent": "none"
+  }
+}

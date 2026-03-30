@@ -29,67 +29,411 @@ export const ITEMS_DATA = {
   oak_staff: {
     id: 'oak_staff', name: 'Oak Staff',
     slot: 'staff', bonus: 3, rarity: 'common',
-    desc: 'Sturdy and reliable', canUnequip: true
+    desc: 'Sturdy and reliable', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_005.png'
   },
   amethyst_staff: {
     id: 'amethyst_staff', name: 'Amethyst Staff',
-    slot: 'staff', bonus: 5, rarity: 'common',
-    desc: 'The purple gem faintly glimmers', canUnequip: true
-  },
-  swampfire_staff: {
-    id: 'swampfire_staff', name: 'Swampfire Staff',
-    slot: 'staff', bonus: 7, rarity: 'common',
-    desc: 'The tip smolders green', canUnequip: true
+    slot: 'staff', bonus: 5, rarity: 'uncommon',
+    desc: 'The purple gem faintly glimmers', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_006.png'
   },
   novice_hat: {
     id: 'novice_hat', name: 'Novice Hat',
     slot: 'hat', bonus: 3, rarity: 'common',
-    desc: 'Simple, but intact', canUnequip: true
-  },
-  stargazer_hat: {
-    id: 'stargazer_hat', name: 'Stargazer Hat',
-    slot: 'hat', bonus: 5, rarity: 'common',
-    desc: 'Stars embroidered on the brim', canUnequip: true
-  },
-  nightwind_hat: {
-    id: 'nightwind_hat', name: 'Nightwind Hat',
-    slot: 'hat', bonus: 7, rarity: 'common',
-    desc: 'Light as if sewn from mist', canUnequip: true
+    desc: 'Simple, but intact', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_009.png'
   },
   road_cloak: {
     id: 'road_cloak', name: 'Road Cloak',
     slot: 'cloak', bonus: 3, rarity: 'common',
-    desc: 'Smells of campfire smoke', canUnequip: true
-  },
-  forestguard_cloak: {
-    id: 'forestguard_cloak', name: 'Forest Guard Cloak',
-    slot: 'cloak', bonus: 5, rarity: 'common',
-    desc: 'Dark green, with a hood', canUnequip: true
-  },
-  dusk_cloak: {
-    id: 'dusk_cloak', name: 'Dusk Cloak',
-    slot: 'cloak', bonus: 7, rarity: 'common',
-    desc: 'Purple sheen on the fabric', canUnequip: true
+    desc: 'Smells of campfire smoke', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_011.png'
   },
 
-  // Расходники-заглушки
+  // Rare посохи (синий цвет)
+  void_scepter: {
+    id: 'void_scepter', name: 'Void Scepter',
+    slot: 'staff', bonus: 20, rarity: 'rare',
+    desc: 'Tears holes in reality', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_007.png'
+  },
+
+  // Epic посохи (фиолетовый цвет)
+  ancient_rod: {
+    id: 'ancient_rod', name: 'Ancient Rod',
+    slot: 'staff', bonus: 30, rarity: 'epic',
+    desc: 'Older than the world itself', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_008.png'
+  },
+
+  // Uncommon шляпы
+  runic_hood: {
+    id: 'runic_hood', name: 'Runic Hood',
+    slot: 'hat', bonus: 14, rarity: 'uncommon',
+    desc: 'Runes shimmer in the dark', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_13.png'
+  },
+
+  // Rare шляпы
+  eclipse_hat: {
+    id: 'eclipse_hat', name: 'Eclipse Hat',
+    slot: 'hat', bonus: 22, rarity: 'rare',
+    desc: 'Blocks out all light', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_014.png'
+  },
+
+  // Epic шляпы
+  crown_of_ash: {
+    id: 'crown_of_ash', name: 'Crown of Ash',
+    slot: 'hat', bonus: 35, rarity: 'epic',
+    desc: 'From a fallen king', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_010.png'
+  },
+
+  // Uncommon плащи
+  veil_of_mist: {
+    id: 'veil_of_mist', name: 'Veil of Mist',
+    slot: 'cloak', bonus: 15, rarity: 'uncommon',
+    desc: 'Shifts like fog', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_015.png'
+  },
+
+  // Rare плащи
+  nightweave_cloak: {
+    id: 'nightweave_cloak', name: 'Nightweave Cloak',
+    slot: 'cloak', bonus: 24, rarity: 'rare',
+    desc: 'Woven from shadows', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_016.png'
+  },
+
+  // Epic плащи
+  abyssal_shroud: {
+    id: 'abyssal_shroud', name: 'Abyssal Shroud',
+    slot: 'cloak', bonus: 38, rarity: 'epic',
+    desc: 'The void made cloth', canUnequip: true,
+    img: 'assets/generated/pixel/ICON_012.png'
+  },
+
+  // Расходники (consumables)
   mana_elixir: {
     id: 'mana_elixir', name: 'Mana Elixir',
     slot: 'consumable', bonus: 0, rarity: 'common',
-    desc: 'Will come in handy later...', canUnequip: false
+    desc: '+25% spell damage for 3 combats', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_017.png',
+    buffId: 'mana_surge', buffCombats: 3,
+    price: 50
   },
   crystal_shard: {
     id: 'crystal_shard', name: 'Crystal Shard',
     slot: 'consumable', bonus: 0, rarity: 'common',
-    desc: 'Glimmers with inner light. Value unknown.', canUnequip: false
+    desc: '+15 bonus gold per victory for 5 combats', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_018.png',
+    buffId: 'crystal_fortune', buffCombats: 5,
+    price: 40
+  },
+  iron_flask: {
+    id: 'iron_flask', name: 'Iron Flask',
+    slot: 'consumable', bonus: 0, rarity: 'uncommon',
+    desc: '+40 max HP for 3 combats', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_019.png',
+    buffId: 'iron_flask_buff', buffCombats: 3,
+    price: 60
+  },
+  shadow_dust: {
+    id: 'shadow_dust', name: 'Shadow Dust',
+    slot: 'consumable', bonus: 0, rarity: 'rare',
+    desc: '×2 XP for 2 combats', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_020.png',
+    buffId: 'shadow_dust_buff', buffCombats: 2,
+    price: 80
+  }
+};
+
+// ===== ДАННЫЕ ЗАКЛИНАНИЙ (Grimoire Autocast) =====
+
+export const SPELLS_DATA = {
+  arcane_bolt: {
+    id: 'arcane_bolt',
+    name: 'Arcane Bolt',
+    school: 'arcane',
+    baseDmg: { min: 25, max: 40 },
+    castTime: 1.8,
+    effect: null,
+    unlockLevel: 1,
+    description: 'Pure arcane damage. No frills, just power.',
+    color: '#4a90d9',
+    glowColor: 'rgba(74,144,217,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  arcane_barrage: {
+    id: 'arcane_barrage',
+    name: 'Arcane Barrage',
+    school: 'arcane',
+    baseDmg: { min: 15, max: 20 },
+    castTime: 1.0,
+    effect: { type: 'multishot', hits: 3 },
+    unlockLevel: 4,
+    description: 'Three arcane missiles. Fast but lower total damage.',
+    color: '#6aabf7',
+    glowColor: 'rgba(106,171,247,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  fireball: {
+    id: 'fireball',
+    name: 'Fireball',
+    school: 'fire',
+    baseDmg: { min: 30, max: 50 },
+    castTime: 2.2,
+    effect: null,
+    unlockLevel: 2,
+    description: 'High single-hit damage. A classic.',
+    color: '#e74c3c',
+    glowColor: 'rgba(231,76,60,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  ignite: {
+    id: 'ignite',
+    name: 'Ignite',
+    school: 'fire',
+    baseDmg: { min: 10, max: 15 },
+    castTime: 1.5,
+    effect: { type: 'dot', tickDmg: 8, ticks: 3, interval: 1.5, maxStacks: 3 },
+    unlockLevel: 5,
+    description: 'Weak hit + DoT: 8 dmg/tick, 3 ticks. Stacks up to 3 times.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  inferno: {
+    id: 'inferno',
+    name: 'Inferno',
+    school: 'fire',
+    baseDmg: { min: 50, max: 75 },
+    castTime: 3.5,
+    effect: null,
+    unlockLevel: 8,
+    description: 'Massive fire strike. Highest burst damage in the game. Long cast.',
+    color: '#ff4500',
+    glowColor: 'rgba(255,69,0,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  shadow_bolt: {
+    id: 'shadow_bolt',
+    name: 'Shadow Bolt',
+    school: 'shadow',
+    baseDmg: { min: 20, max: 35 },
+    castTime: 1.8,
+    effect: { type: 'lifesteal', percent: 0.20 },
+    unlockLevel: 2,
+    description: 'Damage + 20% lifesteal.',
+    color: '#8e44ad',
+    glowColor: 'rgba(142,68,173,0.6)',
+    img: 'assets/generated/spell_shadow_pulse.png'
+  },
+  drain_life: {
+    id: 'drain_life',
+    name: 'Drain Life',
+    school: 'shadow',
+    baseDmg: { min: 15, max: 25 },
+    castTime: 2.5,
+    effect: { type: 'lifesteal', percent: 0.50 },
+    unlockLevel: 6,
+    description: 'Medium damage + 50% lifesteal. Core survival tool.',
+    color: '#6c3483',
+    glowColor: 'rgba(108,52,131,0.6)',
+    img: 'assets/generated/spell_shadow_pulse.png'
+  },
+  void_eruption: {
+    id: 'void_eruption',
+    name: 'Void Eruption',
+    school: 'shadow',
+    baseDmg: { min: 40, max: 60 },
+    castTime: 2.8,
+    effect: { type: 'debuff', debuffType: 'void', ampPercent: 0.15, duration: 5 },
+    unlockLevel: 9,
+    description: 'Damage + debuff: enemy takes +15% damage for 5 sec.',
+    color: '#4a235a',
+    glowColor: 'rgba(74,35,90,0.7)',
+    img: 'assets/generated/spell_shadow_pulse.png'
+  },
+  frost_spike: {
+    id: 'frost_spike',
+    name: 'Frost Spike',
+    school: 'frost',
+    baseDmg: { min: 20, max: 30 },
+    castTime: 1.5,
+    effect: { type: 'slow', slowPercent: 0.20, duration: 3 },
+    unlockLevel: 3,
+    description: 'Damage + 20% attack slow for 3 sec.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  blizzard: {
+    id: 'blizzard',
+    name: 'Blizzard',
+    school: 'frost',
+    baseDmg: { min: 25, max: 40 },
+    castTime: 2.8,
+    effect: { type: 'slow', slowPercent: 0.40, duration: 4 },
+    unlockLevel: 7,
+    description: 'Damage + 40% attack slow for 4 sec. Overwrites Frost Spike.',
+    color: '#1a6da0',
+    glowColor: 'rgba(26,109,160,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  mana_shield: {
+    id: 'mana_shield',
+    name: 'Mana Shield',
+    school: 'utility',
+    baseDmg: { min: 0, max: 0 },
+    castTime: 1.2,
+    effect: { type: 'shield', baseShield: 40, intMultiplier: 0.8 },
+    unlockLevel: 3,
+    description: 'Creates a shield of 40 + INT*0.8 HP. Overwrites existing shield.',
+    color: '#c9a84c',
+    glowColor: 'rgba(201,168,76,0.6)',
+    img: 'assets/generated/spell_focus.png'
+  },
+  focus: {
+    id: 'focus',
+    name: 'Focus',
+    school: 'utility',
+    baseDmg: { min: 0, max: 0 },
+    castTime: 1.0,
+    effect: { type: 'focus', multiplier: 2.0 },
+    unlockLevel: 1,
+    description: 'Next damaging spell deals x2.0 damage.',
+    color: '#f1c40f',
+    glowColor: 'rgba(241,196,15,0.6)',
+    img: 'assets/generated/spell_focus.png'
+  }
+};
+
+// ===== ДАННЫЕ ВРАГОВ =====
+
+export const ENEMIES_DATA = {
+  training_dummy: {
+    id: 'training_dummy',
+    name: 'Training Dummy',
+    hp: 200,
+    attack: 0,
+    attackInterval: 0,
+    resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 1.0 },
+    weakness: null,
+    xpReward: 15,
+    goldReward: { min: 5, max: 8 },
+    description: 'Does not attack. For practice.',
+    recommendedLevel: 1,
+    img: 'assets/generated/training_dummy.png'
+  },
+  skeleton_warrior: {
+    id: 'skeleton_warrior',
+    name: 'Skeleton Warrior',
+    hp: 300,
+    attack: 12,
+    attackInterval: 2.5,
+    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 1.0 },
+    weakness: 'fire',
+    xpReward: 25,
+    goldReward: { min: 10, max: 15 },
+    description: 'Slow and predictable. Weak to Fire.',
+    recommendedLevel: 2,
+    img: 'assets/generated/training_dummy.png'
+  },
+  shadow_wraith: {
+    id: 'shadow_wraith',
+    name: 'Shadow Wraith',
+    hp: 250,
+    attack: 18,
+    attackInterval: 1.8,
+    resistances: { arcane: 1.3, fire: 0.7, shadow: 1.0, frost: 1.0 },
+    weakness: 'arcane',
+    xpReward: 30,
+    goldReward: { min: 12, max: 18 },
+    description: 'Fast attacks, medium HP. High DPS pressure.',
+    recommendedLevel: 3,
+    img: 'assets/generated/training_dummy.png'
+  },
+  frost_elemental: {
+    id: 'frost_elemental',
+    name: 'Frost Elemental',
+    hp: 400,
+    attack: 10,
+    attackInterval: 3.0,
+    resistances: { arcane: 1.0, fire: 1.5, shadow: 1.0, frost: 0.5 },
+    weakness: 'fire',
+    xpReward: 35,
+    goldReward: { min: 14, max: 20 },
+    description: 'Huge HP, weak attacks. A tank.',
+    recommendedLevel: 4,
+    img: 'assets/generated/training_dummy.png'
+  },
+  undead_knight: {
+    id: 'undead_knight',
+    name: 'Undead Knight',
+    hp: 450,
+    attack: 15,
+    attackInterval: 2.0,
+    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 0.7 },
+    weakness: 'fire',
+    xpReward: 45,
+    goldReward: { min: 18, max: 25 },
+    description: 'Two resistances, one weakness. Prepared mages only.',
+    recommendedLevel: 5,
+    img: 'assets/generated/training_dummy.png'
+  },
+  demon_lord: {
+    id: 'demon_lord',
+    name: 'Demon Lord',
+    hp: 600,
+    attack: 22,
+    attackInterval: 1.5,
+    resistances: { arcane: 1.0, fire: 0.5, shadow: 1.15, frost: 1.3 },
+    weakness: 'frost',
+    xpReward: 60,
+    goldReward: { min: 25, max: 35 },
+    description: 'High DPS and HP. Boss encounter.',
+    recommendedLevel: 7,
+    img: 'assets/generated/training_dummy.png'
+  },
+  void_horror: {
+    id: 'void_horror',
+    name: 'Void Horror',
+    hp: 800,
+    attack: 25,
+    attackInterval: 1.8,
+    resistances: { arcane: 0.7, fire: 1.0, shadow: 1.3, frost: 1.0 },
+    weakness: 'shadow',
+    xpReward: 80,
+    goldReward: { min: 35, max: 50 },
+    description: 'Endgame. Optimal rotation required.',
+    recommendedLevel: 9,
+    img: 'assets/generated/training_dummy.png'
   }
 };
 
 // Пулы предметов по слотам для случайного дропа
+// Включают все non-starter и non-consumable предметы по слотам
 export const ITEM_POOLS = {
-  staff: ['oak_staff', 'amethyst_staff', 'swampfire_staff'],
-  hat: ['novice_hat', 'stargazer_hat', 'nightwind_hat'],
-  cloak: ['road_cloak', 'forestguard_cloak', 'dusk_cloak']
+  staff: [
+    'oak_staff', 'amethyst_staff',  // common / uncommon
+    'void_scepter',                  // rare
+    'ancient_rod'                    // epic
+  ],
+  hat: [
+    'novice_hat',    // common
+    'runic_hood',    // uncommon
+    'eclipse_hat',   // rare
+    'crown_of_ash'   // epic
+  ],
+  cloak: [
+    'road_cloak',        // common
+    'veil_of_mist',      // uncommon
+    'nightweave_cloak',  // rare
+    'abyssal_shroud'     // epic
+  ]
 };
 
 // Дефолтное состояние нового игрока
@@ -106,11 +450,26 @@ function getDefaultState() {
       hat: 'starter_hat',
       cloak: 'starter_cloak'
     },
+    // По 1 штуке каждого не-стартового предмета у которого есть иконка (img)
+    // Расходники начинаются с 0 (покупаются в магазине)
     inventory: {
-      oak_staff: 0, amethyst_staff: 0, swampfire_staff: 0,
-      novice_hat: 0, stargazer_hat: 0, nightwind_hat: 0,
-      road_cloak: 0, forestguard_cloak: 0, dusk_cloak: 0,
-      mana_elixir: 0, crystal_shard: 0
+      // 12 уникальных предметов с разными иконками
+      oak_staff: 1, amethyst_staff: 1,
+      void_scepter: 1,
+      ancient_rod: 1,
+      novice_hat: 1,
+      runic_hood: 1,
+      eclipse_hat: 1,
+      crown_of_ash: 1,
+      road_cloak: 1,
+      veil_of_mist: 1,
+      nightweave_cloak: 1,
+      abyssal_shroud: 1,
+      // Расходники — начинают с 0, покупаются в магазине
+      mana_elixir: 0,
+      crystal_shard: 0,
+      iron_flask: 0,
+      shadow_dust: 0
     },
     dailyLogin: {
       currentDay: 1,
@@ -121,6 +480,14 @@ function getDefaultState() {
       fightsToday: 0,
       lastFightDate: '',
       consecutiveWins: 0
+    },
+    // Гримуар: 5 слотов, хранит spell id или null
+    grimoire: [null, null, null, null, null],
+    buffs: {
+      mana_surge:       { active: false, combatsLeft: 0 },
+      crystal_fortune:  { active: false, combatsLeft: 0 },
+      iron_flask_buff:  { active: false, combatsLeft: 0 },
+      shadow_dust_buff: { active: false, combatsLeft: 0 }
     },
     timestamps: {
       firstLogin: now,
@@ -149,8 +516,19 @@ export function loadState() {
         combat:      { ...defaults.combat,       ...(parsed.combat      || {}) },
         timestamps:  { ...defaults.timestamps,   ...(parsed.timestamps  || {}) },
         equipment:   { ...defaults.equipment,    ...(parsed.equipment   || {}) },
-        inventory:   { ...defaults.inventory,    ...(parsed.inventory   || {}) }
+        // Инвентарь берём только из сохранения — без мёрджа с defaults
+        // чтобы использованные зелья не восстанавливались после перезагрузки
+        inventory:   parsed.inventory || defaults.inventory,
+        // Гримуар: массив 5 слотов — берём из сохранения если есть
+        grimoire:    Array.isArray(parsed.grimoire) ? parsed.grimoire : defaults.grimoire,
+        buffs:       {
+          mana_surge:       { ...defaults.buffs.mana_surge,       ...((parsed.buffs && parsed.buffs.mana_surge)       || {}) },
+          crystal_fortune:  { ...defaults.buffs.crystal_fortune,  ...((parsed.buffs && parsed.buffs.crystal_fortune)  || {}) },
+          iron_flask_buff:  { ...defaults.buffs.iron_flask_buff,  ...((parsed.buffs && parsed.buffs.iron_flask_buff)  || {}) },
+          shadow_dust_buff: { ...defaults.buffs.shadow_dust_buff, ...((parsed.buffs && parsed.buffs.shadow_dust_buff) || {}) }
+        }
       };
+      saveState();
     } else {
       _state = getDefaultState();
     }
@@ -400,4 +778,121 @@ export function rollItemDrop() {
   const slot = slots[Math.floor(Math.random() * slots.length)];
   const pool = ITEM_POOLS[slot];
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Возвращает список заклинаний доступных на текущем уровне игрока
+ */
+export function getUnlockedSpells() {
+  const state = getState();
+  return Object.values(SPELLS_DATA).filter(s => s.unlockLevel <= state.level);
+}
+
+/**
+ * Сохраняет гримуар (массив из 5 spell id или null)
+ */
+export function saveGrimoire(slots) {
+  const state = getState();
+  state.grimoire = slots.slice(0, 5);
+  saveState();
+}
+
+// ===== BUFF SYSTEM =====
+
+/** Metadata for each buff type */
+const BUFF_META = {
+  mana_surge:       { label: 'Mana Surge',      color: '#4a90d9', symbol: 'M' },
+  crystal_fortune:  { label: 'Crystal Fortune', color: '#9b59b6', symbol: 'C' },
+  iron_flask_buff:  { label: 'Iron Flask',       color: '#c0392b', symbol: '🛡' },
+  shadow_dust_buff: { label: 'Shadow Dust',      color: '#8e44ad', symbol: '✨' }
+};
+
+/**
+ * Uses a consumable item — activates (or refreshes) its buff.
+ * Decrements inventory count. Returns { success, buffId, buffLabel } or null.
+ */
+export function useConsumable(itemId) {
+  const state = getState();
+  const item = ITEMS_DATA[itemId];
+  if (!item || item.slot !== 'consumable') return null;
+  if (!state.inventory[itemId] || state.inventory[itemId] <= 0) return null;
+
+  const buffId = item.buffId;
+  if (!buffId || !state.buffs[buffId]) return null;
+
+  // Decrement inventory, удаляем предмет если кончился
+  state.inventory[itemId]--;
+  if (state.inventory[itemId] <= 0) {
+    delete state.inventory[itemId];
+  }
+
+  // Activate / refresh buff
+  state.buffs[buffId].active = true;
+  state.buffs[buffId].combatsLeft = item.buffCombats;
+
+  saveState();
+
+  const meta = BUFF_META[buffId];
+  return { success: true, buffId, buffLabel: meta ? meta.label : buffId };
+}
+
+/**
+ * Called after each combat — decrements combatsLeft on active buffs.
+ * Deactivates expired buffs. Returns array of expired buff labels.
+ */
+export function tickBuffs() {
+  const state = getState();
+  const expired = [];
+
+  for (const [buffId, buff] of Object.entries(state.buffs)) {
+    if (!buff.active) continue;
+    buff.combatsLeft--;
+    if (buff.combatsLeft <= 0) {
+      buff.active = false;
+      buff.combatsLeft = 0;
+      const meta = BUFF_META[buffId];
+      expired.push(meta ? meta.label : buffId);
+    }
+  }
+
+  saveState();
+  return expired;
+}
+
+/**
+ * Купить предмет в магазине. Возвращает { success, reason }.
+ */
+export function buyItem(itemId) {
+  const state = getState();
+  const item = ITEMS_DATA[itemId];
+  if (!item || !item.price) return { success: false, reason: 'not_for_sale' };
+  if (state.gold < item.price) return { success: false, reason: 'no_gold' };
+  state.gold -= item.price;
+  if (!state.inventory[itemId]) state.inventory[itemId] = 0;
+  state.inventory[itemId]++;
+  saveState();
+  return { success: true };
+}
+
+/**
+ * Returns array of currently active buffs for UI rendering.
+ * Each entry: { buffId, combatsLeft, label, color, symbol }
+ */
+export function getActiveBuffs() {
+  const state = getState();
+  const result = [];
+
+  for (const [buffId, buff] of Object.entries(state.buffs)) {
+    if (!buff.active) continue;
+    const meta = BUFF_META[buffId];
+    result.push({
+      buffId,
+      combatsLeft: buff.combatsLeft,
+      label: meta ? meta.label : buffId,
+      color: meta ? meta.color : '#888',
+      symbol: meta ? meta.symbol : '?'
+    });
+  }
+
+  return result;
 }

@@ -1,0 +1,14 @@
+{
+  "asset_id": "CELL_BG_003",
+  "asset_name": "Inventory Cell Background — Rare",
+  "type": "ui_tile_seamless",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "64x64 pixel art seamless tile, rare rarity inventory slot background, cool blue and indigo tones #0f4a7a #1a3d5a with hints of pale silver #b8c5d6, crystalline structure pattern, subtle shimmer and mist effect, arcane energy visible, dark fantasy style, minimal pixel art flat design, mystical atmosphere, tileable repeating texture, no visible seams",
+  "negative_prompt": "bright cyan, neon blue, oversaturated, photorealistic detail, realistic crystals, modern elements, excessive sparkle, golden accents, warm tones, gradient shading, busy patterns",
+  "style_notes": "Rare = crystalline/arcane aesthetic. Blue-indigo palette references magical ice/arcane properties. Silver shimmer from style guide #b8c5d6. Crystals kept minimal and pixelated (not realistic). Cool tones reinforce mystical quality. Seamless tile requirement.",
+  "aspect_ratio": "1:1",
+  "resolution": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

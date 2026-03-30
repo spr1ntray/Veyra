@@ -79,13 +79,13 @@
 
 /* Завтрашний день (следующий к получению, но сегодня уже получено) */
 .daily-day.day-next {
-  background: rgba(74, 144, 217, 0.06);
-  border-color: rgba(74, 144, 217, 0.3);
+  background: rgba(201, 168, 76, 0.06); /* золото вместо синего */
+  border-color: rgba(201, 168, 76, 0.3);
   opacity: 0.8;
 }
 
 .day-tomorrow-badge {
-  background: rgba(74, 144, 217, 0.2) !important;
+  background: rgba(201, 168, 76, 0.2) !important; /* золото вместо синего */
   color: var(--color-arcane) !important;
 }
 
@@ -98,7 +98,7 @@
 }
 
 .day-icon {
-  font-size: 22px;
+  font-size: 44px;
   line-height: 1;
 }
 
@@ -221,8 +221,8 @@
 }
 
 .stat-icon {
-  font-size: 18px;
-  width: 24px;
+  font-size: 36px;
+  width: 36px;
   text-align: center;
 }
 
@@ -400,7 +400,7 @@
 /* === ИНВЕНТАРЬ === */
 #screen-inventory {
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(26, 10, 46, 0.8) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 0%, rgba(20, 15, 10, 0.6) 0%, transparent 60%), /* тёмный коричневый вместо фиолетового */
     var(--color-bg-deep);
 }
 
@@ -433,7 +433,7 @@
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(26, 10, 46, 0.8), rgba(10, 14, 39, 0.8));
+  background: linear-gradient(135deg, rgba(20, 15, 10, 0.8), rgba(10, 14, 39, 0.8)); /* тёмный коричневый вместо фиолетового */
   border: 1px solid rgba(201, 168, 76, 0.25);
   border-radius: 10px;
   transition: border-color 0.2s ease;
@@ -444,8 +444,8 @@
 }
 
 .slot-icon {
-  font-size: 28px;
-  width: 40px;
+  font-size: 52px;
+  width: 56px;
   text-align: center;
   filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.4));
 }
@@ -617,7 +617,7 @@
 
 /* === POPUP: ПРОСМОТР ЛОКАЦИИ === */
 .location-view-window {
-  background: linear-gradient(160deg, #1f1040 0%, #0d1230 100%);
+  background: linear-gradient(160deg, #120f0a 0%, #0d1230 100%); /* тёмный коричневый вместо фиолетового */
   border: 1px solid var(--color-border-gold);
   border-radius: 16px;
   width: 100%;

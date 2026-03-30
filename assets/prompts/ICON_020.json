@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_020",
+  "asset_name": "Shadow Dust",
+  "type": "item_icon",
+  "rarity": "uncommon",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 128x128, minimalist dark fantasy, shadow dust vial containing swirling dark-violet powder, glass vial with magenta-neon accents (#b700ff) indicating dark arcane essence, charcoal background (#1a1a24), swirling purple dust (#b700ff) visible inside transparent bottle creating motion effect, ethereal void particles floating subtly around the vial, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, experience essence, shadow magic",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges on pixels, realistic glass reflections, too detailed, text overlay, oversaturated, bright colors, cluttered background, illegible, too many particles overwhelming, metallic shine, bright blue or green tones, organic lifelike transparency",
+  "style_notes": "Uncommon rarity XP dust. Magenta neon (#b700ff) indicates dark arcane magic and experience gain. Swirling powder inside vial conveys motion and invisible power. Subtle void particles float around but don't clutter—maintaining 128x128 clarity. Purple hue distinguishes from other potions (cyan mana, red health).",
+  "aspect_ratio": "1:1",
+  "size_pixels": "128x128",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --steps 40 --scale 7.5",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#0a0a0e",
+    "accent": "#b700ff"
+  }
+}

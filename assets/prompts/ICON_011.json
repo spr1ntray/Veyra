@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_011",
+  "asset_name": "Cloak — Common (Tattered)",
+  "type": "item_icon",
+  "rarity": "common",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, worn tattered cloak, ragged cloth garment with visible tears and patches, charcoal background (#1a1a24), no glowing effects, dark grays and browns with worn texture, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, weathered garment",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, glowing effects, neon accents, magical aura, bright colors, cluttered background, illegible, ornate decorations, pristine appearance, shiny material",
+  "style_notes": "Common rarity cloak. Emphasizes wear and damage (tears, patches) to show basic non-magical garment. Uses dark grays and browns. Sharp pixel art for 64x64 scale.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#4a4a5a",
+    "accent": "none"
+  }
+}

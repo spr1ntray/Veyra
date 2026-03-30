@@ -1,0 +1,148 @@
+/**
+ * shop.css — стили магазина торговца
+ * Тёмные тона, золотые акценты, dark fantasy
+ */
+
+.shop-popup-box {
+  width: 560px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(180,140,60,0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: rgba(10,8,6,0.92);
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(180,140,60,0.25);
+  background: rgba(0,0,0,0.5);
+}
+
+.shop-title {
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: var(--fs-xl); /* Page title */
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #c8a84b;
+  margin: 0;
+}
+
+.shop-gold {
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: 1rem;
+  color: #e0c060;
+}
+
+.shop-items-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Скроллбар в духе dark fantasy */
+.shop-items-list::-webkit-scrollbar {
+  width: 4px;
+}
+.shop-items-list::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.3);
+}
+.shop-items-list::-webkit-scrollbar-thumb {
+  background: rgba(180,140,60,0.4);
+  border-radius: 2px;
+}
+
+.shop-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(180,140,60,0.2);
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.shop-item-row:hover {
+  background: rgba(180,140,60,0.08);
+}
+
+.shop-item-icon {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+}
+
+.shop-item-info {
+  flex: 1;
+}
+
+.shop-item-name {
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: var(--fs-sm); /* Item label */
+  letter-spacing: 1px;
+  color: #d4b86a;
+  margin-bottom: 2px;
+}
+
+.shop-item-desc {
+  font-family: var(--font-body, 'Crimson Text', serif);
+  font-size: var(--fs-xs); /* Body text */
+  color: rgba(200,180,140,0.7);
+}
+
+.shop-item-price {
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: var(--fs-2xs); /* Caption / stat */
+  color: #e0c060;
+  min-width: 64px;
+  text-align: right;
+}
+
+.shop-buy-btn {
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: 0.8rem;
+  padding: 6px 16px;
+  background: rgba(180,140,60,0.15);
+  border: 1px solid rgba(180,140,60,0.5);
+  color: #c8a84b;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+
+.shop-buy-btn:hover:not(:disabled) {
+  background: rgba(180,140,60,0.3);
+  color: #e8c85b;
+}
+
+.shop-buy-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Кнопка "Leave" внизу попапа */
+#popup-shop .popup-close-btn {
+  margin: 12px 20px 16px;
+  align-self: center;
+}
+
+/* Спрайт торговца — hover-эффект подсветки */
+#merchant-sprite {
+  transition: filter 0.2s;
+}
+
+#merchant-sprite:hover img {
+  filter: brightness(1.15);
+}

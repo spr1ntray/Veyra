@@ -6,17 +6,22 @@
   <meta name="theme-color" content="#0a0e27">
   <meta name="description" content="Veyra — dark fantasy browser RPG">
   <title>Veyra — Dark Fantasy RPG</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Playfair+Display:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Стили -->
   <link rel="stylesheet" href="src/css/main.css">
   <link rel="stylesheet" href="src/css/map.css">
   <link rel="stylesheet" href="src/css/combat.css">
+  <link rel="stylesheet" href="src/css/grimoire.css">
   <link rel="stylesheet" href="src/css/ui.css">
+  <link rel="stylesheet" href="src/css/inventory.css">
+  <link rel="stylesheet" href="src/css/shop.css">
 </head>
 <body>
 
@@ -31,40 +36,54 @@
 
   <!-- ===== LOADING SCREEN ===== -->
   <div id="screen-loading" class="screen active">
-    <div class="loading-logo">
-      <span class="logo-icon">🧙</span>
-    </div>
-    <h1 class="loading-title">VEYRA</h1>
-    <p class="loading-subtitle">Dark Fantasy RPG</p>
+    <div class="loading-bg"></div>
 
-    <!-- Имя персонажа -->
-    <div class="name-section">
-      <div class="name-label">Wizard Name</div>
-      <div id="hero-name-display">Unnamed Wizard</div>
-      <div class="name-input-row">
-        <input
-          type="text"
-          id="hero-name-input"
-          placeholder="Enter name..."
-          maxlength="20"
-          autocomplete="off"
-          spellcheck="false"
-        >
-        <button id="btn-confirm-name">✓</button>
+    <!-- Логотип по центру экрана, выше контентного блока -->
+    <div class="loading-logo-center">
+      <img src="assets/generated/pixel/logo.png" class="loading-logo" alt="VEYRA">
+    </div>
+
+    <div class="loading-content">
+
+      <!-- Блок для зарегистрированного пользователя (скрыт по умолчанию) -->
+      <div class="loading-user-block" id="loading-user-block" style="display:none">
+        <div class="loading-user-row">
+          <span class="loading-username" id="hero-name-display"></span>
+          <button class="loading-logout-btn" id="btn-logout">✕ Logout</button>
+        </div>
       </div>
-    </div>
 
-    <div class="ornament">
-      <span class="ornament-symbol">✦ ✦ ✦</span>
-    </div>
+      <!-- Блок ввода имени (для незарегистрированного) -->
+      <div class="loading-register-block" id="loading-register-block">
+        <div class="loading-register-label">Choose your wizard name</div>
+        <div class="loading-name-row">
+          <input
+            type="text"
+            id="hero-name-input"
+            placeholder="Enter name..."
+            maxlength="20"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="btn-confirm-name">✓</button>
+        </div>
+      </div>
 
-    <button id="btn-start">⚔ Enter Veyra</button>
+      <div class="ornament"><span class="ornament-symbol">✦ ✦ ✦</span></div>
+      <button id="btn-start">⚔ Enter Veyra</button>
+    </div>
   </div>
 
   <!-- ===== LOCATION SCREEN ===== -->
   <div id="screen-location" class="screen">
     <!-- Полноэкранный фон текущей локации -->
     <div id="location-bg" class="location-bg"></div>
+
+    <!-- Спрайт торговца — показывается только на площади -->
+    <div id="merchant-sprite" style="display:none; position:absolute; bottom:5%; left:4%; z-index:5; cursor:pointer;" title="Talk to Merchant">
+      <img src="assets/generated/pixel/NPC_MERCHANT.png" style="height:400px;image-rendering:pixelated;" alt="Merchant">
+    </div>
+
     <!-- Градиентный оверлей для читаемости текста -->
     <div class="location-overlay"></div>
 
@@ -73,12 +92,16 @@
       <span id="loc-hud-name" class="loc-hud-name">Mage</span>
       <span id="loc-hud-level" class="loc-hud-level">Lv. 1</span>
       <span id="loc-hud-gold" class="loc-hud-gold">🪙 0</span>
+      <div class="hud-buffs" id="hud-buffs"></div>
     </div>
+
+    <!-- Длинная кнопка инвентаря вверху -->
+    <button class="inv-top-btn" id="btn-open-inventory"><img src="assets/generated/pixel/inventory_icon.png" width="56" height="56" style="image-rendering:pixelated;vertical-align:middle" alt=""> Inventory</button>
 
     <!-- Кнопки правый верхний угол (вертикально) -->
     <div class="location-top-right">
-      <button class="loc-btn-gold" id="btn-loc-daily">🎁 Rewards</button>
-      <button class="loc-btn-outline" id="btn-loc-map">🗺️ Map</button>
+      <button class="loc-btn-gold" id="btn-loc-daily"><img src="assets/generated/pixel/reward_icon.png" width="56" height="56" style="image-rendering:pixelated;vertical-align:middle" alt=""> Rewards</button>
+      <button class="loc-btn-outline" id="btn-loc-map"><img src="assets/generated/pixel/map_icon.png" width="56" height="56" style="image-rendering:pixelated;vertical-align:middle" alt=""> Map</button>
     </div>
 
     <!-- Кнопки действий внизу по центру (динамические) -->
@@ -87,85 +110,176 @@
 
   <!-- ===== MAP SCREEN ===== -->
   <div id="screen-map" class="screen">
-    <!-- Полноэкранная картинка карты -->
     <div class="map-fullscreen-bg"></div>
 
-    <!-- Хотспот: Town Square (замок, топ-левый угол) -->
-    <div class="map-hotspot" id="hotspot-square"
-         style="left:2%;top:3%;width:30%;height:42%">
-      <div class="map-hotspot-label">Town Square</div>
+    <!-- Маркер: Town Square — PNG иконка замка -->
+    <div class="map-marker map-marker-square" id="hotspot-square">
+      <img src="assets/generated/pixel/castle-marker.png" class="map-marker-img" alt="Town Square">
+      <div class="map-marker-label">Town Square</div>
     </div>
 
-    <!-- Хотспот: Home (домик с огнями, боттом-левый угол) -->
-    <div class="map-hotspot" id="hotspot-home"
-         style="left:2%;top:52%;width:22%;height:38%">
-      <div class="map-hotspot-label">Your Home</div>
+    <!-- Маркер: Home — PNG иконка дома -->
+    <div class="map-marker map-marker-home" id="hotspot-home">
+      <img src="assets/generated/pixel/home-marker.png" class="map-marker-img" alt="Home">
+      <div class="map-marker-label">Home</div>
     </div>
 
-    <!-- Кнопка назад -->
     <button class="map-back-btn" id="btn-map-back">← Back</button>
   </div>
 
-  <!-- ===== HOME / INVENTORY SCREEN ===== -->
+  <!-- ===== INVENTORY SCREEN ===== -->
   <div id="screen-home" class="screen">
-    <!-- Полноэкранный фон — изображение мага -->
-    <div class="home-wizard-bg"></div>
-    <!-- Градиент: слева прозрачно, справа тёмный фон для панели статов -->
-    <div class="home-overlay"></div>
 
-    <!-- Кликабельные зоны экипировки поверх мага -->
-    <div class="equip-zone" id="zone-hat"
-         style="left:32%;top:2%;width:36%;height:30%"
-         data-slot="hat">
-      <div class="equip-zone-hint">Hat</div>
-    </div>
-    <div class="equip-zone" id="zone-staff"
-         style="left:7%;top:8%;width:20%;height:78%"
-         data-slot="staff">
-      <div class="equip-zone-hint">Staff</div>
-    </div>
-    <div class="equip-zone" id="zone-cloak"
-         style="left:18%;top:38%;width:64%;height:58%"
-         data-slot="cloak">
-      <div class="equip-zone-hint">Cloak</div>
+    <!-- Шапка инвентаря -->
+    <div class="inv-header">
+      <button class="inv-back-btn" id="btn-home-back">← Back</button>
+      <div class="inv-header-title">Inventory</div>
+      <div class="inv-header-gold" id="inv-gold">🪙 0</div>
     </div>
 
-    <!-- Выпадающие списки экипировки (скрыты по умолчанию) -->
-    <div class="equip-dropdown" id="dropdown-hat"   data-slot="hat"></div>
-    <div class="equip-dropdown" id="dropdown-staff" data-slot="staff"></div>
-    <div class="equip-dropdown" id="dropdown-cloak" data-slot="cloak"></div>
+    <!-- Основной layout: левая вешалка + правая сетка -->
+    <div class="inv-layout">
 
-    <!-- Правая панель: статы и снаряжение -->
-    <div class="home-stats-panel">
-      <div class="home-char-name" id="home-char-name">Mage</div>
-      <div class="home-char-level" id="home-char-level">Level 1</div>
+      <!-- ЛЕВАЯ ЧАСТЬ (40%): интерактивная вешалка -->
+      <div class="inv-left">
+        <div class="inv-section-label">Equipped</div>
 
-      <div class="stat-row">
-        <span class="stat-icon">💪</span>
-        <span class="stat-name">Strength</span>
-        <div class="stat-bar-wrap">
-          <div class="stat-bar" id="stat-strength-bar" style="width:0%"></div>
+        <!-- Крупная интерактивная вешалка -->
+        <div class="inv-hanger-interactive">
+          <!-- Wrapper — точно по размеру изображения, зоны позиционируются внутри -->
+          <div class="hanger-img-wrapper">
+            <img src="assets/generated/pixel/вешалка.png" class="hanger-main-img" alt="hanger">
+
+            <!-- Circle indicators for equipment slots -->
+            <!-- Position via top/left percentages. Adjust to match your hanger image (337x600). -->
+            <div class="hanger-circle" id="hanger-slot-hat" data-slot="hat" style="top: 10%; left: 42%;"></div>
+            <div class="hanger-circle" id="hanger-slot-cloak" data-slot="cloak" style="top: 45%; left: 18%;"></div>
+            <div class="hanger-circle" id="hanger-slot-staff" data-slot="staff" style="top: 40%; left: 72%;"></div>
+          </div>
+
+          <!-- Скрытые элементы для совместимости с inventory.js -->
+          <span id="hanger-hat-emoji" style="display:none"></span>
+          <span id="hanger-cloak-emoji" style="display:none"></span>
+          <span id="hanger-staff-emoji" style="display:none"></span>
         </div>
-        <span class="stat-value" id="stat-strength-val">5</span>
+
+        <!-- Статы персонажа -->
+        <div class="inv-char-block">
+          <div class="inv-char-name" id="inv-char-name">Mage</div>
+          <div class="inv-char-level" id="inv-char-level">Level 1</div>
+          <div class="inv-buffs" id="inv-buffs" style="display:none"></div>
+          <div class="inv-stat-row">
+            <span class="inv-stat-label">Strength</span>
+            <div class="inv-stat-bar-wrap"><div class="inv-stat-bar" id="inv-str-bar"></div></div>
+            <span class="inv-stat-val" id="inv-str-val">5</span>
+          </div>
+          <div class="inv-stat-row">
+            <span class="inv-stat-label">Intelligence</span>
+            <div class="inv-stat-bar-wrap"><div class="inv-stat-bar" id="inv-int-bar"></div></div>
+            <span class="inv-stat-val" id="inv-int-val">5</span>
+          </div>
+        </div>
       </div>
 
-      <div class="stat-row">
-        <span class="stat-icon">🧠</span>
-        <span class="stat-name">Intelligence</span>
-        <div class="stat-bar-wrap">
-          <div class="stat-bar" id="stat-int-bar" style="width:0%"></div>
-        </div>
-        <span class="stat-value" id="stat-int-val">5</span>
+      <!-- Вертикальный разделитель -->
+      <div class="inv-divider"></div>
+
+      <!-- ПРАВАЯ ЧАСТЬ (60%): сетка предметов -->
+      <div class="inv-right">
+        <div class="inv-section-label">Items<span class="inv-filter-label" id="inv-filter-label"></span></div>
+        <!-- Сетка 4×4, пагинация вместо скролла -->
+        <div class="inv-grid" id="inv-grid"></div>
+        <div id="inv-pagination" class="inv-pagination"></div>
       </div>
 
-      <div class="home-gold" id="home-gold">🪙 0</div>
-
-      <!-- Список текущего снаряжения (генерируется через JS) -->
-      <div class="home-equipment-list" id="home-equip-list"></div>
     </div>
 
-    <!-- Кнопка назад на карту -->
-    <button class="home-back-btn" id="btn-home-back">← Map</button>
+    <!-- Tooltip предмета (скрыт по умолчанию) -->
+    <div class="inv-item-tooltip" id="inv-tooltip">
+      <div class="tooltip-name" id="tooltip-name"></div>
+      <div class="tooltip-type" id="tooltip-type"></div>
+      <div class="tooltip-bonus" id="tooltip-bonus"></div>
+      <div class="tooltip-btn-row">
+        <button class="tooltip-equip-btn" id="tooltip-equip-btn">Equip</button>
+        <button class="tooltip-use-btn" id="tooltip-use-btn" style="display:none">Use</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== GRIMOIRE SCREEN ===== -->
+  <div id="screen-grimoire" class="screen">
+
+    <!-- Верхняя панель гримуара -->
+    <div class="grimoire-header">
+      <button id="btn-grimoire-back">← Back</button>
+      <div class="grimoire-header-title">Grimoire Preparation</div>
+      <div class="grimoire-header-right" id="grimoire-enemy-badge"></div>
+    </div>
+
+    <!-- Основной layout: книга гримуара -->
+    <div class="grimoire-book">
+
+      <!-- Левая страница: слоты сборки -->
+      <div class="grimoire-page grimoire-page-left">
+        <div class="grimoire-page-title">Spell Rotation</div>
+
+        <!-- Лор-подсказка при пустом гримуаре — показывается через JS -->
+        <div class="grimoire-lore-hint" id="grimoire-empty-hint" style="display:none">
+          Your grimoire is empty, traveller. Choose your spells — weave them into the fabric of your magic. Without three rituals the portal to battle will not open.
+        </div>
+
+        <!-- 5 слотов гримуара -->
+        <div class="grimoire-slots" id="grimoire-slots">
+          <!-- Генерируется через JS -->
+        </div>
+
+        <!-- Лор-подпись под слотами -->
+        <div class="grimoire-page-lore">
+          Pages of the grimoire. Spells will be cast in this order,<br>again and again, until the enemy falls.
+        </div>
+
+        <div class="grimoire-rotation-hint">I → II → III → IV → V → I → ...</div>
+
+        <!-- Превью DPS -->
+        <div class="grimoire-dps-preview">
+          <div class="dps-row">
+            <span class="dps-label">Est. DPS:</span>
+            <span class="dps-value" id="grimoire-dps">—</span>
+          </div>
+          <div class="dps-row">
+            <span class="dps-label">Est. Kill Time:</span>
+            <span class="dps-value" id="grimoire-killtime">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Разделитель книги -->
+      <div class="grimoire-spine"></div>
+
+      <!-- Правая страница: пул заклинаний -->
+      <div class="grimoire-page grimoire-page-right">
+        <div class="grimoire-page-title">Available Spells</div>
+        <div class="grimoire-spell-pool" id="grimoire-spell-pool">
+          <!-- Генерируется через JS -->
+        </div>
+        <!-- Лор-подпись под пулом -->
+        <div class="grimoire-page-lore">
+          Arsenal of available spells. Each new ability<br>awakens as your power grows.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Карточка выбранного врага -->
+    <div class="grimoire-enemy-card" id="grimoire-enemy-card"></div>
+
+    <!-- Кнопка начала боя -->
+    <div class="grimoire-footer">
+      <div class="grimoire-warning" id="grimoire-warning"></div>
+      <button class="grimoire-begin-btn" id="btn-begin-battle" disabled>⚔ Begin Battle</button>
+    </div>
+
   </div>
 
   <!-- ===== COMBAT SCREEN ===== -->
@@ -173,35 +287,54 @@
 
     <!-- Верхняя панель боя -->
     <div class="combat-header">
-      <div class="combat-round-display" id="combat-round">Action 1 / 10</div>
-      <div id="fights-remaining">Battles today: 5 / 5</div>
       <button id="btn-combat-back">← Map</button>
+      <div class="combat-timer-display" id="combat-timer">1:00</div>
+      <div class="combat-mage-hp-display" id="combat-mage-hp-display">HP: 100 / 100</div>
     </div>
 
-    <!-- Арена: маг VS манекен -->
+    <!-- Арена: маг VS враг -->
     <div class="combat-arena">
 
       <!-- Маг -->
       <div id="combat-mage">
-        <div class="mage-figure">🧙</div>
+        <div class="mage-figure">
+          <img id="mage-img-idle" class="mage-sprite" src="assets/generated/pixel/маг стоит.png" alt="Mage">
+          <video id="mage-video-attack" class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/маг-атака.webm" muted playsinline></video>
+          <video id="mage-video-defend" class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/маг-защита.webm" muted playsinline></video>
+        </div>
+        <!-- HP бар мага -->
+        <div class="combat-hp-bar-wrap">
+          <div class="combat-hp-bar combat-hp-bar-mage" id="mage-hp-bar"></div>
+        </div>
+        <div class="combat-hp-text" id="mage-hp-text">100 / 100</div>
+        <!-- Индикатор щита -->
+        <div class="mage-shield-display" id="mage-shield-display" style="display:none">Shield: <span id="mage-shield-val">0</span></div>
         <div class="mage-label">You</div>
       </div>
 
       <!-- Снаряд заклинания (позиционируется абсолютно) -->
       <div id="spell-projectile"></div>
 
-      <!-- Манекен -->
-      <div id="combat-dummy">
-        <div class="dummy-figure">
-          <div class="dummy-target-rings"></div>
+      <!-- Враг -->
+      <div id="combat-enemy">
+        <div class="enemy-figure">
+          <img id="enemy-img" class="combat-enemy-img" src="assets/generated/training_dummy.png" alt="Enemy">
         </div>
-        <div class="dummy-label">Dummy</div>
-        <div class="dummy-hp-container">
-          <div id="dummy-hp-bar"></div>
+        <!-- Статусы врага -->
+        <div class="enemy-status-row" id="enemy-status-row"></div>
+        <!-- HP бар врага -->
+        <div class="combat-hp-bar-wrap">
+          <div class="combat-hp-bar combat-hp-bar-enemy" id="enemy-hp-bar"></div>
         </div>
-        <div id="dummy-hp-text">200 / 200</div>
+        <div class="combat-hp-text" id="enemy-hp-text">200 / 200</div>
+        <div class="enemy-label" id="enemy-label">Enemy</div>
       </div>
 
+    </div>
+
+    <!-- Grimoire Tracker: текущая ротация -->
+    <div class="grimoire-tracker" id="grimoire-tracker">
+      <!-- Генерируется через JS -->
     </div>
 
     <!-- Лог боевых действий -->
@@ -209,12 +342,9 @@
       <div id="combat-log"></div>
     </div>
 
-    <!-- Панель заклинаний -->
-    <div class="combat-spells-panel">
-      <div class="spells-label">✦ Choose a Spell ✦</div>
-      <div id="spell-buttons">
-        <!-- Кнопки генерируются через JS -->
-      </div>
+    <!-- Лор-подсказка при первом бою — скрывается через 8 сек -->
+    <div class="combat-lore-hint" id="combat-lore-hint" style="display:none">
+      Your mage performs the ritual automatically. Watch. Pray. Your power decides the outcome.
     </div>
 
   </div>
@@ -278,8 +408,20 @@
   </div>
 </div>
 
+<!-- ===== POPUP: SHOP ===== -->
+<div id="popup-shop" class="popup-overlay">
+  <div class="popup-box shop-popup-box">
+    <div class="shop-header">
+      <h2 class="shop-title">Merchant's Wares</h2>
+      <span id="shop-gold-display" class="shop-gold">🪙 0</span>
+    </div>
+    <div id="shop-items-list" class="shop-items-list"></div>
+    <button id="btn-close-shop" class="popup-close-btn">Leave</button>
+  </div>
+</div>
+
 <!-- ES6 модули — точка входа -->
-<script type="module" src="src/js/main.js"></script>
+<script type="module" src="src/js/main.js?v=2"></script>
 
 </body>
 </html>

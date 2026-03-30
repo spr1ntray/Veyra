@@ -1,0 +1,14 @@
+{
+  "asset_id": "MAP_MARKER_HOME",
+  "asset_name": "World Map Marker — Mage's Home",
+  "type": "map_marker_icon",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A small pixel art icon of a dark wizard's tower or stone cottage, top-down view, 48x48 pixels, dark fantasy RPG style. The building is a simple silhouette in deep navy blue (#1a2d4d) and dark indigo (#0f1b33), with a conical roof or peaked gable. A single small window glows with warm greenish-gold light (#8b9d2a mixed with #d4af37), suggesting candlelight or alchemical glow inside. The glow is soft and minimal, not overwhelming. The structure sits centered in the frame with transparent background (PNG). No surrounding landscape, only the icon itself. Pixel art aesthetic with clear hard edges, no gradients or smoothing. Minimalist silhouette that reads at small size (32px and above). Medieval fantasy architecture, arcane mood but not menacing. Color palette: desaturated cool tones with single warm accent light. Reference style: dark fantasy retro RPG marker icon, like classic top-down dungeon crawlers or strategy games. Clean, readable, atmospheric.",
+  "negative_prompt": "blurry, photorealistic, gradients, smooth shading, 3D render, colorful, oversaturated, cute, cheerful, modern architecture, detailed, high-resolution textures, anti-aliasing, realistic shadows, bright neon colors, multiple colors, crowded composition, background elements, landscape, trees, terrain, text, watermark, multiple buildings, complex, elaborate decoration, comic style, cartoon, anime",
+  "style_notes": "This icon emphasizes a cozy but dark aesthetic with the warm window glow as the only bright accent. The top-down perspective makes it readable at small scales. Pixel art with hard edges ensures it doesn't blur when scaled down. The greenish-gold glow suggests a mage's home (alchemical/magical) without being garish. Strictly adheres to style guide dark palette with single warm accent. Transparent background critical for map overlay integration.",
+  "aspect_ratio": "1:1",
+  "target_size": "48x48px or 64x64px",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

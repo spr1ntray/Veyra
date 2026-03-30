@@ -1,0 +1,14 @@
+{
+  "asset_id": "HANGER_002",
+  "asset_name": "Inventory UI — Wizard Hanger (Metal, Detailed Items)",
+  "type": "ui_element_inventory",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A vertical pixel art iron or steel hanger with ornate hooks at the top, dark fantasy inventory UI element. The hanger frame is rendered in cool metallic tones: deep navy (#1a2d4d) base with pale silver (#b8c5d6) edge highlights and sparse gold (#d4af37) decorative rivets. Three wizard items are clearly visible hanging from hooks: a tall pointed wizard hat (left side, dark purple silhouette with gold trim), a billowing magical cloak or robe (center, navy blue with gold rune symbols), and an ornate staff with a glowing arcane orb (right, dark silhouette with bright gold magical aura around the top). Background is fully transparent. Composition is vertical, approximately 200×350 pixels. Retro RPG pixel art, 16-bit sprite aesthetic, dark fantasy minimalist style, desaturated cool-tone palette, mysterious and arcane mood, high contrast for UI readability. No background scenery, clean functional design.",
+  "negative_prompt": "bright colors, neon, photorealistic, 3D rendering, smooth shading, complex gradients, modern architecture, cute aesthetic, colorful backgrounds, oversaturated hues, realistic textures, comic book style, detailed realism, cheerful atmosphere, excessive ornamentation, realistic lighting with shadows, depth of field, busy composition, legible text, watermarks, non-transparent background, contemporary design, intricate details",
+  "style_notes": "This variant emphasizes slightly more detail while maintaining pixel art minimalism. Metal construction with silver and gold accents provides visual contrast against dark background. The rune symbols on the cloak and magical aura around the staff's orb add thematic fantasy elements while staying within desaturated palette rules. Still maintains full transparency for UI integration. The three items are individually distinguishable despite dark tones, ensuring clear readability in inventory UI context.",
+  "aspect_ratio": "custom_vertical",
+  "resolution": "200x350",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

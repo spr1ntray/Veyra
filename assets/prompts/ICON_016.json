@@ -1,0 +1,22 @@
+{
+  "asset_id": "ICON_016",
+  "asset_name": "Cloak — Rare (Nightweave Cloak)",
+  "type": "item_icon",
+  "rarity": "rare",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, nightweave shadow cloak, intricate woven garment with ethereal shadow threads and crystalline night-energy, charcoal background (#1a1a24), dual neon aura: neon cyan (#00d9ff) primary and magenta (#ff00ff) secondary interweaving through the weave pattern, dynamic flowing silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, void-touched elegance",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges on pixels, realistic textures, too detailed, text overlay, oversaturated, bright solid colors, cluttered background, illegible, too many particles, metallic shine, rigid appearance, organic lifelike movement",
+  "style_notes": "Rare rarity cloak. Dual neon blend (cyan + magenta) elevates visual hierarchy above uncommon mist cloak. Woven shadow pattern indicates shadow/void craftsmanship. Crystalline night-energy conveys powerful enchantment. Maintains 64x64 readability with balanced color distribution and clean silhouette.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#3a3a4a",
+    "accent_primary": "#00d9ff",
+    "accent_secondary": "#ff00ff"
+  }
+}

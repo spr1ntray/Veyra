@@ -1,0 +1,19 @@
+{
+  "asset_id": "ICON_002",
+  "asset_name": "Training Icon — Combat/Practice Button",
+  "type": "ui_icon",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art icon, 64x64, minimalist dark fantasy, training dummy or combat stance symbol, wooden practice dummy or crossed staves motif, charcoal background (#1a1a24), neon cyan accents (#00d9ff), clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, martial energy",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, multiple colors, oversaturated, swords crossed (explicitly avoid), cluttered background, illegible, anthropomorphic features",
+  "style_notes": "Combat/training button icon. Emphasizes practice and martial training without showing weapons directly (per user request to avoid swords). Uses cyan accent on dark background. Sharp pixel art for 64x64 scale.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "accent": "#00d9ff"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "asset_id": "MAP_MARKER_SQUARE",
+  "asset_name": "World Map Marker — Town Square",
+  "type": "map_marker_icon",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A small pixel art icon of a fortified tower, castle gate, or town hall building, top-down or front-facing view, 48x48 pixels, dark fantasy RPG style. The structure is a proud silhouette in deep navy blue (#1a2d4d) and dark indigo (#0f1b33), slightly larger or more imposing than a cottage. It features crenellations, a tower crown, or strong architectural lines. Windows or upper sections glow with cool blue-violet light (#2d1a3d mixed with faint #6a5acd), suggesting civic authority or arcane defense magic. The glow is subtle and concentrated, not diffused. The structure sits centered in the frame with transparent background (PNG). No surrounding landscape, only the icon itself. Pixel art aesthetic with clear hard edges, no gradients or smoothing. Minimalist silhouette readable at small size (32px and above). Medieval fortress or grand civic building, majestic but dark and mysterious. Color palette: desaturated cool tones with single cool-toned violet-blue accent light. Reference style: dark fantasy retro RPG marker icon, like strategic stronghold or town hub markers. Clean, readable, authoritative, atmospheric.",
+  "negative_prompt": "blurry, photorealistic, gradients, smooth shading, 3D render, colorful, oversaturated, cute, cheerful, warm colors, neon, detailed, high-resolution textures, anti-aliasing, realistic shadows, bright lights, multiple colors, crowded composition, background elements, landscape, trees, terrain, text, watermark, flags, banners, people, complex decoration, comic style, cartoon, anime, small house, cottage, humble building",
+  "style_notes": "This icon projects authority and majesty with a larger, more imposing silhouette than the home marker. The cool blue-violet glow (matching the secondary palette from style guide) reinforces arcane/magical governance. Top-down or front view ensures instant readability. Pixel art hard edges maintain clarity at small scales. Transparent background critical for map overlay. Unlike the warm home marker, this uses cool-toned accent to differentiate it as a major civic location.",
+  "aspect_ratio": "1:1",
+  "target_size": "48x48px or 64x64px",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

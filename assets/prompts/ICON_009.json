@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_009",
+  "asset_name": "Wizard Hat — Common (Simple Cone)",
+  "type": "item_icon",
+  "rarity": "common",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, simple conical wizard hat, plain pointed hat with basic cloth folds, charcoal background (#1a1a24), no glowing effects, dark grays and thread-like accents, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, humble garment",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, glowing effects, neon accents, magical aura, bright colors, cluttered background, illegible, stars on hat, ornate decorations, shiny material",
+  "style_notes": "Common rarity wizard hat. Simple conical shape with minimal decoration. Uses dark grays and muted colors to convey basic, non-magical item. Sharp pixel art for 64x64 scale.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#4a4a5a",
+    "accent": "none"
+  }
+}

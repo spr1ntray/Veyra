@@ -1,0 +1,22 @@
+{
+  "asset_id": "ICON_007",
+  "asset_name": "Staff — Rare (Crystal-Topped)",
+  "type": "item_icon",
+  "rarity": "rare",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, crystalline staff with arcane orb atop, wooden staff topped with glowing mystical crystal, charcoal background (#1a1a24), neon cyan and purple crystalline glow (#00d9ff and #b700ff blended), clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered diagonal composition, powerful magical artifact",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, oversaturated glowing, bright solid colors, cluttered background, illegible, overly transparent crystal, metallic reflections without purpose",
+  "style_notes": "Rare rarity staff. Combines cyan and purple neon accents around crystal orb to indicate higher rarity tier. Crystal element is centered at staff top. Maintains pixel art clarity at 64x64 scale.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#8b7355",
+    "accent_primary": "#00d9ff",
+    "accent_secondary": "#b700ff"
+  }
+}

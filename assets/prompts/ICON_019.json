@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_019",
+  "asset_name": "Iron Flask",
+  "type": "item_icon",
+  "rarity": "common",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 128x128, minimalist dark fantasy, sturdy iron flask health potion, dark-red liquid (#8b0000) visible inside heavy metal container, charcoal background (#1a1a24), dull iron-gray body (#3a3a48) with dark-red potion filling half the flask, simple utilitarian design with corked stopper, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, healing essence, warrior's remedy",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges on pixels, realistic metal reflections, too detailed, text overlay, oversaturated, bright colors, cluttered background, illegible, glowing effects, liquid dripping, organic lifelike shine, magical aura",
+  "style_notes": "Common rarity HP potion. Dark-red liquid (#8b0000) indicates healing/vitality and danger theme. Iron-gray flask body shows utilitarian, non-magical construction. No glow or magical aura—simple alchemical potion. Maintains 128x128 readability with clear two-tone design (gray metal, red liquid).",
+  "aspect_ratio": "1:1",
+  "size_pixels": "128x128",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --steps 40 --scale 7.5",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#3a3a48",
+    "accent": "#8b0000"
+  }
+}

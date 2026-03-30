@@ -1,289 +1,428 @@
 /**
- * inventory.js — экран дома, экипировка и статы персонажа
- * Рендерит wizard-экран: кликабельные зоны экипировки,
- * правую панель со статами и выпадающие списки выбора предметов.
+ * inventory.js — экран инвентаря
+ * Левая часть: вешалка с экипировкой (40%)
+ * Правая часть: сетка предметов 5×7 (60%)
  */
 
-import { getState, ITEMS_DATA, equipItem, getBonusPower, getStats } from './state.js';
+import { getState, ITEMS_DATA, equipItem, getStats, useConsumable, getActiveBuffs } from './state.js';
 import { updateHUD, showNotification } from './ui.js';
 
-// Иконки слотов
-const SLOT_ICONS = {
-  staff: '🪄',
-  hat:   '🎩',
-  cloak: '🧣'
-};
-
-// Названия слотов
-const SLOT_NAMES = {
-  staff: 'Staff',
-  hat:   'Hat',
-  cloak: 'Cloak'
-};
+// Emoji для слотов
+const SLOT_EMOJI = { staff: '🪄', hat: '🎩', cloak: '🧣', consumable: '🧪' };
 
 // Цвета редкостей
 const RARITY_COLORS = {
-  starter:   '#6b6b6b',
-  common:    '#e8e0d0',
+  starter:   '#666',
+  common:    '#aaa',
   uncommon:  '#2ecc71',
   rare:      '#4a90d9',
   epic:      '#9b59b6',
   legendary: '#f39c12'
 };
 
+// Текущий выбранный предмет (для tooltip)
+let _selectedItemId = null;
+
+// Текущая страница сетки (0-based)
+let _currentPage = 0;
+
+// Текущий активный фильтр слота ('hat' | 'cloak' | 'staff' | null)
+let _activeFilter = null;
+
+
 /**
- * Главная функция отрисовки экрана дома.
+ * Рендерит весь экран инвентаря.
  * Вызывается при каждом переходе на screen-home.
  */
 export function renderHomeScreen() {
-  renderStatsPanel();
-  renderEquipmentList();
-  initEquipmentZones();
+  renderHanger();
+  renderCharBlock();
+  initHangerFilter();
+  renderGrid();
+  hideTooltip();
 }
 
 /**
- * Обновляет правую панель: имя, уровень, прогресс-бары статов, золото.
+ * Инициализирует клики по кружкам вешалки для фильтрации сетки.
+ * CSS handles hover/active label visibility — JS only toggles is-active-filter class.
  */
-function renderStatsPanel() {
-  const state = getState();
-  const stats = getStats();
+function initHangerFilter() {
+  ['hat', 'cloak', 'staff'].forEach(slot => {
+    const el = document.getElementById(`hanger-slot-${slot}`);
+    if (!el) return;
 
-  // Имя и уровень
-  const nameEl  = document.getElementById('home-char-name');
-  const levelEl = document.getElementById('home-char-level');
-  if (nameEl)  nameEl.textContent  = state.name;
-  if (levelEl) levelEl.textContent = `Level ${state.level}`;
+    // Клонируем элемент чтобы убрать старые listeners перед каждым байндом
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
 
-  // Прогресс-бар силы
-  const strengthBar = document.getElementById('stat-strength-bar');
-  const strengthVal = document.getElementById('stat-strength-val');
-  if (strengthBar) {
-    const pct = Math.min(100, Math.round((stats.strength / stats.maxStrength) * 100));
-    strengthBar.style.width = `${pct}%`;
-  }
-  if (strengthVal) strengthVal.textContent = stats.strength;
+    newEl.addEventListener('click', () => {
+      _activeFilter = (_activeFilter === slot) ? null : slot;
 
-  // Прогресс-бар интеллекта
-  const intBar = document.getElementById('stat-int-bar');
-  const intVal = document.getElementById('stat-int-val');
-  if (intBar) {
-    const pct = Math.min(100, Math.round((stats.intelligence / stats.maxIntelligence) * 100));
-    intBar.style.width = `${pct}%`;
-  }
-  if (intVal) intVal.textContent = stats.intelligence;
+      // Toggle is-active-filter class on all circles
+      ['hat', 'cloak', 'staff'].forEach(s => {
+        const circleEl = document.getElementById(`hanger-slot-${s}`);
+        if (circleEl) circleEl.classList.toggle('is-active-filter', s === _activeFilter);
+      });
 
-  // Золото
-  const goldEl = document.getElementById('home-gold');
-  if (goldEl) goldEl.textContent = `🪙 ${state.gold}`;
+      renderGrid();
+    });
+  });
 }
 
 /**
- * Рендерит список текущего снаряжения в правой панели.
+ * Обновляет вешалку — показывает текущую экипировку.
  */
-function renderEquipmentList() {
-  const container = document.getElementById('home-equip-list');
-  if (!container) return;
-
+function renderHanger() {
   const state = getState();
-  container.innerHTML = '';
 
-  for (const slot of ['staff', 'hat', 'cloak']) {
+  for (const slot of ['hat', 'cloak', 'staff']) {
     const itemId = state.equipment[slot];
     const item   = ITEMS_DATA[itemId];
 
-    const row = document.createElement('div');
-    row.className = 'home-equip-row';
-
-    const slotLabel = document.createElement('span');
-    slotLabel.className = 'home-equip-slot';
-    slotLabel.textContent = SLOT_NAMES[slot] + ':';
-
-    const itemName = document.createElement('span');
-    itemName.className = 'home-equip-name';
-    itemName.textContent = item ? item.name : 'Empty';
-    if (item) itemName.style.color = RARITY_COLORS[item.rarity];
-
-    row.appendChild(slotLabel);
-    row.appendChild(itemName);
-    container.appendChild(row);
+    const emojiEl = document.getElementById(`hanger-${slot}-emoji`);
+    if (emojiEl) emojiEl.textContent = SLOT_EMOJI[slot];
   }
 }
 
 /**
- * Инициализирует кликабельные зоны на маге.
- * При клике на зону — закрывает другие дропдауны, открывает свой.
- * При клике вне — закрывает все.
+ * Обновляет блок персонажа (имя, уровень, статы, золото).
+ */
+function renderCharBlock() {
+  const state = getState();
+  const stats = getStats();
+
+  const nameEl  = document.getElementById('inv-char-name');
+  const levelEl = document.getElementById('inv-char-level');
+  const goldEl  = document.getElementById('inv-gold');
+
+  if (nameEl)  nameEl.textContent  = state.name;
+  if (levelEl) levelEl.textContent = `Level ${state.level}`;
+  if (goldEl)  goldEl.textContent  = `🪙 ${state.gold}`;
+
+  const strBar = document.getElementById('inv-str-bar');
+  const strVal = document.getElementById('inv-str-val');
+  if (strBar) strBar.style.width = `${Math.min(100, Math.round((stats.strength / stats.maxStrength) * 100))}%`;
+  if (strVal) strVal.textContent = stats.strength;
+
+  const intBar = document.getElementById('inv-int-bar');
+  const intVal = document.getElementById('inv-int-val');
+  if (intBar) intBar.style.width = `${Math.min(100, Math.round((stats.intelligence / stats.maxIntelligence) * 100))}%`;
+  if (intVal) intVal.textContent = stats.intelligence;
+
+  // Render active buffs
+  renderInvBuffs();
+}
+
+/**
+ * Рендерит сетку предметов с пагинацией.
+ * Страница 4×4 = 16 ячеек. Переключение через кнопки под сеткой.
+ */
+function renderGrid() {
+  const container = document.getElementById('inv-grid');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Обновляем метку активного фильтра над сеткой
+  const filterLabelEl = document.getElementById('inv-filter-label');
+  if (filterLabelEl) {
+    filterLabelEl.textContent = _activeFilter ? `· ${_activeFilter}` : '';
+  }
+
+  const state = getState();
+
+  // Собираем предметы, которые есть у игрока (count > 0)
+  const ownedItems = Object.entries(state.inventory)
+    .filter(([id, count]) => count > 0 && ITEMS_DATA[id])
+    .map(([id, count]) => ({ id, count, item: ITEMS_DATA[id] }));
+
+  // Применяем фильтр по слоту если выбран
+  const filteredItems = _activeFilter
+    ? ownedItems.filter(({ item }) => item.slot === _activeFilter)
+    : ownedItems;
+
+  // Размер страницы: 4 колонки × 4 строки
+  const PAGE_SIZE = 16;
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+
+  // Сбрасываем страницу если вышла за пределы (например при смене фильтра)
+  if (_currentPage >= totalPages) _currentPage = 0;
+
+  // Срез предметов текущей страницы
+  const pageItems = filteredItems.slice(_currentPage * PAGE_SIZE, _currentPage * PAGE_SIZE + PAGE_SIZE);
+
+  // Всегда рисуем ровно 16 ячеек
+  for (let i = 0; i < PAGE_SIZE; i++) {
+    const entry = pageItems[i] || null;
+    container.appendChild(createCell(entry, state));
+  }
+
+  // Обработчик клика вне ячеек — скрываем tooltip при каждом рендере
+  // (container.innerHTML = '' уничтожает старый DOM вместе со старым listener)
+  container.addEventListener('click', (e) => {
+    if (!e.target.closest('.inv-cell.has-item')) {
+      hideTooltip();
+    }
+  });
+
+  // Рендерим кнопки пагинации
+  renderPagination(totalPages);
+}
+
+/**
+ * Рендерит кнопки пагинации под сеткой.
+ * Скрывает блок если страница одна.
+ */
+function renderPagination(totalPages) {
+  const paginationEl = document.getElementById('inv-pagination');
+  if (!paginationEl) return;
+  paginationEl.innerHTML = '';
+
+  // Скрываем пагинацию если страница единственная
+  if (totalPages <= 1) {
+    paginationEl.style.display = 'none';
+    return;
+  }
+  paginationEl.style.display = 'flex';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'inv-page-btn';
+  prevBtn.textContent = '← Prev';
+  prevBtn.disabled = _currentPage === 0;
+  prevBtn.addEventListener('click', () => {
+    if (_currentPage > 0) {
+      _currentPage--;
+      renderGrid();
+    }
+  });
+
+  const counter = document.createElement('span');
+  counter.className = 'inv-page-counter';
+  counter.textContent = `${_currentPage + 1} / ${totalPages}`;
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'inv-page-btn';
+  nextBtn.textContent = 'Next →';
+  nextBtn.disabled = _currentPage >= totalPages - 1;
+  nextBtn.addEventListener('click', () => {
+    if (_currentPage < totalPages - 1) {
+      _currentPage++;
+      renderGrid();
+    }
+  });
+
+  paginationEl.appendChild(prevBtn);
+  paginationEl.appendChild(counter);
+  paginationEl.appendChild(nextBtn);
+}
+
+/**
+ * Создаёт одну ячейку сетки.
+ */
+function createCell(entry, state) {
+  const cell = document.createElement('div');
+  cell.className = 'inv-cell';
+
+  if (!entry) {
+    // Пустая ячейка — визуально обозначена пунктирной рамкой
+    const inner = document.createElement('div');
+    inner.className = 'cell-empty-inner';
+    cell.appendChild(inner);
+    return cell;
+  }
+
+  const { id, count, item } = entry;
+  const isEquipped = Object.values(state.equipment).includes(id);
+
+  cell.classList.add('has-item');
+  if (isEquipped) cell.classList.add('is-equipped');
+
+  // Подсветка фона ячейки по редкости предмета
+  const rarityBg = {
+    starter:   'rgba(100,100,100,0.15)',
+    common:    'rgba(150,150,150,0.12)',
+    uncommon:  'rgba(46,204,113,0.12)',
+    rare:      'rgba(74,144,217,0.15)',
+    epic:      'rgba(155,89,182,0.18)',
+    legendary: 'rgba(243,156,18,0.20)'
+  };
+  cell.style.backgroundColor = rarityBg[item.rarity] || rarityBg.common;
+
+  // Иконка предмета: PNG если есть поле img, иначе emoji-заглушка
+  const emojiEl = document.createElement('div');
+  emojiEl.className = 'cell-emoji';
+  if (item.img) {
+    const img = document.createElement('img');
+    img.src = item.img;
+    img.style.cssText = 'width:75%;height:75%;image-rendering:pixelated;object-fit:contain';
+    emojiEl.appendChild(img);
+  } else {
+    emojiEl.textContent = SLOT_EMOJI[item.slot] || '📦';
+  }
+  cell.appendChild(emojiEl);
+
+  // Количество (если > 1)
+  if (count > 1) {
+    const countEl = document.createElement('div');
+    countEl.className = 'cell-count';
+    countEl.textContent = `×${count}`;
+    cell.appendChild(countEl);
+  }
+
+  // Полоска редкости снизу
+  const rarityBar = document.createElement('div');
+  rarityBar.className = `cell-rarity-bar rarity-${item.rarity}`;
+  cell.appendChild(rarityBar);
+
+  // Клик — показываем tooltip
+  cell.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showTooltip(id, isEquipped, cell);
+  });
+
+  return cell;
+}
+
+/**
+ * Показывает tooltip с кнопкой экипировки.
+ */
+function showTooltip(itemId, isEquipped, cellEl) {
+  const item = ITEMS_DATA[itemId];
+  if (!item) return;
+
+  _selectedItemId = itemId;
+
+  const tooltip   = document.getElementById('inv-tooltip');
+  const nameEl    = document.getElementById('tooltip-name');
+  const typeEl    = document.getElementById('tooltip-type');
+  const bonusEl   = document.getElementById('tooltip-bonus');
+  const equipBtn  = document.getElementById('tooltip-equip-btn');
+  const useBtn    = document.getElementById('tooltip-use-btn');
+
+  if (nameEl)  nameEl.textContent  = item.name;
+  if (nameEl)  nameEl.style.color  = RARITY_COLORS[item.rarity];
+  if (typeEl)  typeEl.textContent  = `${item.slot} · ${item.rarity}`;
+  if (bonusEl) bonusEl.textContent = item.bonus > 0 ? `+${item.bonus} power` : item.desc;
+
+  const isConsumable = item.slot === 'consumable';
+
+  // Equip button — hidden for consumables
+  if (equipBtn) {
+    if (isConsumable) {
+      equipBtn.style.display = 'none';
+    } else {
+      equipBtn.style.display = '';
+      if (isEquipped) {
+        equipBtn.textContent = 'Equipped';
+        equipBtn.disabled = true;
+        equipBtn.style.opacity = '0.4';
+      } else {
+        equipBtn.textContent = 'Equip';
+        equipBtn.disabled = false;
+        equipBtn.style.opacity = '1';
+      }
+    }
+  }
+
+  // Use button — shown only for consumables
+  if (useBtn) {
+    if (isConsumable) {
+      useBtn.style.display = '';
+      useBtn.disabled = false;
+      useBtn.style.opacity = '1';
+    } else {
+      useBtn.style.display = 'none';
+    }
+  }
+
+  if (tooltip) tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById('inv-tooltip');
+  if (tooltip) tooltip.classList.remove('visible');
+  _selectedItemId = null;
+}
+
+/**
+ * Инициализирует кнопку экипировки в tooltip.
+ * Вызывается один раз из main.js.
  */
 export function initEquipmentZones() {
-  const slots = ['hat', 'staff', 'cloak'];
+  const equipBtn = document.getElementById('tooltip-equip-btn');
+  if (equipBtn) {
+    equipBtn.addEventListener('click', () => {
+      if (!_selectedItemId) return;
+      const success = equipItem(_selectedItemId);
+      if (success) {
+        const item = ITEMS_DATA[_selectedItemId];
+        showNotification(`Equipped: ${item.name}`, 'success');
+        updateHUD();
+        renderHomeScreen();
+      }
+    });
+  }
 
-  slots.forEach(slot => {
-    const zone     = document.getElementById(`zone-${slot}`);
-    const dropdown = document.getElementById(`dropdown-${slot}`);
-    if (!zone || !dropdown) return;
-
-    // Клик по зоне: переключаем дропдаун
-    zone.addEventListener('click', (e) => {
+  // Use button for consumables
+  const useBtn = document.getElementById('tooltip-use-btn');
+  if (useBtn) {
+    useBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const isOpen = dropdown.classList.contains('visible');
-
-      // Закрываем все дропдауны
-      closeAllDropdowns();
-
-      // Если был закрыт — открываем и рендерим
-      if (!isOpen) {
-        populateDropdown(slot, dropdown, zone);
-        dropdown.classList.add('visible');
-      }
-    });
-  });
-
-  // Клик вне зон — закрыть все дропдауны
-  document.addEventListener('click', closeAllDropdowns);
-}
-
-/**
- * Закрывает все выпадающие списки экипировки.
- */
-function closeAllDropdowns() {
-  document.querySelectorAll('.equip-dropdown').forEach(d => {
-    d.classList.remove('visible');
-  });
-}
-
-/**
- * Заполняет выпадающий список предметами доступного слота.
- * Показывает: текущий экипированный + предметы с count > 0 в инвентаре.
- *
- * @param {string} slot - 'hat' | 'staff' | 'cloak'
- * @param {HTMLElement} dropdown
- * @param {HTMLElement} zone - зона на маге для позиционирования
- */
-function populateDropdown(slot, dropdown, zone) {
-  const state = getState();
-  dropdown.innerHTML = '';
-
-  // Заголовок
-  const title = document.createElement('div');
-  title.className = 'dropdown-title';
-  title.textContent = `Choose: ${SLOT_NAMES[slot]}`;
-  dropdown.appendChild(title);
-
-  // Собираем список: текущий экипированный + предметы слота в инвентаре
-  const equippedId = state.equipment[slot];
-
-  // Группа всех предметов этого слота (стартовые + те что есть в инвентаре)
-  const slotItems = Object.values(ITEMS_DATA).filter(item => {
-    if (item.slot !== slot) return false;
-    if (item.id === equippedId) return true; // всегда показываем экипированный
-    // Показываем только если есть в инвентаре
-    return (state.inventory[item.id] || 0) > 0;
-  });
-
-  if (slotItems.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'dropdown-item';
-    empty.style.color = 'var(--color-text-muted)';
-    empty.textContent = 'No items available';
-    dropdown.appendChild(empty);
-  } else {
-    slotItems.forEach(item => {
-      const isEquipped = equippedId === item.id;
-      const count = state.inventory[item.id] || 0;
-
-      const itemEl = document.createElement('div');
-      itemEl.className = `dropdown-item${isEquipped ? ' is-equipped' : ''}`;
-
-      // Название с бонусом
-      const nameSpan = document.createElement('span');
-      nameSpan.style.color = RARITY_COLORS[item.rarity];
-      nameSpan.textContent = item.name;
-      if (!isEquipped && count > 0) {
-        nameSpan.textContent += ` [x${count}]`;
-      }
-
-      itemEl.appendChild(nameSpan);
-
-      // Бонус силы
-      if (item.bonus > 0) {
-        const bonusSpan = document.createElement('span');
-        bonusSpan.className = 'dropdown-item-bonus';
-        bonusSpan.textContent = `+${item.bonus}`;
-        itemEl.appendChild(bonusSpan);
-      }
-
-      // Клик на предмет — экипируем и закрываем
-      if (!isEquipped) {
-        itemEl.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const success = equipItem(item.id);
-          if (success) {
-            showNotification(`Equipped: ${item.name}`, 'success');
-            closeAllDropdowns();
-            // Перерисовываем панель статов и список снаряжения
-            renderStatsPanel();
-            renderEquipmentList();
-            updateHUD();
-          }
-        });
+      if (!_selectedItemId) return;
+      const result = useConsumable(_selectedItemId);
+      if (result && result.success) {
+        hideTooltip();
+        showNotification(`✨ ${result.buffLabel} activated! ${ITEMS_DATA[_selectedItemId]?.desc || ''}`, 'success');
+        updateHUD();
+        renderHomeScreen();
       } else {
-        // Уже надето — не кликабельно
-        itemEl.style.cursor = 'default';
-        itemEl.title = 'Already equipped';
+        showNotification('Cannot use this item', 'warning');
       }
-
-      dropdown.appendChild(itemEl);
     });
   }
 
-  // Позиционируем дропдаун рядом с зоной (справа от неё или у правой панели)
-  positionDropdown(dropdown, zone);
+  // Закрытие tooltip по Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideTooltip();
+  });
 }
 
 /**
- * Позиционирует выпадающий список относительно зоны клика.
- * Старается показать список правее зоны, ближе к правой панели статов.
- *
- * @param {HTMLElement} dropdown
- * @param {HTMLElement} zone
+ * Renders active buff pills in inventory char block.
  */
-function positionDropdown(dropdown, zone) {
-  const zoneRect   = zone.getBoundingClientRect();
-  const screenW    = window.innerWidth;
-  const screenH    = window.innerHeight;
+function renderInvBuffs() {
+  const container = document.getElementById('inv-buffs');
+  if (!container) return;
+  container.innerHTML = '';
 
-  // Дропдаун — абсолютный внутри #screen-home,
-  // поэтому координаты берём относительно #screen-home
-  const homeEl     = document.getElementById('screen-home');
-  const homeRect   = homeEl ? homeEl.getBoundingClientRect() : { left: 0, top: 0 };
-
-  // Целевая позиция: правее зоны, вертикально по центру
-  let left = zoneRect.right - homeRect.left + 12;
-  let top  = zoneRect.top  - homeRect.top  + (zoneRect.height / 2) - 60;
-
-  // Проверяем выход за правый край (правая панель занимает 30%)
-  const panelLeft = screenW * 0.7;
-  if (left + 240 > panelLeft - 8) {
-    // Смещаем левее зоны
-    left = zoneRect.left - homeRect.left - 252;
+  const buffs = getActiveBuffs();
+  if (buffs.length === 0) {
+    container.style.display = 'none';
+    return;
   }
+  container.style.display = 'flex';
 
-  // Не выходим за нижний край
-  if (top + 200 > screenH - homeRect.top) {
-    top = screenH - homeRect.top - 208;
+  for (const buff of buffs) {
+    const pill = document.createElement('div');
+    pill.className = 'buff-pill-inv';
+    pill.style.borderColor = buff.color;
+    // Convert hex to rgba for background
+    pill.style.background = hexToRgba(buff.color, 0.15);
+    pill.innerHTML = `<span class="buff-pill-label" style="color:${buff.color}">${buff.symbol}</span>` +
+      `<span class="buff-pill-text">${buff.label}</span>` +
+      `<span class="buff-pill-count">${buff.combatsLeft}</span>`;
+    container.appendChild(pill);
   }
-  // Не выходим за верхний
-  if (top < 8) top = 8;
-
-  dropdown.style.left = `${Math.max(8, left)}px`;
-  dropdown.style.top  = `${top}px`;
 }
 
 /**
- * Устаревшая функция — оставлена для совместимости с возможными внешними вызовами.
- * Используй renderHomeScreen() вместо неё.
+ * Converts hex color (#rrggbb) to rgba string.
  */
-export function renderInventory() {
-  // Перенаправляем на новый рендер домашнего экрана
-  renderHomeScreen();
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+// Оставлен для совместимости
+export function renderInventory() { renderHomeScreen(); }

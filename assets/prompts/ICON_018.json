@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_018",
+  "asset_name": "Crystal Shard",
+  "type": "item_icon",
+  "rarity": "rare",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 128x128, minimalist dark fantasy, faceted crystal shard with golden-bronze highlights, transparent crystalline gem with sharp angular facets, charcoal background (#1a1a24) with subtle golden coin silhouettes scattered behind, warm gold accent color (#c9a76f) highlighting edges and catching light on crystal planes, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, precious gem, arcane focus stone",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges on pixels, realistic glass reflections, too detailed, text overlay, oversaturated, bright colors, cluttered background, illegible, too many particles, liquid inside, metallic shine, organic uneven facets",
+  "style_notes": "Rare rarity crystal. Golden bronze (#c9a76f) indicates valuable treasure and arcane power. Faceted silhouette conveys sharp, valuable nature. Subtle coin backdrop adds economic context without cluttering the 128x128 frame. Gold accents on crystal edges create visual hierarchy.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "128x128",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --steps 40 --scale 7.5",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#2a2a38",
+    "accent": "#c9a76f"
+  }
+}

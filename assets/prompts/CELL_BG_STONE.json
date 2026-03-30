@@ -1,0 +1,14 @@
+{
+  "asset_id": "CELL_BG_STONE",
+  "asset_name": "Inventory Cell Background — Dark Stone Tile",
+  "type": "texture_tileable",
+  "target_model": "Flux",
+  "prompt_en": "Seamless 128x128 pixel art texture: nearly uniform dark stone background, almost solid charcoal (#1a1a1a). Minimal subtle grain or very faint stone pores — barely visible texture, not distracting. No cracks, no details, no patterns, no reflections, no lighting. Just a plain dark recessive background tile for game inventory cell. Tiles perfectly without seams. Retro RPG pixel art, 16-bit aesthetic. Perfect for foreground item sprites and rarity color overlays to stand out clearly. High quality.",
+  "negative_prompt": "cracks, fissures, weathered blocks, runes, details, patterns, reflections, candlelight, shiny surface, ornate, decorative, borders, bright colors, neon, photorealism, 3D render, cartoon, smooth gradients, overly textured, rough, metallic, seams, tiling artifacts, watermark, text",
+  "style_notes": "Stripped to absolute minimum. This tile is purely background for foreground item sprites — it must NOT compete for attention. Near-solid charcoal (#1a1a1a) with barely-visible grain allows rarity color overlays (green/blue/purple) and item icons to read clearly. No cracks, details, reflections, or lighting. Seamless tiling is critical. Retro RPG pixel art anchors to project identity. The goal: invisible support for item clarity.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "128x128",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

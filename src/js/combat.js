@@ -1,68 +1,50 @@
 /**
- * combat.js — боевая система
- * Управляет состоянием боя, анимациями, расчётом урона
- * Вызывает колбеки onBattleEnd для передачи результата в main.js
+ * combat.js — Grimoire Autocast боевая система
+ * Маг автоматически кастует заклинания из гримуара по кругу.
+ * Враг атакует мага по таймеру. Игрок только наблюдает.
  */
 
 import {
-  getState, saveState, getBonusPower,
+  getState, saveState, getBonusPower, getStats,
   addXP, addGold, addItemToInventory,
-  rollItemDrop, checkDailyReset
+  rollItemDrop, checkDailyReset, tickBuffs, getActiveBuffs,
+  SPELLS_DATA, ENEMIES_DATA
 } from './state.js';
 
-// Данные заклинаний (названия и описания переведены на английский)
-export const SPELLS = {
-  arcane_bolt: {
-    id: 'arcane_bolt',
-    name: 'Arcane Bolt',
-    minDmg: 25, maxDmg: 40,
-    color: '#4a90d9',
-    glowColor: 'rgba(74, 144, 217, 0.6)',
-    emoji: '⚡',
-    animClass: 'spell-arcane',
-    type: 'attack',
-    typeLabel: 'Attack'
-  },
-  arcane_focus: {
-    id: 'arcane_focus',
-    name: 'Focus',
-    minDmg: 0, maxDmg: 0,
-    color: '#c9a84c',
-    glowColor: 'rgba(201, 168, 76, 0.6)',
-    emoji: '🛡️',
-    animClass: 'spell-focus',
-    type: 'defensive',
-    typeLabel: 'Defense — next attack ×2'
-  },
-  shadow_pulse: {
-    id: 'shadow_pulse',
-    name: 'Shadow Pulse',
-    minDmg: 15, maxDmg: 55,
-    color: '#9b59b6',
-    glowColor: 'rgba(155, 89, 182, 0.6)',
-    emoji: '🌑',
-    animClass: 'spell-shadow',
-    type: 'attack_alt',
-    typeLabel: 'Alt. Attack'
-  }
-};
+// Экспортируем данные для обратной совместимости с main.js
+export { SPELLS_DATA as SPELLS };
 
-// Константы боя — увеличены HP и лимит действий вместо раундов
-const DUMMY_MAX_HP = 200;
-const ACTIONS_TOTAL = 10;
-const FIGHTS_LIMIT = 5;
+// Константы
+const BATTLE_TIMEOUT = 60;    // секунд до ничьей
+const FIGHTS_LIMIT   = 5;
+const CAST_GAP       = 300;   // мс пауза между кастами
+const INTRO_DELAY    = 800;   // мс задержка перед первым кастом
 
 // Состояние текущего боя
 let battleState = {
   active: false,
-  action: 1,           // номер текущего действия
-  dummyHP: DUMMY_MAX_HP,
-  totalDamage: 0,
-  actionsHistory: [],
-  focusCharged: false  // true если концентрация заряжена
+  mageHP: 100,
+  mageMaxHP: 100,
+  shieldHP: 0,          // HP щита (Mana Shield)
+  enemyId: null,
+  enemyHP: 0,
+  enemyMaxHP: 0,
+  enemySlowPercent: 0,  // текущее замедление атаки (Frost)
+  enemySlowExpireAt: 0, // timestamp когда slow истекает
+  voidDebuffActive: false,
+  voidDebuffExpireAt: 0,
+  focusCharged: false,  // следующее атак. заклинание x2
+  dotStacks: [],        // массив активных DoT-стаков [{ticksLeft, interval, nextTickAt}]
+  grimoire: [],         // заполненные слоты (только не-null)
+  currentSlotIndex: 0,  // текущий индекс в ротации
+  elapsedTime: 0,       // секунд прошло
+  castTimeout: null,    // setTimeout для следующего каста
+  enemyAttackTimeout: null,
+  timerInterval: null,  // setInterval для секундного таймера
+  dotInterval: null     // setInterval для DoT тиков
 };
 
-// Колбек вызывается по окончании боя с результатами
+// Колбек окончания боя
 let _onBattleEnd = null;
 
 /**
@@ -73,29 +55,24 @@ export function setOnBattleEnd(callback) {
 }
 
 /**
- * Инициализирует новый бой
- * Возвращает false если лимит боёв исчерпан
+ * Возвращает максимальное HP мага по формуле:
+ * 100 + (level - 1) * 15 + floor(BonusPower * 0.5)
  */
-export function initBattle() {
-  checkDailyReset();
+function calcMageMaxHP() {
   const state = getState();
+  const bp = getBonusPower();
+  let base = 100 + (state.level - 1) * 15 + Math.floor(bp * 0.5);
+  if (state.buffs?.iron_flask_buff?.active) base += 40;
+  return base;
+}
 
-  if (state.combat.fightsToday >= FIGHTS_LIMIT) {
-    return false;
-  }
-
-  // Сбрасываем состояние боя
-  battleState = {
-    active: true,
-    action: 1,
-    dummyHP: DUMMY_MAX_HP,
-    totalDamage: 0,
-    actionsHistory: [],
-    focusCharged: false
-  };
-
-  renderBattleUI();
-  return true;
+/**
+ * Возвращает Intelligence по формуле: 5 + (level-1)*3 + BonusPower
+ */
+function getIntelligence() {
+  const state = getState();
+  const bp = getBonusPower();
+  return 5 + (state.level - 1) * 3 + bp;
 }
 
 /**
@@ -106,150 +83,498 @@ function randInt(min, max) {
 }
 
 /**
- * Вычисляет финальный урон: base * (1 + bonusPower/100) * focusMultiplier
+ * Инициализирует бой с конкретным врагом.
+ * Вызывается из main.js после экрана гримуара.
  */
-function calcDamage(spell) {
-  const bonusPower = getBonusPower();
-  const base = randInt(spell.minDmg, spell.maxDmg);
-  let multiplier = 1 + bonusPower / 100;
+export function initBattle(enemyId) {
+  checkDailyReset();
 
-  // Если заряжена Концентрация — удваиваем урон и снимаем заряд
-  if (battleState.focusCharged) {
-    multiplier *= 2.0;
-    battleState.focusCharged = false;
-    // Убираем индикатор заряда
-    const indicator = document.getElementById('focus-indicator');
-    if (indicator) indicator.remove();
-  }
+  // Очищаем таймеры предыдущего боя во избежание двойного срабатывания
+  clearTimeout(battleState.castTimeout);
+  clearTimeout(battleState.enemyAttackTimeout);
+  clearInterval(battleState.timerInterval);
+  clearInterval(battleState.dotInterval);
 
-  return Math.floor(base * multiplier);
+  const state = getState();
+  const enemy = ENEMIES_DATA[enemyId];
+  if (!enemy) return false;
+
+  // Фильтруем null из гримуара
+  const activeSlots = state.grimoire.filter(id => id !== null);
+  if (activeSlots.length < 3) return false;
+
+  const mageMaxHP = calcMageMaxHP();
+
+  // Сброс состояния боя
+  battleState = {
+    active: true,
+    mageHP: mageMaxHP,
+    mageMaxHP,
+    shieldHP: 0,
+    enemyId,
+    enemyHP: enemy.hp,
+    enemyMaxHP: enemy.hp,
+    enemySlowPercent: 0,
+    enemySlowExpireAt: 0,
+    voidDebuffActive: false,
+    voidDebuffExpireAt: 0,
+    focusCharged: false,
+    dotStacks: [],
+    grimoire: activeSlots,
+    currentSlotIndex: 0,
+    elapsedTime: 0,
+    castTimeout: null,
+    enemyAttackTimeout: null,
+    timerInterval: null,
+    dotInterval: null
+  };
+
+  renderBattleUI(enemy);
+  startBattleLoop(enemy);
+  return true;
 }
 
 /**
- * Игрок выбирает заклинание — основная функция действия
- * Бой продолжается пока HP манекена > 0 или не исчерпаны все 10 действий
+ * Запускает игровой цикл боя
  */
-export async function castSpell(spellId) {
+function startBattleLoop(enemy) {
+  // Таймер отсчёта боя (раз в секунду)
+  battleState.timerInterval = setInterval(() => {
+    if (!battleState.active) return;
+    battleState.elapsedTime++;
+
+    // Проверяем истечение баффов на враге
+    const now = Date.now();
+    if (battleState.enemySlowPercent > 0 && now >= battleState.enemySlowExpireAt) {
+      battleState.enemySlowPercent = 0;
+      addCombatLog('Enemy slow expired.', '#888');
+    }
+    if (battleState.voidDebuffActive && now >= battleState.voidDebuffExpireAt) {
+      battleState.voidDebuffActive = false;
+      addCombatLog('Void debuff expired.', '#888');
+      updateEnemyStatusRow();
+    }
+
+    updateTimerDisplay();
+
+    // Timeout — ничья
+    if (battleState.elapsedTime >= BATTLE_TIMEOUT) {
+      endBattle('timeout');
+    }
+  }, 1000);
+
+  // DoT тики (каждые 500мс проверяем стаки)
+  battleState.dotInterval = setInterval(() => {
+    if (!battleState.active || battleState.dotStacks.length === 0) return;
+    processDotTicks();
+  }, 500);
+
+  // Первый каст с задержкой вступления
+  battleState.castTimeout = setTimeout(() => {
+    if (battleState.active) scheduleNextCast();
+  }, INTRO_DELAY);
+
+  // Первая атака врага (если атакует)
+  if (enemy.attack > 0 && enemy.attackInterval > 0) {
+    scheduleEnemyAttack(enemy);
+  }
+}
+
+/**
+ * Планирует следующий каст из гримуара
+ */
+function scheduleNextCast() {
   if (!battleState.active) return;
 
-  const spell = SPELLS[spellId];
-  if (!spell) return;
+  const spellId = battleState.grimoire[battleState.currentSlotIndex];
+  const spell = SPELLS_DATA[spellId];
+  if (!spell) {
+    // Пустой слот — пропускаем
+    advanceGrimoire();
+    scheduleNextCast();
+    return;
+  }
 
-  // Блокируем кнопки на время анимации
-  setSpellButtonsDisabled(true);
+  // Обновляем трекер — подсвечиваем текущий слот
+  updateGrimoireTracker();
 
-  // Защитное заклинание Концентрация — особая логика
-  if (spell.id === 'arcane_focus') {
-    battleState.focusCharged = true;
-    battleState.actionsHistory.push({ spell, damage: 0, action: battleState.action, isFocus: true });
-    await playFocusAnimation();
-    addCombatLog(spell, 0, battleState.action, true);
-    battleState.action++;
+  // Выполняем каст через castTime заклинания
+  battleState.castTimeout = setTimeout(async () => {
+    if (!battleState.active) return;
+    await performCast(spell);
+    if (battleState.active) {
+      advanceGrimoire();
+      // Пауза между кастами перед следующим
+      battleState.castTimeout = setTimeout(() => {
+        if (battleState.active) scheduleNextCast();
+      }, CAST_GAP);
+    }
+  }, spell.castTime * 1000);
+}
 
-    // Проверяем не исчерпаны ли действия
-    if (battleState.action > ACTIONS_TOTAL) {
-      await endBattle();
+/**
+ * Сдвигает индекс гримуара к следующему слоту
+ */
+function advanceGrimoire() {
+  battleState.currentSlotIndex = (battleState.currentSlotIndex + 1) % battleState.grimoire.length;
+}
+
+/**
+ * Выполняет каст заклинания
+ */
+async function performCast(spell) {
+  if (!battleState.active) return;
+
+  const effect = spell.effect;
+
+  // === UTILITY спеллы (без урона) ===
+
+  if (spell.school === 'utility' && spell.id === 'focus') {
+    // Focus — следующий атакующий каст x2
+    if (battleState.focusCharged) {
+      addCombatLog('Focus already active — wasted!', spell.color);
     } else {
-      updateActionDisplay();
-      setSpellButtonsDisabled(false);
+      battleState.focusCharged = true;
+      addCombatLog('Focus activated — next spell x2.0', spell.color);
+      await playFocusAnimation();
     }
     return;
   }
 
-  const damage = calcDamage(spell);
-  battleState.dummyHP -= damage;
-  battleState.totalDamage += damage;
-  battleState.actionsHistory.push({ spell, damage, action: battleState.action });
+  if (spell.id === 'mana_shield') {
+    // Создаём или перезаписываем щит
+    const int = getIntelligence();
+    const shieldVal = Math.floor(40 + int * 0.8);
+    battleState.shieldHP = shieldVal;
+    addCombatLog(`Mana Shield: +${shieldVal} HP shield`, spell.color);
+    await playShieldAnimation(shieldVal);
+    updateMageHP();
+    return;
+  }
 
-  // Анимация заклинания
-  await playSpellAnimation(spell, damage);
+  // === АТАКУЮЩИЕ ЗАКЛИНАНИЯ ===
 
-  // Обновляем HP бар
-  updateDummyHP();
+  const enemy = ENEMIES_DATA[battleState.enemyId];
+  const int = getIntelligence();
 
-  // Лог
-  addCombatLog(spell, damage, battleState.action);
+  // INT_multiplier
+  const intMult = 1 + (int - 5) / 100;
 
-  battleState.action++;
+  // school_modifier из данных врага
+  const schoolMod = enemy.resistances[spell.school] || 1.0;
 
-  // Проверяем условия окончания боя:
-  // победа — манекен убит; поражение — закончились действия
-  if (battleState.dummyHP <= 0) {
-    await endBattle();
-  } else if (battleState.action > ACTIONS_TOTAL) {
-    await endBattle();
-  } else {
-    updateActionDisplay();
-    setSpellButtonsDisabled(false);
+  // debuff_modifier (Void Eruption)
+  const debuffMod = battleState.voidDebuffActive ? 1.15 : 1.0;
+
+  // focus_modifier
+  let focusMod = 1.0;
+  let wasFocused = false;
+  if (battleState.focusCharged) {
+    focusMod = 2.0;
+    battleState.focusCharged = false;
+    wasFocused = true;
+  }
+
+  // buff_modifier (Mana Surge)
+  const state = getState();
+  const buffMod = (state.buffs.mana_surge && state.buffs.mana_surge.active) ? 1.25 : 1.0;
+
+  // Для Arcane Barrage — 3 попадания
+  if (spell.id === 'arcane_barrage') {
+    let totalDmg = 0;
+    for (let i = 0; i < 3; i++) {
+      const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+      const dmg = Math.floor(base * intMult * schoolMod * debuffMod * (i === 0 ? focusMod : 1.0) * buffMod);
+      totalDmg += dmg;
+      battleState.enemyHP -= dmg;
+    }
+    showDamageNumber(totalDmg, spell.color);
+    const focusLabel = wasFocused ? ' (x2 Focus on first hit!)' : '';
+    addCombatLog(`${spell.name} hits for ${totalDmg} (3 missiles)${focusLabel}`, spell.color);
+    await playSpellAnimation(spell, totalDmg);
+    updateEnemyHP();
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // DoT: Ignite
+  if (effect && effect.type === 'dot') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const directDmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    battleState.enemyHP -= directDmg;
+
+    // Добавляем стак DoT (максимум 3)
+    if (battleState.dotStacks.length < effect.maxStacks) {
+      battleState.dotStacks.push({
+        ticksLeft: effect.ticks,
+        interval: effect.interval * 1000,
+        nextTickAt: Date.now() + effect.interval * 1000,
+        dmgPerTick: effect.tickDmg,
+        intMult,
+        schoolMod,
+        color: spell.color
+      });
+      addCombatLog(`${spell.name}: ${directDmg} dmg + DoT stack (${battleState.dotStacks.length}/${effect.maxStacks})`, spell.color);
+    } else {
+      addCombatLog(`${spell.name}: ${directDmg} dmg (DoT stacks maxed)`, spell.color);
+    }
+    await playSpellAnimation(spell, directDmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // Slow: Frost Spike / Blizzard
+  if (effect && effect.type === 'slow') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    battleState.enemyHP -= dmg;
+
+    battleState.enemySlowPercent = effect.slowPercent;
+    battleState.enemySlowExpireAt = Date.now() + effect.duration * 1000;
+
+    const slowPct = Math.floor(effect.slowPercent * 100);
+    const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
+    addCombatLog(`${spell.name}: ${dmg} dmg + -${slowPct}% attack speed${focusLabel}`, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // Void debuff
+  if (effect && effect.type === 'debuff' && effect.debuffType === 'void') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    battleState.enemyHP -= dmg;
+
+    battleState.voidDebuffActive = true;
+    battleState.voidDebuffExpireAt = Date.now() + effect.duration * 1000;
+
+    const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
+    addCombatLog(`${spell.name}: ${dmg} dmg + Void Debuff +15%${focusLabel}`, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // Lifesteal: Shadow Bolt / Drain Life
+  if (effect && effect.type === 'lifesteal') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    battleState.enemyHP -= dmg;
+
+    // Лайфстил — хилит мага (не больше недостающего HP, не хилит щит)
+    const missingHP = battleState.mageMaxHP - battleState.mageHP;
+    const heal = Math.min(missingHP, Math.floor(dmg * effect.percent));
+    if (heal > 0) {
+      battleState.mageHP += heal;
+    }
+
+    const healPct = Math.floor(effect.percent * 100);
+    const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
+    addCombatLog(`${spell.name}: ${dmg} dmg + healed ${heal} HP (${healPct}% lifesteal)${focusLabel}`, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateMageHP();
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // Базовый урон (Arcane Bolt, Fireball, Inferno и др.)
+  const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+  const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+  battleState.enemyHP -= dmg;
+
+  // Школьный модификатор в логе
+  let schoolNote = '';
+  if (schoolMod > 1.0) schoolNote = ' — WEAKNESS!';
+  else if (schoolMod < 1.0) schoolNote = ' — RESIST';
+  const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
+
+  addCombatLog(`${spell.name}: ${dmg} dmg${schoolNote}${focusLabel}`, spell.color);
+  await playSpellAnimation(spell, dmg);
+  updateEnemyHP();
+  if (battleState.enemyHP <= 0) { endBattle('win'); }
+}
+
+/**
+ * Обрабатывает тики активных DoT-стаков
+ */
+function processDotTicks() {
+  if (!battleState.active) return;
+  const now = Date.now();
+  let changed = false;
+
+  for (let i = battleState.dotStacks.length - 1; i >= 0; i--) {
+    const stack = battleState.dotStacks[i];
+    if (now >= stack.nextTickAt) {
+      // Наносим тик урона
+      const tickDmg = Math.floor(stack.dmgPerTick * stack.intMult * stack.schoolMod);
+      battleState.enemyHP -= tickDmg;
+      changed = true;
+      addCombatLog(`DoT tick: ${tickDmg} fire damage`, stack.color);
+      showDamageNumber(tickDmg, stack.color);
+
+      stack.ticksLeft--;
+      stack.nextTickAt = now + stack.interval;
+
+      if (stack.ticksLeft <= 0) {
+        battleState.dotStacks.splice(i, 1);
+      }
+
+      if (battleState.enemyHP <= 0) {
+        endBattle('win');
+        return;
+      }
+    }
+  }
+
+  if (changed) {
+    updateEnemyHP();
+    updateEnemyStatusRow();
   }
 }
 
 /**
- * Завершает бой, начисляет награды, вызывает колбек
+ * Планирует атаку врага
  */
-async function endBattle() {
-  battleState.active = false;
-  const state = getState();
-  const won = battleState.dummyHP <= 0;
+function scheduleEnemyAttack(enemy) {
+  if (!battleState.active) return;
 
-  // Фиксируем бой в статистике
+  // Интервал с учётом замедления
+  const effectiveInterval = battleState.enemySlowPercent > 0
+    ? enemy.attackInterval / (1 - battleState.enemySlowPercent)
+    : enemy.attackInterval;
+
+  battleState.enemyAttackTimeout = setTimeout(() => {
+    if (!battleState.active) return;
+    performEnemyAttack(enemy);
+    scheduleEnemyAttack(enemy);
+  }, effectiveInterval * 1000);
+}
+
+/**
+ * Враг атакует мага
+ */
+function performEnemyAttack(enemy) {
+  if (!battleState.active) return;
+
+  let dmg = enemy.attack;
+
+  // Щит поглощает урон первым
+  if (battleState.shieldHP > 0) {
+    const absorbed = Math.min(battleState.shieldHP, dmg);
+    battleState.shieldHP -= absorbed;
+    dmg -= absorbed;
+    addCombatLog(
+      `Enemy attacks for ${enemy.attack} — Shield absorbs ${absorbed} (shield: ${battleState.shieldHP})`,
+      '#c9a84c'
+    );
+    updateMageHP();
+    if (dmg <= 0) return;
+  } else {
+    addCombatLog(`Enemy attacks for ${dmg}`, '#e74c3c');
+  }
+
+  battleState.mageHP -= dmg;
+
+  // Визуальный удар по магу
+  const mageEl = document.getElementById('combat-mage');
+  if (mageEl) {
+    mageEl.classList.add('mage-hit');
+    setTimeout(() => mageEl.classList.remove('mage-hit'), 400);
+  }
+
+  updateMageHP();
+
+  if (battleState.mageHP <= 0) {
+    endBattle('loss');
+  }
+}
+
+/**
+ * Завершает бой с указанным результатом
+ */
+function endBattle(result) {
+  if (!battleState.active) return;
+  battleState.active = false;
+
+  // Остановка всех таймеров
+  clearTimeout(battleState.castTimeout);
+  clearTimeout(battleState.enemyAttackTimeout);
+  clearInterval(battleState.timerInterval);
+  clearInterval(battleState.dotInterval);
+
+  const state = getState();
+  const enemy = ENEMIES_DATA[battleState.enemyId];
+
   state.combat.fightsToday++;
   state.combat.lastFightDate = new Date().toDateString();
 
   let goldEarned = 0;
   let xpEarned = 0;
   let droppedItem = null;
-  let bonusTriggered = false;
 
-  if (won) {
+  if (result === 'win') {
     state.combat.consecutiveWins++;
-    goldEarned = randInt(10, 15);
-    xpEarned = 20;
+    goldEarned = randInt(enemy.goldReward.min, enemy.goldReward.max);
+    xpEarned = enemy.xpReward;
 
-    // 3% шанс дропа Common-предмета
-    if (Math.random() < 0.03) {
+    // Shadow Dust buff — ×2 XP
+    if (state.buffs?.shadow_dust_buff?.active) xpEarned *= 2;
+
+    // Crystal Fortune buff — +15 bonus gold
+    if (state.buffs.crystal_fortune && state.buffs.crystal_fortune.active) {
+      goldEarned += 15;
+    }
+
+    // 5% шанс дропа предмета
+    if (Math.random() < 0.05) {
       droppedItem = rollItemDrop();
       addItemToInventory(droppedItem);
     }
-
-    // Бонус 5 побед за день: проверяем после 5го боя если все победы
-    if (state.combat.fightsToday === FIGHTS_LIMIT && state.combat.consecutiveWins >= FIGHTS_LIMIT) {
-      bonusTriggered = true;
-      goldEarned += 25;
-      xpEarned += 50;
-    }
-  } else {
-    // При поражении — сбрасываем серию побед
+  } else if (result === 'loss') {
     state.combat.consecutiveWins = 0;
-    goldEarned = randInt(5, 7);
-    xpEarned = 10;
+    goldEarned = Math.floor(randInt(enemy.goldReward.min, enemy.goldReward.max) * 0.5);
+    xpEarned = Math.floor(enemy.xpReward * 0.5);
+  } else {
+    // timeout — ничья
+    state.combat.consecutiveWins = 0;
+    goldEarned = Math.floor(randInt(enemy.goldReward.min, enemy.goldReward.max) * 0.3);
+    xpEarned = Math.floor(enemy.xpReward * 0.3);
   }
 
   saveState();
-
-  // Начисляем золото и опыт
+  const expiredBuffs = tickBuffs();
   addGold(goldEarned);
   const levelUps = addXP(xpEarned);
 
-  // Небольшая пауза перед показом результата
-  await delay(600);
-
-  // Вызываем колбек из main.js с результатами
-  if (_onBattleEnd) {
-    _onBattleEnd({
-      won,
-      damage: battleState.totalDamage,
-      dummyHP: Math.max(0, battleState.dummyHP),
-      goldEarned,
-      xpEarned,
-      droppedItem,
-      bonusTriggered,
-      fightsLeft: FIGHTS_LIMIT - state.combat.fightsToday,
-      actions: battleState.actionsHistory,
-      levelUps
-    });
-  }
+  setTimeout(() => {
+    if (_onBattleEnd) {
+      _onBattleEnd({
+        result,        // 'win' | 'loss' | 'timeout'
+        won: result === 'win',
+        goldEarned,
+        xpEarned,
+        droppedItem,
+        fightsLeft: FIGHTS_LIMIT - state.combat.fightsToday,
+        levelUps,
+        expiredBuffs,
+        enemyName: enemy.name,
+        enemyHPLeft: Math.max(0, battleState.enemyHP),
+        mageHPLeft: Math.max(0, battleState.mageHP),
+        elapsedTime: battleState.elapsedTime
+      });
+    }
+  }, 600);
 }
+
+// ===== АНИМАЦИИ =====
 
 /**
  * Задержка
@@ -259,37 +584,75 @@ function delay(ms) {
 }
 
 /**
- * Анимация Концентрации — маг заряжается, снаряда нет
+ * Анимация Focus (маг заряжается)
  */
 async function playFocusAnimation() {
   const mageEl = document.getElementById('combat-mage');
   if (!mageEl) return;
 
   mageEl.classList.add('mage-focusing');
+  const idleImg = document.getElementById('mage-img-idle');
+  const defendVid = document.getElementById('mage-video-defend');
+  if (idleImg) idleImg.classList.add('mage-sprite-hidden');
+  if (defendVid) { defendVid.classList.remove('mage-sprite-hidden'); defendVid.currentTime = 0; defendVid.play(); }
 
-  // Показываем индикатор заряда
-  const indicator = document.createElement('div');
-  indicator.className = 'focus-charged-indicator';
-  indicator.id = 'focus-indicator';
-  indicator.textContent = '⚡ FOCUS';
-  mageEl.appendChild(indicator);
+  // Индикатор над магом
+  let indicator = document.getElementById('focus-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.className = 'focus-charged-indicator';
+    indicator.id = 'focus-indicator';
+    indicator.textContent = 'FOCUS x2';
+    mageEl.appendChild(indicator);
+  }
 
   await delay(900);
   mageEl.classList.remove('mage-focusing');
+  if (defendVid) defendVid.classList.add('mage-sprite-hidden');
+  if (idleImg) idleImg.classList.remove('mage-sprite-hidden');
 }
 
 /**
- * Проигрывает визуальную анимацию заклинания
+ * Анимация Mana Shield
+ */
+async function playShieldAnimation(shieldVal) {
+  const mageEl = document.getElementById('combat-mage');
+  if (!mageEl) return;
+
+  mageEl.classList.add('mage-shielded');
+
+  const floatEl = document.createElement('div');
+  floatEl.className = 'damage-number';
+  floatEl.textContent = `+${shieldVal} shield`;
+  floatEl.style.color = '#c9a84c';
+  floatEl.style.textShadow = '0 0 10px rgba(201,168,76,0.8)';
+  mageEl.appendChild(floatEl);
+  setTimeout(() => floatEl.remove(), 1200);
+
+  await delay(700);
+  mageEl.classList.remove('mage-shielded');
+}
+
+/**
+ * Анимация полёта снаряда заклинания
  */
 async function playSpellAnimation(spell, damage) {
   const mageEl = document.getElementById('combat-mage');
-  const dummyEl = document.getElementById('combat-dummy');
+  const enemyEl = document.getElementById('combat-enemy');
   const projectileEl = document.getElementById('spell-projectile');
 
-  if (!mageEl || !dummyEl || !projectileEl) return;
+  if (!mageEl || !enemyEl || !projectileEl) return;
 
   // Маг начинает каст
   mageEl.classList.add('mage-casting');
+  const idleImg = document.getElementById('mage-img-idle');
+  const attackVid = document.getElementById('mage-video-attack');
+  if (idleImg) idleImg.classList.add('mage-sprite-hidden');
+  if (attackVid) { attackVid.classList.remove('mage-sprite-hidden'); attackVid.currentTime = 0; attackVid.play(); }
+
+  // Убираем Focus индикатор
+  const indicator = document.getElementById('focus-indicator');
+  if (indicator && !battleState.focusCharged) indicator.remove();
 
   await delay(150);
 
@@ -298,155 +661,277 @@ async function playSpellAnimation(spell, damage) {
   projectileEl.style.display = 'flex';
   projectileEl.style.background = spell.color;
   projectileEl.style.boxShadow = `0 0 20px ${spell.glowColor}, 0 0 40px ${spell.glowColor}`;
-  projectileEl.textContent = spell.emoji;
+  projectileEl.textContent = getSpellEmoji(spell.school);
 
-  // Запускаем анимацию движения снаряда
-  void projectileEl.offsetWidth; // принудительный reflow для перезапуска анимации
-  projectileEl.classList.add(spell.animClass);
+  // Запускаем анимацию
+  void projectileEl.offsetWidth;
+  projectileEl.classList.add('spell-arcane');
 
   await delay(600);
 
   // Попадание
   projectileEl.style.display = 'none';
-  dummyEl.classList.add('dummy-hit');
-
-  // Цифра урона
+  enemyEl.classList.add('dummy-hit');
   showDamageNumber(damage, spell.color);
 
-  await delay(400);
+  await delay(350);
 
-  dummyEl.classList.remove('dummy-hit');
+  enemyEl.classList.remove('dummy-hit');
   mageEl.classList.remove('mage-casting');
+
+  if (attackVid) attackVid.classList.add('mage-sprite-hidden');
+  if (idleImg) idleImg.classList.remove('mage-sprite-hidden');
 }
 
 /**
- * Показывает всплывающую цифру урона
+ * Эмодзи/символ по школе заклинания
+ */
+function getSpellEmoji(school) {
+  const map = {
+    arcane: '✦',
+    fire:   '🔥',
+    shadow: '◈',
+    frost:  '❄',
+    utility: '◎'
+  };
+  return map[school] || '•';
+}
+
+/**
+ * Всплывающая цифра урона
  */
 function showDamageNumber(damage, color) {
-  const dummyEl = document.getElementById('combat-dummy');
-  if (!dummyEl) return;
+  const enemyEl = document.getElementById('combat-enemy');
+  if (!enemyEl) return;
 
   const dmgEl = document.createElement('div');
   dmgEl.className = 'damage-number';
   dmgEl.textContent = `-${damage}`;
   dmgEl.style.color = color;
   dmgEl.style.textShadow = `0 0 10px ${color}`;
-
-  dummyEl.appendChild(dmgEl);
+  enemyEl.appendChild(dmgEl);
   setTimeout(() => dmgEl.remove(), 1200);
 }
 
-/**
- * Обновляет HP бар манекена
- */
-function updateDummyHP() {
-  const hpBar = document.getElementById('dummy-hp-bar');
-  const hpText = document.getElementById('dummy-hp-text');
+// ===== UI =====
 
-  const currentHP = Math.max(0, battleState.dummyHP);
-  const percent = (currentHP / DUMMY_MAX_HP) * 100;
+/**
+ * Рендерит начальное состояние боевого UI
+ */
+function renderBattleUI(enemy) {
+  // Enemy
+  const enemyImg = document.getElementById('enemy-img');
+  if (enemyImg) {
+    enemyImg.src = enemy.img || 'assets/generated/training_dummy.png';
+    enemyImg.alt = enemy.name;
+  }
+  const enemyLabel = document.getElementById('enemy-label');
+  if (enemyLabel) enemyLabel.textContent = enemy.name;
+
+  // HP bars
+  updateMageHP();
+  updateEnemyHP();
+  updateEnemyStatusRow();
+
+  // Grimoire Tracker
+  renderGrimoireTracker();
+
+  // Лог
+  const logEl = document.getElementById('combat-log');
+  if (logEl) logEl.innerHTML = '';
+
+  // Таймер
+  updateTimerDisplay();
+
+  addCombatLog(`Battle started vs ${enemy.name}!`, '#c9a84c');
+
+  // Лор-подсказка при первом бою — показываем один раз и прячем через 8 сек
+  showCombatLoreHintIfFirst();
+}
+
+/**
+ * Показывает лор-подсказку при первом бою, потом скрывает через 8 секунд
+ */
+function showCombatLoreHintIfFirst() {
+  const HINT_KEY = 'veyra_combat_hint_shown';
+  if (localStorage.getItem(HINT_KEY)) return;
+
+  const hint = document.getElementById('combat-lore-hint');
+  if (!hint) return;
+
+  hint.style.display = 'block';
+  hint.classList.remove('fading');
+
+  // Через 8 секунд — анимация исчезновения, потом скрываем
+  setTimeout(() => {
+    hint.classList.add('fading');
+    setTimeout(() => { hint.style.display = 'none'; }, 650);
+  }, 8000);
+
+  // Запоминаем что уже показали
+  localStorage.setItem(HINT_KEY, '1');
+}
+
+/**
+ * Обновляет HP бар и текст мага
+ */
+function updateMageHP() {
+  const hpBar = document.getElementById('mage-hp-bar');
+  const hpText = document.getElementById('mage-hp-text');
+  const hpDisplay = document.getElementById('combat-mage-hp-display');
+  const shieldDisplay = document.getElementById('mage-shield-display');
+  const shieldVal = document.getElementById('mage-shield-val');
+
+  const current = Math.max(0, battleState.mageHP);
+  const max = battleState.mageMaxHP;
+  const percent = (current / max) * 100;
 
   if (hpBar) {
     hpBar.style.width = `${percent}%`;
-    // Add/remove critical class at 25% HP
-    if (percent <= 25) {
-      hpBar.classList.add('hp-critical');
-    } else {
-      hpBar.classList.remove('hp-critical');
-    }
-    if (percent > 60) {
-      hpBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
-    } else if (percent > 30) {
-      hpBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
-    } else {
-      hpBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
-    }
+    hpBar.classList.toggle('hp-critical', percent <= 25);
+    hpBar.style.background = percent > 60
+      ? 'linear-gradient(90deg, #2ecc71, #27ae60)'
+      : percent > 30
+        ? 'linear-gradient(90deg, #f39c12, #e67e22)'
+        : 'linear-gradient(90deg, #e74c3c, #c0392b)';
   }
+  if (hpText) hpText.textContent = `${current} / ${max}`;
+  if (hpDisplay) hpDisplay.textContent = `HP: ${current} / ${max}`;
 
-  if (hpText) {
-    hpText.textContent = `${currentHP} / ${DUMMY_MAX_HP}`;
+  // Щит
+  if (shieldDisplay) {
+    shieldDisplay.style.display = battleState.shieldHP > 0 ? 'block' : 'none';
+  }
+  if (shieldVal) shieldVal.textContent = battleState.shieldHP;
+}
+
+/**
+ * Обновляет HP бар и текст врага
+ */
+function updateEnemyHP() {
+  const hpBar = document.getElementById('enemy-hp-bar');
+  const hpText = document.getElementById('enemy-hp-text');
+
+  const current = Math.max(0, battleState.enemyHP);
+  const max = battleState.enemyMaxHP;
+  const percent = (current / max) * 100;
+
+  if (hpBar) {
+    hpBar.style.width = `${percent}%`;
+    hpBar.classList.toggle('hp-critical', percent <= 25);
+    hpBar.style.background = percent > 60
+      ? 'linear-gradient(90deg, #2ecc71, #27ae60)'
+      : percent > 30
+        ? 'linear-gradient(90deg, #f39c12, #e67e22)'
+        : 'linear-gradient(90deg, #e74c3c, #c0392b)';
+  }
+  if (hpText) hpText.textContent = `${current} / ${max}`;
+}
+
+/**
+ * Обновляет строку статусов врага (slow, DoT, debuff)
+ */
+function updateEnemyStatusRow() {
+  const row = document.getElementById('enemy-status-row');
+  if (!row) return;
+  row.innerHTML = '';
+
+  if (battleState.enemySlowPercent > 0) {
+    const tag = document.createElement('span');
+    tag.className = 'enemy-status-tag enemy-slow';
+    tag.textContent = `-${Math.floor(battleState.enemySlowPercent * 100)}% slow`;
+    row.appendChild(tag);
+  }
+  if (battleState.dotStacks.length > 0) {
+    const tag = document.createElement('span');
+    tag.className = 'enemy-status-tag enemy-dot';
+    tag.textContent = `DoT x${battleState.dotStacks.length}`;
+    row.appendChild(tag);
+  }
+  if (battleState.voidDebuffActive) {
+    const tag = document.createElement('span');
+    tag.className = 'enemy-status-tag enemy-void';
+    tag.textContent = '+15% dmg';
+    row.appendChild(tag);
   }
 }
 
 /**
  * Добавляет строку в лог боя
  */
-function addCombatLog(spell, damage, action, isFocus = false) {
+function addCombatLog(text, color = '#c9a84c') {
   const logEl = document.getElementById('combat-log');
   if (!logEl) return;
 
   const entry = document.createElement('div');
   entry.className = 'log-entry';
+  entry.style.color = color;
+  entry.textContent = `> ${text}`;
 
-  const damageHtml = isFocus
-    ? `<span class="log-focus">→ Next attack ×2</span>`
-    : `<span class="log-damage">-${damage}</span>`;
-
-  entry.innerHTML = `
-    <span class="log-round">Action ${action}</span>
-    <span class="log-spell" style="color: ${spell.color}">${spell.emoji} ${spell.name}</span>
-    ${damageHtml}
-  `;
   logEl.appendChild(entry);
+
+  // Оставляем максимум 20 записей для производительности
+  while (logEl.children.length > 20) {
+    logEl.removeChild(logEl.firstChild);
+  }
   logEl.scrollTop = logEl.scrollHeight;
 }
 
 /**
- * Обновляет счётчик действий
+ * Обновляет отображение таймера
  */
-function updateActionDisplay() {
-  const el = document.getElementById('combat-round');
-  if (el) {
-    el.textContent = `Action ${battleState.action} / ${ACTIONS_TOTAL}`;
-  }
+function updateTimerDisplay() {
+  const el = document.getElementById('combat-timer');
+  if (!el) return;
+  const remaining = Math.max(0, BATTLE_TIMEOUT - battleState.elapsedTime);
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  el.classList.toggle('timer-critical', remaining <= 10);
 }
 
 /**
- * Блокирует/разблокирует кнопки заклинаний
+ * Рендерит Grimoire Tracker в боевом экране
  */
-function setSpellButtonsDisabled(disabled) {
-  document.querySelectorAll('.spell-btn').forEach(btn => {
-    btn.disabled = disabled;
+function renderGrimoireTracker() {
+  const tracker = document.getElementById('grimoire-tracker');
+  if (!tracker) return;
+  tracker.innerHTML = '';
+
+  battleState.grimoire.forEach((spellId, index) => {
+    const spell = SPELLS_DATA[spellId];
+    const slot = document.createElement('div');
+    slot.className = 'tracker-slot';
+    slot.id = `tracker-slot-${index}`;
+    slot.dataset.index = index;
+
+    if (spell) {
+      slot.style.setProperty('--spell-color', spell.color);
+      slot.innerHTML = `
+        <div class="tracker-slot-icon" style="border-color:${spell.color};box-shadow:0 0 8px ${spell.glowColor}">
+          <span style="color:${spell.color}">${getSpellEmoji(spell.school)}</span>
+        </div>
+        <div class="tracker-slot-name" style="color:${spell.color}">${spell.name}</div>
+      `;
+    }
+    tracker.appendChild(slot);
   });
 }
 
 /**
- * Рендерит начальное состояние боевого UI
+ * Подсвечивает текущий активный слот в Grimoire Tracker
  */
-function renderBattleUI() {
-  // Сброс HP манекена
-  const hpBar = document.getElementById('dummy-hp-bar');
-  const hpText = document.getElementById('dummy-hp-text');
-  if (hpBar) {
-    hpBar.style.width = '100%';
-    hpBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
-  }
-  if (hpText) hpText.textContent = `${DUMMY_MAX_HP} / ${DUMMY_MAX_HP}`;
-
-  // Сброс счётчика действий
-  updateActionDisplay();
-
-  // Очистка лога
-  const logEl = document.getElementById('combat-log');
-  if (logEl) logEl.innerHTML = '';
-
-  // Разблокировка кнопок
-  setSpellButtonsDisabled(false);
-
-  // Счётчик боёв
-  const state = getState();
-  const fightCountEl = document.getElementById('fights-remaining');
-  if (fightCountEl) {
-    const remaining = FIGHTS_LIMIT - state.combat.fightsToday;
-    fightCountEl.textContent = `Battles today: ${remaining} / ${FIGHTS_LIMIT}`;
-  }
+function updateGrimoireTracker() {
+  const slots = document.querySelectorAll('.tracker-slot');
+  slots.forEach((slot, i) => {
+    slot.classList.toggle('tracker-slot-active', i === battleState.currentSlotIndex);
+    slot.classList.toggle('tracker-slot-next', i === (battleState.currentSlotIndex + 1) % battleState.grimoire.length);
+  });
 }
 
 /**
- * Возвращает количество боёв оставшихся сегодня
+ * Возвращает оставшееся количество боёв
  */
 export function getFightsRemaining() {
-  checkDailyReset();
-  const state = getState();
-  return Math.max(0, FIGHTS_LIMIT - state.combat.fightsToday);
+  return 999; // TODO: вернуть лимит для production
 }

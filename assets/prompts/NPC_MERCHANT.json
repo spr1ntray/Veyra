@@ -1,0 +1,14 @@
+{
+  "asset_id": "NPC_MERCHANT",
+  "asset_name": "NPC Merchant — Character Sprite",
+  "type": "character_sprite",
+  "target_model": "Flux",
+  "prompt_en": "Pixel art NPC merchant character sprite, standing human figure in dark fantasy setting. Dark brown or charcoal hooded cloak, mysterious and shadowed face beneath hood, calm neutral stance. Small pouch or sack of coins hanging from belt, rendered in brown/tan leather with gold coin accents (#d4af37 minimal). No counter, stall, shelves, or background items — only the character. Front-facing or slight 3/4 view, full-body visible. Transparent background (PNG sprite). Character height approximately 200 pixels, centered composition. Retro RPG pixel art, 16-bit video game style. Dark palette: deep browns (#3d2a47), dark charcoal (#1a1a1a), very small gold accents (#d4af37), muted shadows. Desaturated, mysterious, moody. Idle pose ready for game placement. Clear silhouette readable at any size.",
+  "negative_prompt": "counter, stall, shop, shelves, vials, potions, lantern, background items, busy composition, lantern light, bright colors, neon, oversaturated, photorealism, 3D render, cartoon, cute aesthetic, cheerful expression, modern clothing, visible face, overly detailed features, blurry, watermark, reflective surfaces, smooth gradients, gore, skulls, weapons",
+  "style_notes": "Pure character sprite — no environment or props except a small pouch/coin sack. Hooded cloak establishes merchant archetype through silhouette alone. Shadowed hood creates mystery without exposing face. Coin pouch provides minimal visual context (trader role) without complex details. Transparent background for free-form placement on any background. Dark brown/charcoal palette with minimal gold accents (#d4af37 only on coins) maintains dark fantasy mood. Idle stance ready for player interaction. Clear readable silhouette at all scales per project standards.",
+  "aspect_ratio": "custom",
+  "size_pixels": "~150-200px height (width proportional)",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

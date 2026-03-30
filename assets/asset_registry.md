@@ -1,0 +1,39 @@
+# Veyra Asset Registry
+
+| asset_id | asset_name | type | status | prompt_file | notes |
+|----------|------------|------|--------|-------------|-------|
+| LOADSCREEN_001 | Loading Screen — Haunted Castle | loading_screen_background | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/LOADSCREEN_001.json | Castle silhouette with arcane runes, Midjourney-optimized |
+| LOADSCREEN_002 | Loading Screen — Mystical Portal in Forest | loading_screen_background | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/LOADSCREEN_002.json | Portal focal point with fog effects, Stable Diffusion-optimized |
+| LOADSCREEN_003 | Loading Screen — Ruined Archway & Starfield | loading_screen_background | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/LOADSCREEN_003.json | Cosmic atmosphere with celestial theme, Midjourney-optimized |
+| HANGER_001 | Inventory UI — Wizard Hanger (Wooden, Silhouettes) | ui_element_inventory | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/HANGER_001.json | Wooden hanger with silhouettes of hat, cloak, staff, Stable Diffusion-optimized |
+| HANGER_002 | Inventory UI — Wizard Hanger (Wall-Mounted, Ornate) | ui_element_inventory | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/HANGER_002.json | Wall-mounted ornate bracket with magical glow, Stable Diffusion-optimized |
+| TRIPOD_HANGER_001 | Wizard Tripod Valet Stand — Minimalist Dark Fantasy | ui_element_inventory | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/TRIPOD_HANGER_001.json | Tripod stand with hat, cloak, staff; minimalist pixel art, transparent bg, 256x384 |
+| TRIPOD_HANGER_002 | Wizard Tripod Valet Stand — Arcane Glow Variant | ui_element_inventory | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/TRIPOD_HANGER_002.json | Tripod stand with arcane atmosphere; glowing staff orb, purple haze, 256x384 |
+| ICON_001 | World Map Icon — Navigation Button | ui_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_001.json | Minimalist map compass, cyan neon accents, 64x64 pixel art |
+| ICON_002 | Training Icon — Combat/Practice Button | ui_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_002.json | Training dummy or practice stance, cyan accents, 64x64 pixel art |
+| ICON_003 | Daily Reward Icon — Gift/Bonus Button | ui_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_003.json | Treasure chest/gift reward, orange neon glow, 64x64 pixel art |
+| ICON_004 | Inventory Icon — Items Button | ui_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_004.json | Backpack or item grid, purple neon accents, 64x64 pixel art |
+| ICON_005 | Staff — Common (Wooden) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_005.json | Simple wooden staff, no effects, humble common rarity, 64x64 pixel art |
+| ICON_006 | Staff — Uncommon (Runic) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_006.json | Wooden staff with cyan rune lines, uncommon tier, 64x64 pixel art |
+| ICON_007 | Staff — Rare (Crystal-Topped) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_007.json | Staff with glowing crystal orb, cyan+purple neon blend, rare tier, 64x64 pixel art |
+| ICON_008 | Staff — Epic (Shadow Aura) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_008.json | Dark void staff with purple+cyan aura, epic tier, 64x64 pixel art |
+| ICON_009 | Wizard Hat — Common (Simple Cone) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_009.json | Simple conical hat, no effects, humble common rarity, 64x64 pixel art |
+| ICON_010 | Wizard Hat — Epic (Ash Crown) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_010.json | Corrupted ash crown with shadow aura, purple+cyan neon, epic tier, 64x64 pixel art |
+| ICON_011 | Cloak — Common (Tattered) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_011.json | Worn tattered cloak with tears and patches, common rarity, 64x64 pixel art |
+| ICON_012 | Cloak — Epic (Shadow-Woven) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_012.json | Mystical shadow-woven cloak with ethereal aura, purple+cyan neon, epic tier, 64x64 pixel art |
+| ICON_013 | Cloak — Uncommon (Veil of Mist) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_015.json | Ethereal mist cloak with wispy fog, cyan neon accents, uncommon tier, 64x64 pixel art |
+| ICON_014 | Cloak — Rare (Nightweave Cloak) | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_016.json | Nightweave shadow cloak with dual neon (cyan+magenta), rare tier, 64x64 pixel art |
+| ICON_017 | Mana Elixir | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_017.json | Glowing cyan mana potion in dark glass vial, uncommon rarity, 128x128 pixel art, Stable Diffusion |
+| ICON_018 | Crystal Shard | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_018.json | Faceted golden crystal gem with coins backdrop, rare rarity, 128x128 pixel art, Stable Diffusion |
+| ICON_019 | Iron Flask | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_019.json | Dark-red health potion in iron flask, common rarity, 128x128 pixel art, Stable Diffusion |
+| ICON_020 | Shadow Dust | item_icon | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/ICON_020.json | Magenta XP dust vial with swirling particles, uncommon rarity, 128x128 pixel art, Stable Diffusion |
+| CELL_BG_001 | Inventory Cell Background — Common | ui_tile_seamless | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/CELL_BG_COMMON.json | Stone/wood texture, muted grays, no glow, seamless 64x64 tile |
+| CELL_BG_002 | Inventory Cell Background — Uncommon | ui_tile_seamless | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/CELL_BG_UNCOMMON.json | Dark green with soft glow, faint rune patterns, seamless 64x64 tile |
+| CELL_BG_003 | Inventory Cell Background — Rare | ui_tile_seamless | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/CELL_BG_RARE.json | Blue-indigo with crystalline structure, silver shimmer, seamless 64x64 tile |
+| CELL_BG_004 | Inventory Cell Background — Epic | ui_tile_seamless | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/CELL_BG_EPIC.json | Dark purple void energy, swirling wisps, seamless 64x64 tile |
+| CELL_BG_005 | Inventory Cell Background — Legendary | ui_tile_seamless | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/CELL_BG_LEGENDARY.json | Gold-amber with celestial fire, radiant glow, seamless 64x64 tile |
+| MAGE_001 | Mage Combat Animation — Idle | character_animation_frame | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/MAGE_IDLE.json | Resting stance, staff grounded, subtle mist aura, 512x512 pixel art |
+| MAGE_002 | Mage Combat Animation — Windup | character_animation_frame | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/MAGE_WINDUP.json | Arms raised, energy coalescing, robes billow, 512x512 pixel art |
+| MAGE_003 | Mage Combat Animation — Cast | character_animation_frame | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/MAGE_CAST.json | Spell release, blue-cyan blast erupting, robes blown back, 512x512 pixel art |
+| CELL_BG_STONE | Inventory Cell Background — Dark Stone Tile | texture_tileable | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/CELL_BG_STONE.json | Seamless 128x128 cracked stone, almost pure black, minimal detail for item overlay, 16-bit pixel art |
+| NPC_MERCHANT | NPC Merchant — Town Square Vendor | character_sprite | ready | /Users/sprintray/claude_soft/Veyra/assets/prompts/NPC_MERCHANT.json | Elderly merchant in dark hooded cloak, wooden counter with vials/lantern, 150-200px height, transparent bg, idle stance |

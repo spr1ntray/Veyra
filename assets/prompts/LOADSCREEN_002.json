@@ -1,0 +1,13 @@
+{
+  "asset_id": "LOADSCREEN_002",
+  "asset_name": "Loading Screen — Mystical Portal in Forest",
+  "type": "loading_screen_background",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A mystical arcane portal glowing in the center of an ancient dark forest, pixel art style, dark fantasy, retro RPG aesthetic. The portal is a swirling vortex in violet (#2d1a3d) and gold (#d4af37) hues, radiating magical energy. Gnarled trees frame both sides of the composition in deep navy blue (#1a2d4d) and indigo (#0f1b33), creating a vertical frame. Fog and mist drift through the forest floor in cool grays and muted purples. Above, a canopy of twisted branches obscures the sky, with faint stars barely visible through gaps. Pale silver (#b8c5d6) light emanates from the portal, casting long shadows. Minimalist design, no unnecessary details, mysterious and otherworldly atmosphere. 16-bit sprite art quality, desaturated palette, cool tones throughout. Vertical composition (9:16) with dark area in bottom third for text. Resolution: 768x1024 pixels.",
+  "negative_prompt": "bright colors, oversaturated, photorealistic, detailed background, modern elements, cute aesthetic, 3D render, gradient filters, legible text, watermark, cheerful mood, clear daylight, neon glow, comic style, flesh tones, realistic trees",
+  "style_notes": "The mystical portal creates a strong focal point while maintaining atmospheric mystery. The forest framing provides visual containment without being cluttered. Gold/violet color interaction conveys magic without over-saturation. Fog effect helps darken the middle ground for text readability. Pixel art specificity is critical for retro feel. This variant uses Stable Diffusion strengths in generating ethereal, particle-based effects.",
+  "aspect_ratio": "9:16",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

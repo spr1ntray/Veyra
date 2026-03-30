@@ -1,0 +1,22 @@
+{
+  "asset_id": "ICON_014",
+  "asset_name": "Wizard Hat — Rare (Eclipse Hat)",
+  "type": "item_icon",
+  "rarity": "rare",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, eclipse crown or prismatic wizard hat, sophisticated pointed crown with dual neon magical aura, charcoal background (#1a1a24), neon cyan (#00d9ff) and vibrant magenta (#ff00ff) layered crystalline glow interweaving around the crown, crystalline elements protruding from the tip, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, powerful enchantment",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, oversaturated, bright solid colors, cluttered background, illegible, too many particles, metallic reflections, organic lifelike textures, cheerful appearance",
+  "style_notes": "Rare rarity wizard hat. Dual neon blend (cyan + magenta) creates visual hierarchy above uncommon. Crystalline elements suggest enhanced magical potency. Dynamic glow pattern indicates powerful artifact status. Maintains 64x64 readability with balanced composition.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#3a3a4a",
+    "accent_primary": "#00d9ff",
+    "accent_secondary": "#ff00ff"
+  }
+}

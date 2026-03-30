@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_006",
+  "asset_name": "Staff — Uncommon (Runic)",
+  "type": "item_icon",
+  "rarity": "uncommon",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, runic staff with arcane symbols, wooden staff with glowing rune lines, charcoal background (#1a1a24), neon cyan rune accents (#00d9ff) along staff length, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered diagonal composition, arcane energy",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, multiple glowing colors, oversaturated, bright colors, cluttered background, illegible, overly complex rune patterns, metallic shine without arcane purpose",
+  "style_notes": "Uncommon rarity staff. Adds cyan neon rune lines (#00d9ff) to wooden staff to indicate magical enhancement. Still maintains simplicity and readability at 64x64 scale. Indicates upgrade from common staff.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#8b7355",
+    "accent": "#00d9ff"
+  }
+}

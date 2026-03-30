@@ -3,7 +3,7 @@
  * HUD, навигация между экранами, popup-ы, уведомления
  */
 
-import { getState, xpForLevel, ITEMS_DATA } from './state.js';
+import { getState, xpForLevel, ITEMS_DATA, getActiveBuffs } from './state.js';
 
 // Текущий активный экран
 let currentScreen = 'screen-loading';
@@ -67,6 +67,34 @@ export function updateHUD() {
       xpText.textContent = `${state.xp} / ${xpNeeded} XP`;
     }
   }
+
+  // Also render HUD buff pills
+  renderHudBuffs();
+}
+
+/**
+ * Renders active buff pills in the location HUD bar.
+ */
+export function renderHudBuffs() {
+  const container = document.getElementById('hud-buffs');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const buffs = getActiveBuffs();
+  for (const buff of buffs) {
+    const pill = document.createElement('div');
+    pill.className = 'hud-buff-pill';
+    pill.style.borderColor = buff.color;
+    // Convert hex to rgba
+    const r = parseInt(buff.color.slice(1, 3), 16);
+    const g = parseInt(buff.color.slice(3, 5), 16);
+    const b = parseInt(buff.color.slice(5, 7), 16);
+    pill.style.background = `rgba(${r}, ${g}, ${b}, 0.2)`;
+    pill.style.color = buff.color;
+    pill.textContent = buff.symbol;
+    pill.title = `${buff.label} — ${buff.combatsLeft} combats left`;
+    container.appendChild(pill);
+  }
 }
 
 /**
@@ -76,19 +104,34 @@ export function showPopupResult(data) {
   const popup = document.getElementById('popup-result');
   if (!popup) return;
 
-  const titleEl = document.getElementById('result-title');
+  const titleEl  = document.getElementById('result-title');
   const statusEl = document.getElementById('result-status');
-  const statsEl = document.getElementById('result-stats');
+  const statsEl  = document.getElementById('result-stats');
+
+  // Определяем заголовок и статус по result
+  const result = data.result || (data.won ? 'win' : 'loss');
 
   if (titleEl) {
-    titleEl.textContent = data.won ? '⚔️ Victory!' : '💀 Defeat';
-    titleEl.style.color = data.won ? '#c9a84c' : '#e74c3c';
+    if (result === 'win') {
+      titleEl.textContent = 'Victory!';
+      titleEl.style.color = '#c9a84c';
+    } else if (result === 'timeout') {
+      titleEl.textContent = 'Time Out';
+      titleEl.style.color = '#f39c12';
+    } else {
+      titleEl.textContent = 'Defeat';
+      titleEl.style.color = '#e74c3c';
+    }
   }
 
   if (statusEl) {
-    statusEl.textContent = data.won
-      ? `Dummy destroyed! Dealt ${data.totalDamage || data.damage} damage.`
-      : `Dummy held. HP remaining: ${data.dummyHP}`;
+    if (result === 'win') {
+      statusEl.textContent = `${data.enemyName || 'Enemy'} defeated!`;
+    } else if (result === 'timeout') {
+      statusEl.textContent = `Time expired. ${data.enemyName || 'Enemy'} HP left: ${data.enemyHPLeft || 0}`;
+    } else {
+      statusEl.textContent = `Your mage was defeated.`;
+    }
   }
 
   if (statsEl) {
@@ -124,6 +167,10 @@ export function showPopupResult(data) {
           <span class="stat-value">+25🪙 +50✨</span>
         </div>
       `;
+    }
+
+    if (data.elapsedTime !== undefined) {
+      html += `<div class="result-stat"><span class="stat-label">Duration:</span><span class="stat-value">${data.elapsedTime}s</span></div>`;
     }
 
     html += `

@@ -1,0 +1,13 @@
+{
+  "asset_id": "LOADSCREEN_001",
+  "asset_name": "Loading Screen — Haunted Castle",
+  "type": "loading_screen_background",
+  "target_model": "Midjourney",
+  "prompt_en": "A haunted medieval castle tower rising against a starry night sky, pixel art style, dark fantasy, minimalist aesthetic, vertical composition (9:16 aspect ratio). The castle is silhouetted in deep indigo (#0f1b33) and dark navy blue (#1a2d4d), with scattered arcane runes glowing faintly in gold (#d4af37) along the stonework. A crescent moon hangs behind the tower in pale silver (#b8c5d6). Foreground shows mist rolling across the ground in dark violet tones (#2d1a3d). The sky above is a gradient from deep blue to twilight purple, scattered with tiny stars. No bright colors, no modern elements, desaturated and atmospheric. Retro RPG aesthetic, 16-bit sprite art quality, mysterious and brooding mood. The composition leaves a clear dark area in the lower third for text overlay. Resolution: 512x768 pixels.",
+  "negative_prompt": "bright colors, neon, photorealistic, detailed, modern architecture, cute, cheerful, 3D render, oversaturated, comic style, skulls, gore, contemporary, clear sky, daytime, colorful, busy, legible text, watermark, gradient filters, smooth shading",
+  "style_notes": "This prompt emphasizes the iconic castle silhouette as a recognizable dark fantasy element. The focus on runes and gold accents subtly indicates magical lore without being garish. The vertical composition ensures readability of UI elements overlaid on the lower portion. Pixel art specificity ensures retro aesthetic. Color palette strictly adheres to style guide: deep blues, violets, with restrained gold accents.",
+  "aspect_ratio": "9:16",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

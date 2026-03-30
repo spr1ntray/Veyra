@@ -1,0 +1,22 @@
+{
+  "asset_id": "ICON_010",
+  "asset_name": "Wizard Hat — Epic (Ash Crown)",
+  "type": "item_icon",
+  "rarity": "epic",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, dark ash crown or corrupted wizard hat, twisted pointed crown with shadow energy and mystical aura, charcoal background (#1a1a24), purple neon aura (#b700ff) with cyan accents (#00d9ff), clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, eldritch majesty",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, oversaturated glowing, bright solid colors, cluttered background, illegible, stars decoration, too many particles, metallic shine, cheerful appearance",
+  "style_notes": "Epic rarity wizard hat. Transforms simple cone into corrupted ash crown with shadow/void aesthetics. Uses purple and cyan neon accents to indicate highest rarity. Maintains 64x64 readability.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#2a2a3a",
+    "accent_primary": "#b700ff",
+    "accent_secondary": "#00d9ff"
+  }
+}

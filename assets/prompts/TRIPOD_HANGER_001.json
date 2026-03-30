@@ -1,0 +1,14 @@
+{
+  "asset_id": "TRIPOD_HANGER_001",
+  "asset_name": "Wizard Tripod Valet Stand — Minimalist Dark Fantasy",
+  "type": "ui_element_inventory",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A vertical pixel art tripod clothes stand (valet stand) in dark fantasy minimalist style. The stand has three thin wooden legs at the base, a central vertical wooden post, and a horizontal crossbar at the top. A pointed wizard's hat sits atop the crossbar in dark navy blue (#1a2d4d) with gold (#d4af37) thread trim at the brim. A long flowing wizard's cloak or robe hangs from the crossbar in deep violet (#2d1a3d) with subtle silver highlights (#b8c5d6). A wooden magical staff with a glowing crystal orb at the tip leans against the stand, rendered in dark brown with ethereal pale gold glow around the orb. The background is fully transparent. The composition is vertical (approximately 256×384 pixels), rendered in 16-bit pixel art style with flat colors and minimal shading. Dark fantasy RPG aesthetic, retro sprite quality, mysterious and arcane mood. Minimalist design with high readability. Suitable for game inventory UI element.",
+  "negative_prompt": "bright colors, neon, photorealistic, 3D render, detailed smooth gradients, modern design, cute style, colorful background, oversaturated colors, complex patterns, legible text, watermark, non-transparent background, contemporary aesthetic, comic illustration style, cheerful mood, ornate embellishments, realistic lighting effects, deep shadows with depth perception, busy composition, cloth folds with realism, cartoon shading",
+  "style_notes": "This prompt prioritizes silhouette clarity and minimalist pixel art aesthetic. The tripod structure is simplified to essential lines while remaining recognizable. Dark navy and violet dominate the color scheme with minimal gold accents on magical elements only (staff orb, hat trim). The transparent background and vertical orientation are essential for inventory UI placement. The 256×384 resolution provides clear pixel-level detail while remaining game-UI-appropriate.",
+  "aspect_ratio": "custom_vertical",
+  "resolution": "256x384",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

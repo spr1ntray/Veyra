@@ -6,6 +6,9 @@ photo_2026-03-15_*.jpeg
 .claude/
 skills-lock.json
 
+# User screenshots / local references
+from_user/
+
 # OS
 .DS_Store
 Thumbs.db

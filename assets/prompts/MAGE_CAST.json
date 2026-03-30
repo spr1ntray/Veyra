@@ -1,0 +1,14 @@
+{
+  "asset_id": "MAGE_003",
+  "asset_name": "Mage Combat Animation — Cast",
+  "type": "character_animation_frame",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art character sprite, male dark fantasy mage in spell release pose, arms extended forward launching spell, facing right 3/4 view, dark robe #1a1a2e with cyan trim #20b2aa rippling from force, pale skin black hair blue eyes, staff extended forward glowing bright crystalline tip, massive arcane blast erupting from staff tip cyan and blue energy, magical explosion vortex, energy waves radiating, robes blown back by recoil, intense magical discharge, 16-bit retro RPG animation frame, dark fantasy combat atmosphere, peak spell power, pixel art flat style, dark navy background #1a2d4d, high contrast dramatic lighting",
+  "negative_prompt": "photorealistic, smooth gradients, realistic fire, detailed textures, oversaturated bright colors, neon oversaturation, modern elements, multiple characters, text, watermark, calm pose, static, sword, gun, realistic anatomy, gore, cartoon style, desaturated",
+  "style_notes": "Cast = climax, maximum magical output. Arms extended, staff projecting energy. Cyan-blue blast matches mage identity. Vortex/explosion conveys power. Robes blown by recoil force. Dramatic lighting and energy contrast. Represents moment of spell release. Pixel art minimalism. 3/4 right-facing view for UI consistency.",
+  "aspect_ratio": "1:1",
+  "resolution": "512x512",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

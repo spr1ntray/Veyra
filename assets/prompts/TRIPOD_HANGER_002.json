@@ -1,0 +1,14 @@
+{
+  "asset_id": "TRIPOD_HANGER_002",
+  "asset_name": "Wizard Tripod Valet Stand — Arcane Glow Variant",
+  "type": "ui_element_inventory",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "A vertical pixel art tripod valet stand for wizard garments, rendered in dark fantasy pixel art style with arcane atmosphere. The stand features three sturdy legs splayed at the base, a vertical post of dark weathered wood (#3d2a47 tone), and a horizontal topbar. Perched on the topbar: a tall pointed wizard's hat in deep navy (#1a2d4d) with delicate gold embroidery (#d4af37) along the brim edge. Draped from the crossbar: a full-length wizard's robe in dusty plum (#4a2c5e) with subtle shimmering silver-blue accents (#b8c5d6), creating an impression of magical enchantment. Resting diagonally against the stand: a gnarled wizard's staff topped with a faceted crystal orb glowing with pale arcane light (soft gold aura, #d4af37 surrounded by twilight purple haze #3d2a47). The background is completely transparent. Composition is vertical (256×384 pixels), rendered in 16-bit pixel art aesthetic with flat color blocks and minimal gradient for glow effects only. Dark, mysterious, mystical RPG atmosphere. Retro sprite quality, minimalist yet evocative. Game inventory UI element suitable for dark fantasy game.",
+  "negative_prompt": "bright neon colors, photorealistic texture, 3D rendering, smooth realistic gradients, modern design elements, cartoon or cute aesthetic, colorful or saturated background, complex busy patterns, readable text or labels, watermark or signature, opaque background, contemporary style, comic book illustration, cheerful bright mood, excessive ornate detail, realistic cloth physics, deep cinematic shadows, intricate folds and wrinkles, oversaturated hues, comic shading",
+  "style_notes": "This variant emphasizes arcane atmosphere while maintaining pixel art minimalism. The staff's crystal orb is given subtle glowing treatment (pale gold surrounded by purple haze) to emphasize magical nature without breaking pixel art aesthetic. The robe uses two-tone coloring (dusty plum + silver accents) to suggest movement and enchantment. All colors remain within the style guide's cool-toned, desaturated palette. The transparent background and 256×384 resolution ensure UI compatibility. This version leans slightly more into magical atmosphere while preserving game-sprite readability.",
+  "aspect_ratio": "custom_vertical",
+  "resolution": "256x384",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

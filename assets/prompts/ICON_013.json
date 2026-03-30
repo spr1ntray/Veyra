@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_013",
+  "asset_name": "Wizard Hat — Uncommon (Runic Hood)",
+  "type": "item_icon",
+  "rarity": "uncommon",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 64x64, minimalist dark fantasy, runic wizard hood, pointed conical hat with glowing arcane rune symbols etched along the fabric, charcoal background (#1a1a24), neon cyan rune accents (#00d9ff) marking the enchantment lines, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, arcane artifact, moderate magical glow",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, oversaturated glowing, multiple colors, bright colors, cluttered background, illegible, too many particles, shiny material, metallic shine, too many runes",
+  "style_notes": "Uncommon rarity wizard hat. Transforms simple cone into runic enchanted hood with cyan accent. Single neon accent (#00d9ff) indicates step up from common. Moderate magical glow suggests active enchantment. Maintains 64x64 readability with clean rune placement.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#4a4a5a",
+    "accent": "#00d9ff"
+  }
+}

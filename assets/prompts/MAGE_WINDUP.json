@@ -1,0 +1,14 @@
+{
+  "asset_id": "MAGE_002",
+  "asset_name": "Mage Combat Animation — Windup",
+  "type": "character_animation_frame",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art character sprite, male dark fantasy mage in spellcast windup stance, raising arms and staff above head, preparing spell, facing right 3/4 view, dark tattered robe #1a1a2e with cyan blue rune accents #20b2aa, pale skin, black hair, blue eyes, staff raised high with glowing crystalline tip, magical energy swirling around hands and staff, arcane symbols floating, blue violet energy coalescing, robes billowing dramatically, 16-bit retro RPG animation frame, dark fantasy atmosphere, mystical tension, pixel art flat style, dark navy background #1a2d4d, high contrast",
+  "negative_prompt": "photorealistic, smooth gradients, realistic shading, bright neon, oversaturated, modern elements, multiple characters, text, watermark, idle pose, static position, sword, gun, realistic proportions, gore, cartoon style, detailed textures",
+  "style_notes": "Windup = active preparation, building energy. Arms raised, staff elevated. Magical energy visible but not overwhelming (arcane symbols, coalescing energy). Robes billow to suggest movement. Blue-violet energy matches mage's cyan accent scheme and cool palette. Tension before release. Pixel art minimalism. 3/4 right-facing view.",
+  "aspect_ratio": "1:1",
+  "resolution": "512x512",
+  "version": 1,
+  "status": "ready",
+  "revision_history": []
+}

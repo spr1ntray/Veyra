@@ -1,0 +1,19 @@
+{
+  "asset_id": "ICON_003",
+  "asset_name": "Daily Reward Icon — Gift/Bonus Button",
+  "type": "ui_icon",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art icon, 64x64, minimalist dark fantasy, gift box or treasure reward symbol, ornate but minimal chest or wrapped package with mystical aura, charcoal background (#1a1a24), neon orange accents (#ff6b00) suggesting treasure glow, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, glowing magic effect",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, multiple colors, oversaturated, bright cheerful colors, cluttered background, illegible, anthropomorphic features, ribbons with bows",
+  "style_notes": "Daily reward icon. Uses warm orange neon (#ff6b00) for treasure/reward feeling on dark background. Maintains mystical dark fantasy mood while suggesting reward/bonus. Sharp pixel art for 64x64 scale.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "accent": "#ff6b00"
+  }
+}

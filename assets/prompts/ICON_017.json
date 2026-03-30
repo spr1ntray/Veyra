@@ -1,0 +1,21 @@
+{
+  "asset_id": "ICON_017",
+  "asset_name": "Mana Elixir",
+  "type": "item_icon",
+  "rarity": "uncommon",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "pixel art item icon, 128x128, minimalist dark fantasy, glowing mana elixir potion in dark glass vial, luminous cyan-blue liquid (#00d9ff) with soft magical radiance inside transparent bottle, charcoal background (#1a1a24), ethereal neon cyan glow emanating from the liquid, simple silhouette of corked bottle with glowing contents, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition, arcane essence, magical aura",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges on pixels, realistic glass reflections, too detailed, text overlay, oversaturated, bright colors, cluttered background, illegible, too many particles, metallic shine, liquid dripping, organic lifelike transparency",
+  "style_notes": "Uncommon rarity mana potion. Cyan neon (#00d9ff) indicates magical essence and mana restoration. Glass vial is simple, dark bottle with glowing liquid inside to show magical nature. Glow is ethereal but contained, maintaining 128x128 clarity. References arcane magic palette.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "128x128",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --steps 40 --scale 7.5",
+  "color_refs": {
+    "background": "#1a1a24",
+    "primary": "#0a0a0e",
+    "accent": "#00d9ff"
+  }
+}

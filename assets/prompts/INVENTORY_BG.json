@@ -1,0 +1,13 @@
+{
+  "asset_id": "INVENTORY_BG",
+  "asset_name": "Inventory Screen Background",
+  "type": "background",
+  "target_model": "Stable Diffusion",
+  "prompt_en": "Dark medieval stone chamber background, pixel art style, 16-bit retro RPG aesthetic, mage's treasury and study room. Very dark desaturated atmosphere dominated by deep navy blue (#1a2d4d) and dark violet (#2d1a3d) tones. Ancient stone brick walls with subtle arcane texture, weathered and aged. Torches with pale golden flames (#d4af37) mounted on stone walls casting dim flickering shadows. Glowing magical runes carved into stone in soft blue (#b8c5d6) and gold accents. Mystical fog or mist swirling near ground level in cool desaturated purples and blacks. No focal objects in center — background must be non-distracting and serve as a subtle frame for UI panels and inventory items. Minimalist composition, cool lighting, mysterious and eerie but not grimdark. Atmospheric depth through layering. Horizontal landscape format 1920x1080.",
+  "negative_prompt": "bright colors, neon, oversaturated, photorealistic, detailed, modern elements, technology, contemporary architecture, comic style, cartoon, cheerful, cute, skulls, gore, legible text, watermark, characters, people, animals, photographs, 3D render, overly detailed backgrounds, busy patterns, distracting focal point, center composition focus, monsters, weapons, items, UI elements, buttons, panels",
+  "style_notes": "Prompt emphasizes pixel art retro RPG aesthetic while specifying the dark desaturated color palette from the style guide (navy #1a2d4d, violet #2d1a3d, gold #d4af37, silver #b8c5d6). Stone chamber setting with arcane elements (runes, magical fog) creates mystical medieval mage atmosphere. Torches and ambient lighting instructions ensure low-key mysterious mood suitable for UI overlay. Explicitly designates as non-distracting background to keep focus on inventory items. Stable Diffusion-specific language avoids model-specific terminology.",
+  "aspect_ratio": "16:9",
+  "size_pixels": "1920x1080",
+  "version": 1,
+  "status": "ready"
+}

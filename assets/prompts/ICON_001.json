@@ -1,0 +1,19 @@
+{
+  "asset_id": "ICON_001",
+  "asset_name": "World Map Icon — Navigation Button",
+  "type": "ui_icon",
+  "target_model": "Midjourney",
+  "prompt_en": "pixel art icon, 64x64, minimalist dark fantasy, world map symbol, parchment or compass design, dark charcoal background (#1a1a24), neon cyan accents (#00d9ff) marking explored territories, clean silhouette, high contrast, 16-32bit inspired, atmospheric, muted dark palette, sharp crisp pixels, no blur, centered composition",
+  "negative_prompt": "blurry, low quality, photorealistic, 3D render, soft edges, realistic textures, too detailed, text overlay, multiple colors, oversaturated, neon without purpose, cluttered background, illegible",
+  "style_notes": "Navigation icon for map button. Uses cyan neon for map markers on dark charcoal background. Maintains high contrast and sharp pixelation for 64x64 readability. References the world map minimalism from style_guide_pixel.md.",
+  "aspect_ratio": "1:1",
+  "size_pixels": "64x64",
+  "version": 1,
+  "status": "ready",
+  "revision_history": [],
+  "model_flags": "--ar 1:1 --s 750 --q 2",
+  "color_refs": {
+    "background": "#1a1a24",
+    "accent": "#00d9ff"
+  }
+}

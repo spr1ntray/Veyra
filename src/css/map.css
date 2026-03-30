@@ -1,102 +1,73 @@
 /**
- * map.css — стили экрана карты мира
- * Полноэкранная картинка map.png с кликабельными хотспотами.
- * Grid-система удалена.
+ * map.css — экран карты мира
  */
 
-/* === ЭКРАН КАРТЫ === */
 #screen-map {
   overflow: hidden;
 }
 
-/* Полноэкранный фон — картинка карты */
 .map-fullscreen-bg {
   position: absolute;
   inset: 0;
-  background: url('../../from_user/map.png') center/cover no-repeat;
+  background: url('../../assets/generated/pixel/map.png') center/cover no-repeat;
   z-index: 0;
 }
 
-/* === ХОТСПОТЫ НА КАРТЕ === */
+/* === МАРКЕРЫ НА КАРТЕ === */
 
-/* [HIGH 5.1] Хотспот — всегда видимый, с пульсирующей анимацией */
-.map-hotspot {
+.map-marker {
   position: absolute;
   cursor: pointer;
   z-index: 10;
-  border-radius: 8px;
-  outline: 1px solid rgba(201,168,76,0.15);
-  transition: all 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: none; /* JS проставляет left/top напрямую — transition убран */
+  /* Центрирование: маркер 40px, смещаем на половину его размера */
+  margin-left: -85px;
+  margin-top: -85px;
 }
 
-/* Пульсирующий псевдоэлемент — хотспот дышит */
-.map-hotspot::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  border: 1px solid rgba(201,168,76,0.3);
-  opacity: 0;
-  animation: hotspotPulse 3s ease-in-out infinite;
-  pointer-events: none;
+/* PNG-иконка маркера */
+.map-marker-img {
+  width: 170px;
+  height: 170px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.5));
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.map-marker:hover .map-marker-img {
+  filter: drop-shadow(0 0 16px rgba(201, 168, 76, 0.9));
+  transform: scale(1.1);
 }
 
-@keyframes hotspotPulse {
-  0%, 100% { opacity: 0;   box-shadow: inset 0 0 0px rgba(201,168,76,0); }
-  50%       { opacity: 0.6; box-shadow: inset 0 0 30px rgba(201,168,76,0.05); }
-}
+/* Старые стили точек маркеров закомментированы — заменены на PNG */
+/* .map-marker-dot { ... } */
+/* .map-marker-home .map-marker-dot { ... } */
+/* .map-marker-square .map-marker-dot { ... } */
+/* @keyframes markerPulse { ... } */
 
-/* Hover — полная золотая рамка с внутренним оттенком */
-.map-hotspot::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  transition: all 0.35s ease;
-  pointer-events: none;
-}
-
-.map-hotspot:hover::after {
-  border-color: rgba(201,168,76,1);
-  box-shadow:
-    0 0 30px rgba(201,168,76,0.5),
-    0 0 60px rgba(201,168,76,0.2),
-    inset 0 0 40px rgba(201,168,76,0.08);
-}
-
-/* Подпись хотспота — всегда видна (слабая), яркая при hover */
-.map-hotspot-label {
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+/* Подпись маркера */
+.map-marker-label {
   font-family: var(--font-title);
-  font-size: 11px;
+  font-size: 16px; /* минимум 16px согласно заданию, было 12 */
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(232, 196, 106, 0.5);
+  color: rgba(232, 213, 160, 0.8); /* тёплый золотистый вместо фиолетового */
   white-space: nowrap;
-  opacity: 1;
-  transition: color 0.3s ease, text-shadow 0.3s ease;
-  background: rgba(0,0,0,0.6);
-  padding: 3px 10px;
+  background: rgba(5, 3, 15, 0.75);
+  padding: 5px 12px; /* +30%: 3→5, 8→12 */
   border-radius: 3px;
-  pointer-events: none;
-  z-index: 5;
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(201,168,76,0.15);
+  pointer-events: none;
 }
-
-.map-hotspot:hover .map-hotspot-label {
-  color: #e8c46a;
-  text-shadow: 0 0 12px rgba(201,168,76,0.8);
-  border-color: rgba(201,168,76,0.4);
-}
+.map-marker-home .map-marker-label  { color: rgba(100, 255, 160, 0.9); }
+.map-marker-square .map-marker-label { color: rgba(232, 213, 160, 0.9); } /* золотистый вместо фиолетового */
 
 /* === КНОПКА НАЗАД === */
-/* [MEDIUM 5.2] Унифицированный стиль кнопки назад */
 .map-back-btn {
   position: absolute;
   top: 20px;
@@ -105,18 +76,16 @@
   background: rgba(5,5,20,0.7);
   color: var(--color-text-muted);
   border: 1px solid rgba(255,255,255,0.12);
-  padding: 9px 18px;
+  padding: 12px 24px; /* +30%: 9→12, 18→24 */
   border-radius: 6px;
   font-family: var(--font-title);
-  font-size: 10px;
+  font-size: 16px; /* +30%: 10 → 16, не ниже 16px */
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-
 .map-back-btn:hover {
   border-color: rgba(201,168,76,0.4);
   color: var(--color-gold);
