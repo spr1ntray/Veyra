@@ -207,8 +207,10 @@ export function showPopupLevelUp(newLevel) {
   if (rewardEl) {
     const goldReward = 5 * newLevel;
     let rewardText = `+${goldReward} 🪙 gold`;
+    rewardText += '\n+1 Attribute Point';
 
     // Особые награды на определённых уровнях
+    if (newLevel === 3) rewardText += '\n🔮 Class Awakening available!';
     if (newLevel === 5) rewardText += '\n⚡ Title "Adept" unlocked!';
     if (newLevel === 10) rewardText += '\n👑 Title "Mage of Veyra" unlocked!';
     if (newLevel === 4 || newLevel === 7) rewardText += '\n🎁 Training Chest!';

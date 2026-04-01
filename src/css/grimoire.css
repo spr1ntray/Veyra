@@ -133,6 +133,8 @@
   justify-content: center;
   flex-wrap: wrap;
   margin-bottom: 16px;
+  overflow: visible;
+  position: relative;
 }
 
 .grimoire-slot {
@@ -145,6 +147,8 @@
   gap: 5px;
   border-radius: 6px;
   border: 1px dashed rgba(201,168,76,0.3);
+  position: relative;
+  transition: all 0.2s ease;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
@@ -161,8 +165,9 @@
 
 .grimoire-slot-filled:hover {
   transform: scale(1.05);
-  border-color: #e74c3c;
-  box-shadow: 0 0 12px rgba(231,76,60,0.3);
+  border-color: var(--spell-color, rgba(201,168,76,0.8));
+  box-shadow: 0 0 14px var(--spell-color, rgba(201,168,76,0.4));
+  z-index: 10;
 }
 
 .grimoire-slot-empty:hover {
@@ -277,25 +282,26 @@
 /* === ПРАВАЯ СТРАНИЦА: ПУЛ ЗАКЛИНАНИЙ === */
 .grimoire-spell-pool {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 10px;
+  align-content: flex-start;
+  overflow: visible;
+  position: relative;
 }
 
-.spell-pool-group {}
+/* Группы теперь прозрачны — карточки текут прямо в pool */
+.spell-pool-group {
+  display: contents;
+}
 
+/* Метки школ скрыты при горизонтальном layout */
 .spell-pool-school-label {
-  font-family: var(--font-title);
-  font-size: var(--fs-xs);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  padding-left: 2px;
+  display: none;
 }
 
 .spell-pool-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: contents;
 }
 
 .spell-pool-card {
@@ -309,16 +315,18 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-bottom: 2px solid var(--spell-color, rgba(255,255,255,0.15));
   border-radius: 6px;
+  position: relative;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .spell-pool-card:hover {
-  transform: translateY(-2px);
+  transform: scale(1.08);
   border-color: var(--spell-color, rgba(255,255,255,0.3));
-  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  box-shadow: 0 0 14px rgba(0,0,0,0.6);
   background: rgba(10,10,20,0.8);
+  z-index: 11;
 }
 
 .spell-pool-card-selected {

@@ -29,6 +29,70 @@ let _currentPage = 0;
 // Текущий активный фильтр слота ('hat' | 'cloak' | 'staff' | null)
 let _activeFilter = null;
 
+// Динамический PAGE_SIZE (вычисляется из доступной высоты)
+const GRID_COLS = 5;
+let _dynamicRows = 4; // fallback
+let _resizeObserver = null;
+
+/**
+ * Вычисляет сколько строк помещается в .inv-right контейнер.
+ * Учитывает заголовок "Items", пагинацию и padding.
+ */
+function calcDynamicRows() {
+  const rightPanel = document.querySelector('.inv-right');
+  if (!rightPanel) return 4;
+
+  const grid = document.getElementById('inv-grid');
+  if (!grid) return 4;
+
+  // Получаем доступную высоту всего правого контейнера
+  const panelHeight = rightPanel.clientHeight;
+
+  // Вычитаем высоту элементов кроме сетки:
+  // - заголовок секции "Items" (~30px)
+  // - пагинация (~40px)
+  // - padding сверху и снизу из CSS (21px + 21px)
+  const sectionLabel = rightPanel.querySelector('.inv-section-label');
+  const pagination = document.getElementById('inv-pagination');
+
+  const labelH = sectionLabel ? sectionLabel.offsetHeight + parseFloat(getComputedStyle(sectionLabel).marginBottom || 0) : 30;
+  const paginationH = 44; // фиксированная резервация для пагинации
+  const paddingTop = parseFloat(getComputedStyle(rightPanel).paddingTop) || 21;
+  const paddingBottom = parseFloat(getComputedStyle(rightPanel).paddingBottom) || 21;
+
+  const availableHeight = panelHeight - labelH - paginationH - paddingTop - paddingBottom;
+
+  // Размер ячейки: ширина сетки / 5 (квадрат через aspect-ratio: 1)
+  const gridWidth = grid.clientWidth || rightPanel.clientWidth - parseFloat(getComputedStyle(rightPanel).paddingLeft || 0) - parseFloat(getComputedStyle(rightPanel).paddingRight || 0);
+  const gap = 6; // row-gap из CSS
+  const cellSize = (gridWidth - (GRID_COLS - 1) * 10) / GRID_COLS; // 10px column-gap
+
+  if (cellSize <= 0) return 4;
+
+  const rows = Math.floor((availableHeight + gap) / (cellSize + gap));
+  return Math.max(1, rows);
+}
+
+/**
+ * Инициализирует ResizeObserver для пересчёта сетки при изменении размера окна.
+ */
+function initResizeObserver() {
+  if (_resizeObserver) return; // уже инициализирован
+
+  const rightPanel = document.querySelector('.inv-right');
+  if (!rightPanel) return;
+
+  _resizeObserver = new ResizeObserver(() => {
+    const newRows = calcDynamicRows();
+    if (newRows !== _dynamicRows) {
+      _dynamicRows = newRows;
+      _currentPage = 0; // сброс страницы при смене размера
+      renderGrid();
+    }
+  });
+
+  _resizeObserver.observe(rightPanel);
+}
 
 /**
  * Рендерит весь экран инвентаря.
@@ -38,7 +102,12 @@ export function renderHomeScreen() {
   renderHanger();
   renderCharBlock();
   initHangerFilter();
+
+  // Первичный расчёт строк, затем рендер сетки
+  _dynamicRows = calcDynamicRows();
   renderGrid();
+
+  initResizeObserver();
   hideTooltip();
 }
 
@@ -140,8 +209,8 @@ function renderGrid() {
     ? ownedItems.filter(({ item }) => item.slot === _activeFilter)
     : ownedItems;
 
-  // Размер страницы: 4 колонки × 4 строки
-  const PAGE_SIZE = 16;
+  // Динамический размер страницы: 5 колонок × N строк (зависит от высоты viewport)
+  const PAGE_SIZE = GRID_COLS * _dynamicRows;
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
 
   // Сбрасываем страницу если вышла за пределы (например при смене фильтра)
@@ -150,7 +219,7 @@ function renderGrid() {
   // Срез предметов текущей страницы
   const pageItems = filteredItems.slice(_currentPage * PAGE_SIZE, _currentPage * PAGE_SIZE + PAGE_SIZE);
 
-  // Всегда рисуем ровно 16 ячеек
+  // Всегда рисуем ровно 20 ячеек
   for (let i = 0; i < PAGE_SIZE; i++) {
     const entry = pageItems[i] || null;
     container.appendChild(createCell(entry, state));
@@ -253,7 +322,7 @@ function createCell(entry, state) {
   if (item.img) {
     const img = document.createElement('img');
     img.src = item.img;
-    img.style.cssText = 'width:75%;height:75%;image-rendering:pixelated;object-fit:contain';
+    img.style.cssText = 'width:80%;height:80%;image-rendering:pixelated;object-fit:contain;display:block;margin:auto';
     emojiEl.appendChild(img);
   } else {
     emojiEl.textContent = SLOT_EMOJI[item.slot] || '📦';

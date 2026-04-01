@@ -322,8 +322,8 @@ export const ENEMIES_DATA = {
     attackInterval: 0,
     resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 1.0 },
     weakness: null,
-    xpReward: 15,
-    goldReward: { min: 5, max: 8 },
+    xpReward: 5,
+    goldReward: { min: 1, max: 2 },
     description: 'Does not attack. For practice.',
     recommendedLevel: 1,
     img: 'assets/generated/training_dummy.png'
@@ -336,8 +336,8 @@ export const ENEMIES_DATA = {
     attackInterval: 2.5,
     resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 1.0 },
     weakness: 'fire',
-    xpReward: 25,
-    goldReward: { min: 10, max: 15 },
+    xpReward: 12,
+    goldReward: { min: 4, max: 7 },
     description: 'Slow and predictable. Weak to Fire.',
     recommendedLevel: 2,
     img: 'assets/generated/training_dummy.png'
@@ -350,8 +350,8 @@ export const ENEMIES_DATA = {
     attackInterval: 1.8,
     resistances: { arcane: 1.3, fire: 0.7, shadow: 1.0, frost: 1.0 },
     weakness: 'arcane',
-    xpReward: 30,
-    goldReward: { min: 12, max: 18 },
+    xpReward: 15,
+    goldReward: { min: 5, max: 9 },
     description: 'Fast attacks, medium HP. High DPS pressure.',
     recommendedLevel: 3,
     img: 'assets/generated/training_dummy.png'
@@ -364,8 +364,8 @@ export const ENEMIES_DATA = {
     attackInterval: 3.0,
     resistances: { arcane: 1.0, fire: 1.5, shadow: 1.0, frost: 0.5 },
     weakness: 'fire',
-    xpReward: 35,
-    goldReward: { min: 14, max: 20 },
+    xpReward: 18,
+    goldReward: { min: 6, max: 11 },
     description: 'Huge HP, weak attacks. A tank.',
     recommendedLevel: 4,
     img: 'assets/generated/training_dummy.png'
@@ -378,8 +378,8 @@ export const ENEMIES_DATA = {
     attackInterval: 2.0,
     resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 0.7 },
     weakness: 'fire',
-    xpReward: 45,
-    goldReward: { min: 18, max: 25 },
+    xpReward: 25,
+    goldReward: { min: 8, max: 14 },
     description: 'Two resistances, one weakness. Prepared mages only.',
     recommendedLevel: 5,
     img: 'assets/generated/training_dummy.png'
@@ -392,8 +392,8 @@ export const ENEMIES_DATA = {
     attackInterval: 1.5,
     resistances: { arcane: 1.0, fire: 0.5, shadow: 1.15, frost: 1.3 },
     weakness: 'frost',
-    xpReward: 60,
-    goldReward: { min: 25, max: 35 },
+    xpReward: 35,
+    goldReward: { min: 12, max: 20 },
     description: 'High DPS and HP. Boss encounter.',
     recommendedLevel: 7,
     img: 'assets/generated/training_dummy.png'
@@ -406,8 +406,8 @@ export const ENEMIES_DATA = {
     attackInterval: 1.8,
     resistances: { arcane: 0.7, fire: 1.0, shadow: 1.3, frost: 1.0 },
     weakness: 'shadow',
-    xpReward: 80,
-    goldReward: { min: 35, max: 50 },
+    xpReward: 50,
+    goldReward: { min: 18, max: 30 },
     description: 'Endgame. Optimal rotation required.',
     recommendedLevel: 9,
     img: 'assets/generated/training_dummy.png'
@@ -445,6 +445,9 @@ function getDefaultState() {
     level: 1,
     xp: 0,
     gold: 0,
+    classType: null, // выбирается на уровне 3 (pyromancer/stormcaller/tidecaster/geomancer)
+    attributePoints: 0,
+    attributes: { strength: 0, intelligence: 0 },
     equipment: {
       staff: 'starter_staff',
       hat: 'starter_hat',
@@ -528,6 +531,15 @@ export function loadState() {
           shadow_dust_buff: { ...defaults.buffs.shadow_dust_buff, ...((parsed.buffs && parsed.buffs.shadow_dust_buff) || {}) }
         }
       };
+
+      // === Migration: attribute points system ===
+      if (_state.attributePoints === undefined) {
+        // Grant retroactive points for levels already gained (1 per level after 1)
+        _state.attributePoints = Math.max(0, (_state.level || 1) - 1);
+      }
+      if (!_state.attributes) {
+        _state.attributes = { strength: 0, intelligence: 0 };
+      }
       saveState();
     } else {
       _state = getDefaultState();
@@ -580,13 +592,23 @@ export function getBonusPower() {
 export function getStats() {
   const state = getState();
   const bp = getBonusPower();
+  const ap = state.attributes || { strength: 0, intelligence: 0 };
+
+  const str = 5 + (state.level - 1) * 2 + ap.strength * 3 + Math.floor(bp * 0.4);
+  const int = 5 + (state.level - 1) * 3 + ap.intelligence * 4 + bp;
+
+  // Dynamic max based on level 50, all points in one stat, BiS legendary gear (~150 bp)
+  const maxStr = 5 + 49 * 2 + 49 * 3 + Math.floor(150 * 0.4);  // ~310
+  const maxInt = 5 + 49 * 3 + 49 * 4 + 150;                      // ~498
 
   return {
-    strength:       5 + (state.level - 1) * 2 + Math.floor(bp * 0.4),
-    intelligence:   5 + (state.level - 1) * 3 + bp,
-    // Примерные максимумы: уровень 10, BiS Common (+21 bonusPower)
-    maxStrength:    31,
-    maxIntelligence: 53
+    strength: str,
+    intelligence: int,
+    maxStrength: maxStr,
+    maxIntelligence: maxInt,
+    // Derived bonuses from attribute points
+    physicalResistBonus: ap.strength * 2,      // +2% physical resistance per STR point
+    spellDamageBonus:    ap.intelligence * 3   // +3% spell damage per INT point
   };
 }
 
@@ -594,7 +616,7 @@ export function getStats() {
  * Формула XP до следующего уровня
  */
 export function xpForLevel(level) {
-  return Math.floor(100 * Math.pow(level, 1.3));
+  return Math.floor(110 * Math.pow(level, 1.5));
 }
 
 /**
@@ -606,13 +628,16 @@ export function addXP(amount) {
   state.xp += amount;
   const levelUps = [];
 
-  // Проверяем повышение уровня (максимум 10)
-  while (state.level < 10) {
+  // Проверяем повышение уровня (максимум 50)
+  while (state.level < 50) {
     const needed = xpForLevel(state.level);
     if (state.xp >= needed) {
       state.xp -= needed;
       state.level++;
       levelUps.push(state.level);
+
+      // +1 attribute point per level up
+      state.attributePoints = (state.attributePoints || 0) + 1;
 
       // Награда за уровень
       const goldReward = 5 * state.level;
@@ -624,6 +649,23 @@ export function addXP(amount) {
 
   saveState();
   return levelUps;
+}
+
+/**
+ * Тратит 1 attribute point на указанный атрибут.
+ * @param {'strength'|'intelligence'} attr
+ * @returns {boolean} true если успешно
+ */
+export function spendAttributePoint(attr) {
+  if (attr !== 'strength' && attr !== 'intelligence') return false;
+  const state = getState();
+  if ((state.attributePoints || 0) <= 0) return false;
+
+  state.attributePoints--;
+  if (!state.attributes) state.attributes = { strength: 0, intelligence: 0 };
+  state.attributes[attr]++;
+  saveState();
+  return true;
 }
 
 /**
