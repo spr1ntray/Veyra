@@ -12,17 +12,20 @@ export const ITEMS_DATA = {
   starter_staff: {
     id: 'starter_staff', name: 'Apprentice Staff',
     slot: 'staff', bonus: 0, rarity: 'starter',
-    desc: 'Every mage\'s first staff', canUnequip: false
+    desc: 'Every mage\'s first staff', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_001.png'
   },
   starter_hat: {
     id: 'starter_hat', name: 'Worn Hat',
     slot: 'hat', bonus: 0, rarity: 'starter',
-    desc: 'Seen better days, but still holds', canUnequip: false
+    desc: 'Seen better days, but still holds', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_002.png'
   },
   starter_cloak: {
     id: 'starter_cloak', name: 'Faded Cloak',
     slot: 'cloak', bonus: 0, rarity: 'starter',
-    desc: 'The color faded long ago', canUnequip: false
+    desc: 'The color faded long ago', canUnequip: false,
+    img: 'assets/generated/pixel/ICON_003.png'
   },
 
   // Common предметы (белый цвет)
@@ -116,6 +119,7 @@ export const ITEMS_DATA = {
   },
 
   // Расходники (consumables)
+  // TODO: ICON_017.png, ICON_018.png, ICON_019.png, ICON_020.png не существуют в assets/generated/pixel/ — нужно сгенерировать
   mana_elixir: {
     id: 'mana_elixir', name: 'Mana Elixir',
     slot: 'consumable', bonus: 0, rarity: 'common',

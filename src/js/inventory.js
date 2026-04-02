@@ -29,6 +29,9 @@ let _currentPage = 0;
 // Текущий активный фильтр слота ('hat' | 'cloak' | 'staff' | null)
 let _activeFilter = null;
 
+// AbortController for grid container event listeners (prevents leaks on re-render)
+let _gridAbortController = null;
+
 // Динамический PAGE_SIZE (вычисляется из доступной высоты)
 const GRID_COLS = 5;
 let _dynamicRows = 4; // fallback
@@ -70,7 +73,8 @@ function calcDynamicRows() {
   if (cellSize <= 0) return 4;
 
   const rows = Math.floor((availableHeight + gap) / (cellSize + gap));
-  return Math.max(1, rows);
+  // Safety cap: max 10 rows to prevent PAGE_SIZE from growing too large
+  return Math.min(Math.max(1, rows), 10);
 }
 
 /**
@@ -82,16 +86,23 @@ function initResizeObserver() {
   const rightPanel = document.querySelector('.inv-right');
   if (!rightPanel) return;
 
-  _resizeObserver = new ResizeObserver(() => {
+  const onResize = () => {
     const newRows = calcDynamicRows();
     if (newRows !== _dynamicRows) {
       _dynamicRows = newRows;
       _currentPage = 0; // сброс страницы при смене размера
       renderGrid();
     }
-  });
+  };
 
-  _resizeObserver.observe(rightPanel);
+  if (typeof ResizeObserver !== 'undefined') {
+    _resizeObserver = new ResizeObserver(onResize);
+    _resizeObserver.observe(rightPanel);
+  } else {
+    // Fallback for browsers without ResizeObserver
+    _resizeObserver = 'fallback'; // prevent re-init
+    window.addEventListener('resize', onResize);
+  }
 }
 
 /**
@@ -126,6 +137,7 @@ function initHangerFilter() {
 
     newEl.addEventListener('click', () => {
       _activeFilter = (_activeFilter === slot) ? null : slot;
+      _currentPage = 0; // Reset page when filter changes
 
       // Toggle is-active-filter class on all circles
       ['hat', 'cloak', 'staff'].forEach(s => {
@@ -225,13 +237,16 @@ function renderGrid() {
     container.appendChild(createCell(entry, state));
   }
 
-  // Обработчик клика вне ячеек — скрываем tooltip при каждом рендере
-  // (container.innerHTML = '' уничтожает старый DOM вместе со старым listener)
+  // Abort previous container listeners to prevent leaks on re-render
+  if (_gridAbortController) _gridAbortController.abort();
+  _gridAbortController = new AbortController();
+
+  // Обработчик клика вне ячеек — скрываем tooltip
   container.addEventListener('click', (e) => {
     if (!e.target.closest('.inv-cell.has-item')) {
       hideTooltip();
     }
-  });
+  }, { signal: _gridAbortController.signal });
 
   // Рендерим кнопки пагинации
   renderPagination(totalPages);

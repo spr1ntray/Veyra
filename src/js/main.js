@@ -140,6 +140,9 @@ function init() {
   // Привязываем события магазина (один раз)
   bindShopEvents();
 
+  // Привязываем события Awakening popup (один раз)
+  bindAwakeningEvents();
+
   // Клик на спрайт торговца (один раз, флаг не нужен — handler задаётся один раз здесь)
   document.getElementById('merchant-sprite')?.addEventListener('click', openShop);
 
@@ -161,6 +164,9 @@ function startGame() {
   goToLocation('square');
 
   setTimeout(checkAndShowDailyLogin, 700);
+
+  // Check if player needs to choose a class (level 3+ but no classType)
+  checkAwakening();
 }
 
 /**
@@ -213,6 +219,9 @@ function handleBattleEnd(result) {
       showPopupLevelUp(result.levelUps[result.levelUps.length - 1]);
     }, 2200);
   }
+
+  // Check if Awakening should trigger (level 3+ with no class)
+  checkAwakening();
 }
 
 /**
@@ -233,6 +242,86 @@ function updateLoadingScreen() {
   } else {
     if (userBlock)     userBlock.style.display     = 'none';
     if (registerBlock) registerBlock.style.display = 'block';
+  }
+}
+
+// ===== AWAKENING POPUP (Class Selection at Level 3) =====
+
+let _awakeningSelected = null;
+
+/**
+ * Shows the Awakening popup for class selection.
+ * Cannot be closed without choosing a class.
+ */
+function showAwakeningPopup() {
+  const popup = document.getElementById('popup-awakening');
+  if (!popup) return;
+
+  _awakeningSelected = null;
+  const btn = document.getElementById('btn-awaken');
+  if (btn) btn.disabled = true;
+
+  // Clear previous selection
+  popup.querySelectorAll('.awakening-card').forEach(c => c.classList.remove('selected'));
+
+  popup.classList.add('visible');
+}
+
+/**
+ * Binds Awakening popup events (called once from init).
+ */
+function bindAwakeningEvents() {
+  const popup = document.getElementById('popup-awakening');
+  if (!popup) return;
+
+  const cards = popup.querySelectorAll('.awakening-card');
+  const btn = document.getElementById('btn-awaken');
+
+  // Card selection
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      cards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      _awakeningSelected = card.dataset.class;
+      if (btn) btn.disabled = false;
+    });
+  });
+
+  // Awaken button
+  if (btn) {
+    btn.addEventListener('click', () => {
+      if (!_awakeningSelected) return;
+
+      const state = getState();
+      state.classType = _awakeningSelected;
+      saveState();
+
+      popup.classList.remove('visible');
+      showNotification(`You have awakened as a ${_awakeningSelected.charAt(0).toUpperCase() + _awakeningSelected.slice(1)}!`, 'success');
+      updateHUD();
+      updateLocationHUD();
+    });
+  }
+
+  // Block closing without selection: override overlay click and Escape for this popup
+  popup.addEventListener('click', (e) => {
+    // Only allow closing via the Awaken button — block overlay click dismiss
+    if (e.target === popup) {
+      e.stopPropagation();
+      showNotification('You must choose a class to continue.', 'warning');
+    }
+  }, true); // capture phase to prevent bubbling to generic overlay handler
+}
+
+/**
+ * Checks if Awakening should trigger (level >= 3, classType === null).
+ * Called after battle results and level-up.
+ */
+function checkAwakening() {
+  const state = getState();
+  if (state.level >= 3 && !state.classType) {
+    // Delay slightly to let level-up popup show first
+    setTimeout(showAwakeningPopup, 3500);
   }
 }
 
@@ -330,10 +419,12 @@ function bindEvents() {
     goToLocation('square');
   });
 
-  // Закрытие popup по клику на оверлей
+  // Закрытие popup по клику на оверлей (except Awakening — must choose a class)
   document.querySelectorAll('.popup-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.classList.remove('visible');
+      if (e.target === overlay && overlay.id !== 'popup-awakening') {
+        overlay.classList.remove('visible');
+      }
     });
   });
 
@@ -341,6 +432,8 @@ function bindEvents() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.popup-overlay.visible').forEach(p => {
+        // Don't allow Escape to close Awakening popup — must choose a class
+        if (p.id === 'popup-awakening') return;
         p.classList.remove('visible');
       });
     }

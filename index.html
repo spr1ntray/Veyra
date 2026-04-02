@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="src/css/ui.css">
   <link rel="stylesheet" href="src/css/inventory.css">
   <link rel="stylesheet" href="src/css/shop.css">
+  <link rel="stylesheet" href="src/css/awakening.css">
 </head>
 <body>
 
@@ -417,6 +418,58 @@
     </div>
     <div id="shop-items-list" class="shop-items-list"></div>
     <button id="btn-close-shop" class="popup-close-btn">Leave</button>
+  </div>
+</div>
+
+<!-- ===== POPUP: AWAKENING (Class Selection) ===== -->
+<div class="popup-overlay" id="popup-awakening">
+  <div class="popup-window awakening-window">
+    <h2 class="popup-title awakening-title">The Awakening</h2>
+    <p class="awakening-intro">Your magic stirs. Choose the element that calls to your soul.</p>
+
+    <div class="awakening-grid">
+      <!-- Pyromancer -->
+      <div class="awakening-card" data-class="pyromancer" data-color="#e74c3c">
+        <div class="awakening-card-icon" style="color:#e74c3c">&#128293;</div>
+        <div class="awakening-card-name" style="color:#e74c3c">Pyromancer</div>
+        <div class="awakening-card-element">Fire</div>
+        <div class="awakening-card-desc">Kill before you die. Highest burst damage, devastating DoTs, but no healing.</div>
+        <div class="awakening-card-passive"><strong>Passive:</strong> Combustion &mdash; fire spells build Ember stacks that detonate for bonus damage.</div>
+        <div class="awakening-card-spell">First spell: <em>Fireball</em></div>
+      </div>
+
+      <!-- Stormcaller -->
+      <div class="awakening-card" data-class="stormcaller" data-color="#3498db">
+        <div class="awakening-card-icon" style="color:#3498db">&#9889;</div>
+        <div class="awakening-card-name" style="color:#3498db">Stormcaller</div>
+        <div class="awakening-card-element">Air</div>
+        <div class="awakening-card-desc">Death by a thousand cuts. Fastest casts, chain lightning, evasion.</div>
+        <div class="awakening-card-passive"><strong>Passive:</strong> Static Charge &mdash; rapid casts build charges that trigger Thunderstorm.</div>
+        <div class="awakening-card-spell">First spell: <em>Gust</em></div>
+      </div>
+
+      <!-- Tidecaster -->
+      <div class="awakening-card" data-class="tidecaster" data-color="#1abc9c">
+        <div class="awakening-card-icon" style="color:#1abc9c">&#127754;</div>
+        <div class="awakening-card-name" style="color:#1abc9c">Tidecaster</div>
+        <div class="awakening-card-element">Water</div>
+        <div class="awakening-card-desc">Outlast everything. Sustain, lifesteal, and control. The patient predator.</div>
+        <div class="awakening-card-passive"><strong>Passive:</strong> Tidal Flow &mdash; healing spells strengthen the next attack.</div>
+        <div class="awakening-card-spell">First spell: <em>Tidal Bolt</em></div>
+      </div>
+
+      <!-- Geomancer -->
+      <div class="awakening-card" data-class="geomancer" data-color="#e67e22">
+        <div class="awakening-card-icon" style="color:#e67e22">&#9968;</div>
+        <div class="awakening-card-name" style="color:#e67e22">Geomancer</div>
+        <div class="awakening-card-element">Earth</div>
+        <div class="awakening-card-desc">Unmovable wall. Shields, damage reflection, and attrition warfare.</div>
+        <div class="awakening-card-passive"><strong>Passive:</strong> Bedrock &mdash; shields generate Fortify stacks that reduce incoming damage.</div>
+        <div class="awakening-card-spell">First spell: <em>Stone Bolt</em></div>
+      </div>
+    </div>
+
+    <button class="btn-primary awakening-btn" id="btn-awaken" disabled>Awaken</button>
   </div>
 </div>
 

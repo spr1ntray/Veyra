@@ -165,22 +165,47 @@
 - **Файл**: `design/art-prompts-items.md`
 - **Дата**: 2026-03-30
 
-### [PENDING] Генерация ассетов ICON_001, ICON_002, ICON_003
-- **Агент**: Asset Generator
-- **Суть**: Сгенерировать иконки для стартовых предметов по промптам из `design/art-prompts-items.md`
-- **Зависит от**: промпты готовы
-
-### [PENDING] Привязать img-путь к стартовым предметам в ITEMS_DATA
+### [DONE] Attribute Points система
 - **Агент**: Coder
-- **Суть**: После генерации ICON_001-003 добавить поле `img` к starter_staff, starter_hat, starter_cloak в state.js
-- **Зависит от**: генерация ассетов
+- **Суть**: Реализована система очков атрибутов: `attributePoints` и `attributes: { strength, intelligence }` в getDefaultState(). При level up начисляется +1 attribute point. Функция `spendAttributePoint(attr)` тратит 1 очко. `getStats()` обновлён: STR = base + ap.strength*3, INT = base + ap.intelligence*4. Бонусы: +2% physical resistance per STR point, +3% spell damage per INT point. Миграция: старые сейвы получают retroactive points (level - 1).
+- **Файлы**: `src/js/state.js`, `src/js/ui.js`
+- **Дата**: 2026-03-30
+
+### [DONE] Коммит и push
+- **Агент**: DevOps
+- **Суть**: Закоммичены все изменения (11 файлов, 1857 insertions). Commit: `c261ffa`. Push на origin/main выполнен.
+- **Дата**: 2026-03-30
+
+### [DONE] Иконки стартовых предметов — привязка к ITEMS_DATA
+- **Агент**: Coder
+- **Суть**: Пользователь загрузил ICON_001.png (Apprentice Staff), ICON_002.png (Worn Hat), ICON_003.png (Faded Cloak) в assets/generated/pixel/. Добавлено поле `img` к starter_staff, starter_hat, starter_cloak в ITEMS_DATA (state.js). Consumables (ICON_017-020) помечены TODO — файлы ещё не сгенерированы.
+- **Файл**: `src/js/state.js`
+- **Дата**: 2026-03-30
+
+### [DONE] Баги инвентаря — 4 фикса
+- **Агент**: Coder
+- **Суть**: Исправлены 4 бага в inventory.js:
+  1. Event listener утечка в renderGrid() — добавлен AbortController, abort при каждом перерендере
+  2. _currentPage не сбрасывался при смене фильтра — добавлен `_currentPage = 0` в initHangerFilter()
+  3. Safety cap для calcDynamicRows — `Math.min(rows, 10)` чтобы PAGE_SIZE не взрывался
+  4. ResizeObserver fallback — обёрнут в `if (typeof ResizeObserver !== 'undefined')`, fallback на window.addEventListener('resize')
+- **Файл**: `src/js/inventory.js`
+- **Дата**: 2026-03-30
+
+### [DONE] UI: попап Awakening (выбор класса на уровне 3)
+- **Агент**: Coder
+- **Суть**: Полностью реализован Awakening popup. HTML: 4 карточки классов (Pyromancer/fire/#e74c3c, Stormcaller/air/#3498db, Tidecaster/water/#1abc9c, Geomancer/earth/#e67e22) с описаниями, пассивками, первым заклинанием. CSS: отдельный файл awakening.css, overlay с backdrop-filter blur, grid 4 карточки, selected state с элементальным glow, disabled Awaken кнопка пока не выбран класс. JS: триггер при level >= 3 и classType === null (после боя и при входе в игру), запись classType в state, блокировка закрытия без выбора (Escape и overlay click blocked).
+- **Файлы**: `index.html`, `src/css/awakening.css` (новый), `src/js/main.js`
+- **Дата**: 2026-03-30
+
+### [BLOCKED] Генерация ассетов ICON_017-020 (consumable иконки)
+- **Агент**: Asset Generator
+- **Суть**: ICON_017 (Mana Elixir), ICON_018 (Crystal Shard), ICON_019 (Iron Flask), ICON_020 (Shadow Dust) не существуют в assets/generated/pixel/. Промпты нужно создать. Пути уже прописаны в ITEMS_DATA.
+- **Зависит от**: Art Director промпты -> генерация
 
 ### [PENDING] GitHub setup
 - **Агент**: DevOps
-- **Суть**: Убрать токен из remote URL, настроить credential helper, убедиться что push/pull работают
-
-### [PENDING] Закоммитить текущие изменения
-- После фикса бага и создания бортового журнала
+- **Суть**: Убрать токен из remote URL, настроить credential helper
 
 ---
 
@@ -197,6 +222,9 @@
 | 2026-03-30 | Инвентарь: Вариант B (динамическая пагинация) | Адаптивность к любому viewport без хардкода строк |
 | 2026-03-30 | XP формула: 110 * level^1.5, max 50 | Economy v2, ~22-30 часов до level 50 |
 | 2026-03-30 | classType в state (null до уровня 3) | Подготовка к системе классов |
+| 2026-03-30 | Attribute Points: flat structure (attributePoints + attributes) | Проще чем nested object из GDD, легче мигрировать |
+| 2026-03-30 | STR: +3 per point, INT: +4 per point | Из GDD progression-system.md, баланс для ~50 points |
+| 2026-03-30 | Выбор класса на уровне 3 (не 5) | Решение Game Designer — быстрее вовлечение |
 
 ---
 
