@@ -67,8 +67,12 @@ export function initGrimoire(enemyId, onBeginBattle, onBack) {
 
   selectedPoolSpellId = null;
 
-  // Сбрасываем фильтр при каждом открытии гримуара
-  poolFilter = 'all';
+  // Загружаем фильтр из sessionStorage если класс выбран, иначе сбрасываем
+  if (state.classType) {
+    poolFilter = sessionStorage.getItem('grimoireFilter') || 'all';
+  } else {
+    poolFilter = 'all';
+  }
 
   renderGrimoireScreen();
 }
@@ -263,6 +267,14 @@ function renderSpellPool() {
   pool.innerHTML = '';
 
   const state = getState();
+
+  // Сбрасываем выбранный спелл если он скрыт фильтром myclass
+  if (poolFilter === 'myclass' && selectedPoolSpellId) {
+    const sel = SPELLS_DATA[selectedPoolSpellId];
+    if (sel && getSpellPoolState(sel, state.classType, state.level) === 'locked-class') {
+      selectedPoolSpellId = null;
+    }
+  }
   const playerClass = state.classType;
   const playerLevel = state.level;
 
@@ -363,7 +375,7 @@ function renderSpellPool() {
     } else if (spellState === 'locked-level') {
       card.title = `Unlocks at level ${spell.unlockLevel}`;
     } else {
-      card.title = `${spell.name}\n${spell.description}\nCast: ${spell.castTime}s`;
+      card.title = `${spell.name} — ${spell.description} — Cast: ${spell.castTime}s`;
     }
 
     // Drag и клики — только для доступных спеллов
@@ -572,6 +584,7 @@ export function bindGrimoireEvents() {
   // Обработчик фильтра "All"
   document.getElementById('filter-btn-all')?.addEventListener('click', () => {
     poolFilter = 'all';
+    sessionStorage.setItem('grimoireFilter', poolFilter);
     syncFilterButtons();
     renderSpellPool();
   });
@@ -579,6 +592,7 @@ export function bindGrimoireEvents() {
   // Обработчик фильтра "My Class"
   document.getElementById('filter-btn-myclass')?.addEventListener('click', () => {
     poolFilter = 'myclass';
+    sessionStorage.setItem('grimoireFilter', poolFilter);
     syncFilterButtons();
     renderSpellPool();
   });
