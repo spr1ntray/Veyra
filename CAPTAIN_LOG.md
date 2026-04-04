@@ -23,7 +23,10 @@
 ├── favicon.svg
 ├── CAPTAIN_LOG.md           -- этот файл
 ├── design/
-│   └── progression-system.md  -- GDD системы прогрессии (max lvl 50, attribute points, новые заклинания/враги/PvP)
+│   ├── progression-system.md  -- GDD системы прогрессии (max lvl 50, attribute points, новые заклинания/враги/PvP)
+│   ├── mage-classes.md        -- GDD системы классов магов (4 класса, пассивки, заклинания, баланс)
+│   ├── combat-class-mechanics.md -- спецификация интеграции классов в combat.js (REVISED)
+│   └── art-prompts-consumables.md -- промпты для pixel art иконок расходников
 ├── src/
 │   ├── css/
 │   │   ├── main.css         -- переменные, глобальные стили, шрифты
@@ -198,10 +201,80 @@
 - **Файлы**: `index.html`, `src/css/awakening.css` (новый), `src/js/main.js`
 - **Дата**: 2026-03-30
 
-### [BLOCKED] Генерация ассетов ICON_017-020 (consumable иконки)
-- **Агент**: Asset Generator
-- **Суть**: ICON_017 (Mana Elixir), ICON_018 (Crystal Shard), ICON_019 (Iron Flask), ICON_020 (Shadow Dust) не существуют в assets/generated/pixel/. Промпты нужно создать. Пути уже прописаны в ITEMS_DATA.
-- **Зависит от**: Art Director промпты -> генерация
+### [DONE] Промпты для иконок расходников ICON_017-020
+- **Агент**: Art Director
+- **Суть**: Созданы детальные промпты для 4 pixel art иконок расходников (64x64, dark fantasy): Mana Elixir (ICON_017, cyan-blue potion), Crystal Shard (ICON_018, violet-blue shard), Iron Flask (ICON_019, runic iron flask), Shadow Dust (ICON_020, dark pouch with purple sparks).
+- **Файл**: `design/art-prompts-consumables.md`
+- **Статус**: Промпты готовы. ICON файлы НЕ существуют в assets/generated/pixel/ -- нужна генерация.
+- **Дата**: 2026-03-30
+
+### [DONE] QA: Awakening popup -- найдено 8 багов/проблем
+- **Агент**: Tester
+- **Суть**: Полный QA-аудит Awakening popup. Найдены проблемы:
+  1. BUG: Нет защиты от повторного тригера (если checkAwakening вызывается дважды быстро -- дублирование setTimeout)
+  2. BUG: Если игрок закроет браузер после выбора -- classType сохранён, но popup.classList.remove('visible') не вызван для ДРУГИХ popup-ов (level-up может остаться visible в DOM)
+  3. BUG: Tidecaster/Geomancer описания пассивок в HTML не совпадают с GDD (HTML: "Tidal Flow", GDD: "Riptide"; HTML: "Bedrock generates Fortify stacks", GDD: Bedrock = damage reduction + reflect)
+  4. A11Y: Карточки не focusable с клавиатуры (нет tabindex, нет role="radio", нет aria-checked)
+  5. A11Y: Кнопка Awaken не получает focus после выбора карточки
+  6. UX: На 1280x720 четыре карточки в ряд -- текст может обрезаться (нет min-width на карточках)
+  7. RACE: checkAwakening в handleBattleEnd вызывается без учёта level-up popup (3500ms delay может совпасть с level-up popup 2200ms delay)
+  8. EDGE: Нет respec flow -- если classType уже задан, повторный вызов showAwakeningPopup невозможен (нет UI для respec)
+- **Фиксы**: См. полный отчёт в ответе PM ниже.
+- **Дата**: 2026-03-30
+
+### [DONE] Спецификация классовых заклинаний для combat.js
+- **Агент**: Game Designer
+- **Суть**: Полная спецификация интеграции 4 классов магов в боевую систему: новые поля SPELLS_DATA (classRestriction, elementType, passiveTrigger), 24 новых заклинания (по 5-8 на класс с учётом переклассификации существующих), 4 пассивки с детальной логикой триггеров, функция getElementalModifier(), формулы урона для каждого заклинания, план миграции, приоритеты имплементации.
+- **Файл**: `design/combat-class-mechanics.md`
+- **Статус**: DRAFT -- ожидает review перед реализацией.
+- **Дата**: 2026-03-30
+
+### [DONE] Исследование конкурентов browser RPG
+- **Агент**: Researcher
+- **Суть**: Проанализированы 6 браузерных RPG (Melvor Idle, Hordes.io, Shattered Pixel Dungeon, Realm Grinder, Idle Champions, Legends of Idleon). Ключевые выводы для Veyra:
+  1. Первые 30 минут критичны -- нужен "hook" каждые 5-10 минут (новый спелл, новый враг, первый лут)
+  2. Класс-прогрессия работает лучше когда есть "preview" будущих способностей (серые иконки с замком)
+  3. Idle-механики (автобой уже есть) нужно дополнить offline-прогрессией для удержания
+  4. Leaderboards / PvP даже в простом виде (async) сильно повышают retention
+  5. Визуальный прогресс (менять внешний вид мага при смене экипировки) -- один из топ-запросов в жанре
+- **Дата**: 2026-03-30
+
+### [DONE] Иконки расходников ICON_017-020 — привязка и загрузка
+- **Агент**: Coder
+- **Суть**: Пользователь загрузил ICON_017-020.png в assets/generated/pixel/. Пути в ITEMS_DATA уже были корректны. Удалён TODO-комментарий из state.js.
+- **Файл**: `src/js/state.js`
+- **Дата**: 2026-03-30
+
+### [DONE] combat-class-mechanics.md — ревизия по фидбеку пользователя
+- **Агент**: Game Designer
+- **Суть**: Внесены 10 правок по детальному фидбеку:
+  1. DoT-тики ограничены 1 Ember/с на уникальный источник (Section 5.1)
+  2. Zephyr: добавлен counter-attack (50% avoided damage)
+  3. Healing Rain: cast time 2.5s -> 1.5s, emergency heal x2 при HP < 50%
+  4. Shield hard cap: min(shieldHP, mageMaxHP) для Fortify и Tectonic Shift
+  5. Tectonic Shift base shield: 200 -> 80
+  6. Frozen Tomb: full freeze -> 70% attack speed reduction (soft CC)
+  7. Комментарии к passiveTrigger: false (Tailwind, Focus)
+  8. training_dummy elementType: null -> "untyped (not neutral)"
+  9. Living Bomb detonation: уточнено ignores focusMod AND buffMod
+  10. Chain Lightning Hit3: "Hit2 * 0.70" -> "Hit1 * 0.49"
+- **Файл**: `design/combat-class-mechanics.md`
+- **Статус**: REVISED
+- **Дата**: 2026-03-30
+
+### [DONE] Баги Awakening popup — 3 фикса
+- **Агент**: Coder
+- **Суть**:
+  1. Guard от двойного вызова: `_awakeningShowing` флаг, сбрасывается при закрытии
+  2. Тексты пассивок Tidecaster/Geomancer в index.html приведены в соответствие с GDD (Riptide / Bedrock)
+  3. Race condition: checkAwakening() вызывается из колбека закрытия level-up попапа, а не через независимый setTimeout. Убран setTimeout(3500) из checkAwakening().
+- **Файлы**: `src/js/main.js`, `index.html`
+- **Дата**: 2026-03-30
+
+### [DONE] Коммит и push (сессия 2)
+- **Агент**: DevOps
+- **Суть**: Закоммичены все изменения (9 файлов, 751 insertions). Commit: `1178cde`. Push на origin/main выполнен.
+- **Дата**: 2026-03-30
 
 ### [PENDING] GitHub setup
 - **Агент**: DevOps
