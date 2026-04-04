@@ -119,7 +119,6 @@ export const ITEMS_DATA = {
   },
 
   // Расходники (consumables)
-  // TODO: ICON_017.png, ICON_018.png, ICON_019.png, ICON_020.png не существуют в assets/generated/pixel/ — нужно сгенерировать
   mana_elixir: {
     id: 'mana_elixir', name: 'Mana Elixir',
     slot: 'consumable', bonus: 0, rarity: 'common',

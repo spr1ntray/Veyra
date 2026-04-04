@@ -218,10 +218,11 @@ function handleBattleEnd(result) {
     setTimeout(() => {
       showPopupLevelUp(result.levelUps[result.levelUps.length - 1]);
     }, 2200);
+    // Awakening check is deferred to level-up popup close callback (see bindEvents)
+  } else {
+    // No level-up: check awakening directly
+    checkAwakening();
   }
-
-  // Check if Awakening should trigger (level 3+ with no class)
-  checkAwakening();
 }
 
 /**
@@ -248,15 +249,19 @@ function updateLoadingScreen() {
 // ===== AWAKENING POPUP (Class Selection at Level 3) =====
 
 let _awakeningSelected = null;
+let _awakeningShowing = false;
 
 /**
  * Shows the Awakening popup for class selection.
  * Cannot be closed without choosing a class.
  */
 function showAwakeningPopup() {
+  if (_awakeningShowing) return; // Guard: prevent double invocation
+
   const popup = document.getElementById('popup-awakening');
   if (!popup) return;
 
+  _awakeningShowing = true;
   _awakeningSelected = null;
   const btn = document.getElementById('btn-awaken');
   if (btn) btn.disabled = true;
@@ -297,6 +302,7 @@ function bindAwakeningEvents() {
       saveState();
 
       popup.classList.remove('visible');
+      _awakeningShowing = false;
       showNotification(`You have awakened as a ${_awakeningSelected.charAt(0).toUpperCase() + _awakeningSelected.slice(1)}!`, 'success');
       updateHUD();
       updateLocationHUD();
@@ -320,8 +326,7 @@ function bindAwakeningEvents() {
 function checkAwakening() {
   const state = getState();
   if (state.level >= 3 && !state.classType) {
-    // Delay slightly to let level-up popup show first
-    setTimeout(showAwakeningPopup, 3500);
+    showAwakeningPopup();
   }
 }
 
@@ -406,8 +411,11 @@ function bindEvents() {
     }
   });
 
-  // Level Up
-  document.getElementById('btn-levelup-close')?.addEventListener('click', hidePopupLevelUp);
+  // Level Up — on close, check if Awakening should trigger
+  document.getElementById('btn-levelup-close')?.addEventListener('click', () => {
+    hidePopupLevelUp();
+    checkAwakening();
+  });
 
   // Просмотр локации (popup совместимость)
   document.getElementById('btn-close-location')?.addEventListener('click', () => {
