@@ -4,7 +4,7 @@
  * После выбора врага игрок нажимает Begin Battle.
  */
 
-import { getState, SPELLS_DATA, ENEMIES_DATA, getUnlockedSpells, saveGrimoire, getBonusPower } from './state.js';
+import { getState, SPELLS_DATA, ENEMIES_DATA, saveGrimoire, getBonusPower } from './state.js';
 
 // Выбранный враг
 let selectedEnemyId = null;
@@ -19,6 +19,33 @@ let selectedPoolSpellId = null;
 let _onBeginBattle = null;
 // Колбек — назад
 let _onBack = null;
+
+// Текущий фильтр пула: 'all' | 'myclass'
+let poolFilter = 'all';
+
+// Маппинг класса на элемент для CSS-классов и badge
+const CLASS_ELEMENT = {
+  pyromancer: 'fire',
+  stormcaller: 'air',
+  tidecaster: 'water',
+  geomancer: 'earth'
+};
+
+// Данные класса для HUD badge: символ и аббревиатура
+const CLASS_BADGE_DATA = {
+  pyromancer:  { symbol: '🔥', abbr: 'Pyro' },
+  stormcaller: { symbol: '⚡', abbr: 'Storm' },
+  tidecaster:  { symbol: '💧', abbr: 'Tide' },
+  geomancer:   { symbol: '⛰', abbr: 'Geo' }
+};
+
+// Имена классов для tooltip (с заглавной буквы)
+const CLASS_DISPLAY_NAMES = {
+  pyromancer:  'Pyromancer',
+  stormcaller: 'Stormcaller',
+  tidecaster:  'Tidecaster',
+  geomancer:   'Geomancer'
+};
 
 /**
  * Инициализирует экран гримуара
@@ -40,6 +67,9 @@ export function initGrimoire(enemyId, onBeginBattle, onBack) {
 
   selectedPoolSpellId = null;
 
+  // Сбрасываем фильтр при каждом открытии гримуара
+  poolFilter = 'all';
+
   renderGrimoireScreen();
 }
 
@@ -53,6 +83,8 @@ function renderGrimoireScreen() {
   renderSpellPool();
   updateDpsPreview();
   updateBeginButton();
+  // Обновляем HUD badge при каждом рендере экрана гримуара
+  updateHudClassBadge();
 }
 
 /**
@@ -185,70 +217,157 @@ function renderSlots() {
 }
 
 /**
- * Рендерит пул доступных заклинаний (правая страница), сгруппированных по школам
+ * Определяет состояние доступности спелла для игрока.
+ * Чистая функция — не зависит от внешнего состояния.
+ *
+ * @param {object} spell — объект спелла из SPELLS_DATA
+ * @param {string|null} playerClass — classType игрока
+ * @param {number} playerLevel — текущий уровень игрока
+ * @returns {'available'|'locked-level'|'locked-class'}
+ */
+function getSpellPoolState(spell, playerClass, playerLevel) {
+  // Сначала проверяем ограничение по классу
+  if (spell.classRestriction !== null && spell.classRestriction !== playerClass) {
+    return 'locked-class';
+  }
+  // Затем проверяем ограничение по уровню
+  if (spell.unlockLevel > playerLevel) {
+    return 'locked-level';
+  }
+  return 'available';
+}
+
+/**
+ * Синхронизирует активный класс на кнопках фильтра пула.
+ * Активной становится кнопка с data-filter === poolFilter.
+ */
+function syncFilterButtons() {
+  const buttons = document.querySelectorAll('.grimoire-filter-btn');
+  buttons.forEach(btn => {
+    if (btn.dataset.filter === poolFilter) {
+      btn.classList.add('grimoire-filter-btn-active');
+    } else {
+      btn.classList.remove('grimoire-filter-btn-active');
+    }
+  });
+}
+
+/**
+ * Рендерит пул доступных заклинаний (правая страница).
+ * Источник: все спеллы из SPELLS_DATA с классификацией по состоянию.
+ * Порядок: available → locked-level → locked-class (по чужим классам).
  */
 function renderSpellPool() {
   const pool = document.getElementById('grimoire-spell-pool');
   if (!pool) return;
   pool.innerHTML = '';
 
-  const unlocked = getUnlockedSpells();
+  const state = getState();
+  const playerClass = state.classType;
+  const playerLevel = state.level;
 
-  // Группируем по школам
-  const schools = ['arcane', 'fire', 'shadow', 'frost', 'utility'];
-  const schoolColors = {
-    arcane: '#4a90d9',
-    fire: '#e74c3c',
-    shadow: '#8e44ad',
-    frost: '#3498db',
-    utility: '#c9a84c'
-  };
-  const schoolNames = {
-    arcane: 'Arcane',
-    fire: 'Fire',
-    shadow: 'Shadow',
-    frost: 'Frost',
-    utility: 'Utility'
-  };
+  // Управляем видимостью кнопки My Class в filter bar
+  const filterBar = document.getElementById('grimoire-filter-bar');
+  if (filterBar) {
+    if (!playerClass) {
+      filterBar.classList.add('grimoire-filter-bar--no-class');
+    } else {
+      filterBar.classList.remove('grimoire-filter-bar--no-class');
+    }
+  }
 
-  schools.forEach(school => {
-    const schoolSpells = unlocked.filter(s => s.school === school);
-    if (schoolSpells.length === 0) return;
+  // Синхронизируем состояние кнопок фильтра
+  syncFilterButtons();
 
-    const group = document.createElement('div');
-    group.className = 'spell-pool-group';
+  // Получаем все спеллы и классифицируем каждый
+  const allSpells = Object.values(SPELLS_DATA);
 
-    const label = document.createElement('div');
-    label.className = 'spell-pool-school-label';
-    label.style.color = schoolColors[school];
-    label.textContent = schoolNames[school];
-    group.appendChild(label);
+  // Разбиваем на три группы по приоритету отображения
+  const available = [];
+  const lockedLevel = [];
+  const lockedClass = [];
 
-    const row = document.createElement('div');
-    row.className = 'spell-pool-row';
+  allSpells.forEach(spell => {
+    const spellState = getSpellPoolState(spell, playerClass, playerLevel);
 
-    schoolSpells.forEach(spell => {
-      const card = document.createElement('div');
-      card.className = 'spell-pool-card';
-      card.dataset.spellId = spell.id;
-      if (selectedPoolSpellId === spell.id) card.classList.add('spell-pool-card-selected');
+    // Фильтр "My Class": скрываем locked-class полностью
+    if (poolFilter === 'myclass' && spellState === 'locked-class') return;
 
-      card.style.setProperty('--spell-color', spell.color);
-      card.innerHTML = `
-        <div class="pool-card-icon" style="border-color:${spell.color};box-shadow:0 0 8px ${spell.glowColor}">
-          <span style="color:${spell.color}">${getSpellEmoji(spell.school)}</span>
-        </div>
-        <div class="pool-card-name" style="color:${spell.color}">${spell.name}</div>
-        <div class="pool-card-stats">
-          ${spell.baseDmg.max > 0 ? `${spell.baseDmg.min}–${spell.baseDmg.max}` : 'Utility'}
-          · ${spell.castTime}s
-        </div>
-      `;
+    if (spellState === 'available') {
+      available.push({ spell, spellState });
+    } else if (spellState === 'locked-level') {
+      lockedLevel.push({ spell, spellState });
+    } else {
+      lockedClass.push({ spell, spellState });
+    }
+  });
 
-      // Tooltip при hover
+  // Сортируем locked-class по классу, потом по уровню (для читаемости дерева)
+  const classOrder = ['pyromancer', 'stormcaller', 'tidecaster', 'geomancer'];
+  lockedClass.sort((a, b) => {
+    const ca = classOrder.indexOf(a.spell.classRestriction);
+    const cb = classOrder.indexOf(b.spell.classRestriction);
+    if (ca !== cb) return ca - cb;
+    return a.spell.unlockLevel - b.spell.unlockLevel;
+  });
+
+  // Итоговый упорядоченный список для рендера
+  const ordered = [...available, ...lockedLevel, ...lockedClass];
+
+  // Рендерим карточки
+  ordered.forEach(({ spell, spellState }) => {
+    const card = document.createElement('div');
+    card.className = 'spell-pool-card';
+    card.dataset.spellId = spell.id;
+
+    // Добавляем классы состояния
+    if (spellState === 'locked-class') {
+      card.classList.add('spell-locked-class');
+    } else if (spellState === 'locked-level') {
+      card.classList.add('spell-locked-level');
+    }
+
+    // Элементальная рамка: для классовых спеллов (не универсальных)
+    if (spell.classRestriction !== null) {
+      const element = CLASS_ELEMENT[spell.classRestriction];
+      if (element) card.classList.add(`spell-element-${element}`);
+    }
+
+    // Выделение при клик-режиме — только для доступных
+    if (spellState === 'available' && selectedPoolSpellId === spell.id) {
+      card.classList.add('spell-pool-card-selected');
+    }
+
+    card.style.setProperty('--spell-color', spell.color);
+
+    // Генерируем HTML иконки — с overlay замка для locked состояний
+    const lockOverlay = (spellState !== 'available')
+      ? `<div class="pool-card-lock-overlay">🔒</div>`
+      : '';
+
+    card.innerHTML = `
+      <div class="pool-card-icon" style="border-color:${spell.color};box-shadow:0 0 8px ${spell.glowColor}">
+        <span style="color:${spell.color}">${getSpellEmoji(spell.school)}</span>
+        ${lockOverlay}
+      </div>
+      <div class="pool-card-name" style="color:${spell.color}">${spell.name}</div>
+      <div class="pool-card-stats">
+        ${spell.baseDmg.max > 0 ? `${spell.baseDmg.min}–${spell.baseDmg.max}` : 'Utility'}
+        · ${spell.castTime}s
+      </div>
+    `;
+
+    // Tooltip зависит от состояния
+    if (spellState === 'locked-class') {
+      card.title = `Requires ${CLASS_DISPLAY_NAMES[spell.classRestriction] || spell.classRestriction}`;
+    } else if (spellState === 'locked-level') {
+      card.title = `Unlocks at level ${spell.unlockLevel}`;
+    } else {
       card.title = `${spell.name}\n${spell.description}\nCast: ${spell.castTime}s`;
+    }
 
-      // Drag из пула
+    // Drag и клики — только для доступных спеллов
+    if (spellState === 'available') {
       card.draggable = true;
       card.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('source', 'pool');
@@ -276,12 +395,9 @@ function renderSpellPool() {
           onSlotsChanged();
         }
       });
+    }
 
-      row.appendChild(card);
-    });
-
-    group.appendChild(row);
-    pool.appendChild(group);
+    pool.appendChild(card);
   });
 }
 
@@ -403,8 +519,44 @@ function getSpellEmoji(school) {
 }
 
 /**
- * Привязывает обработчики кнопок экрана гримуара
- * Вызывается один раз при старте игры
+ * Обновляет HUD-бейдж класса (#loc-hud-class-badge).
+ * Вызывается: при инициализации гримуара, после выбора класса, при загрузке игры.
+ */
+export function updateHudClassBadge() {
+  const badge = document.getElementById('loc-hud-class-badge');
+  if (!badge) return;
+
+  const state = getState();
+  const playerClass = state.classType;
+
+  // Скрываем если класс не выбран
+  if (!playerClass) {
+    badge.style.display = 'none';
+    return;
+  }
+
+  const element = CLASS_ELEMENT[playerClass];
+  const badgeData = CLASS_BADGE_DATA[playerClass];
+
+  if (!element || !badgeData) {
+    badge.style.display = 'none';
+    return;
+  }
+
+  // Содержимое: символ + аббревиатура
+  badge.innerHTML = `${badgeData.symbol} ${badgeData.abbr}`;
+
+  // Сбрасываем все badge-* классы и назначаем актуальный
+  badge.classList.remove('badge-fire', 'badge-air', 'badge-water', 'badge-earth');
+  badge.classList.add(`badge-${element}`);
+
+  // Показываем бейдж
+  badge.style.display = '';
+}
+
+/**
+ * Привязывает обработчики кнопок экрана гримуара.
+ * Вызывается один раз при старте игры.
  */
 export function bindGrimoireEvents() {
   document.getElementById('btn-grimoire-back')?.addEventListener('click', () => {
@@ -415,5 +567,19 @@ export function bindGrimoireEvents() {
     const filled = slots.filter(id => id !== null).length;
     if (filled < 3) return;
     if (_onBeginBattle) _onBeginBattle(selectedEnemyId);
+  });
+
+  // Обработчик фильтра "All"
+  document.getElementById('filter-btn-all')?.addEventListener('click', () => {
+    poolFilter = 'all';
+    syncFilterButtons();
+    renderSpellPool();
+  });
+
+  // Обработчик фильтра "My Class"
+  document.getElementById('filter-btn-myclass')?.addEventListener('click', () => {
+    poolFilter = 'myclass';
+    syncFilterButtons();
+    renderSpellPool();
   });
 }

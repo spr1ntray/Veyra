@@ -350,6 +350,7 @@
   justify-content: center;
   font-size: 3em;
   background: rgba(0,0,0,0.4);
+  position: relative; /* нужно для абсолютного overlay замка */
 }
 
 .pool-card-name {
@@ -543,4 +544,157 @@
 /* Кнопка с тултипом — cursor pointer даже в disabled когда tooltip нужен */
 .grimoire-begin-btn:disabled[title] {
   cursor: help;
+}
+
+/* === КЛАССИФИКАЦИЯ СПЕЛЛОВ В ПУЛЕ === */
+
+/* Спелл чужого класса: сильно затенён, замок поверх иконки */
+.spell-pool-card.spell-locked-class {
+  opacity: 0.4;
+  filter: grayscale(80%);
+  cursor: default;
+  pointer-events: none;
+}
+
+.spell-pool-card.spell-locked-class:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Спелл своего класса, уровень ещё не достигнут: чуть светлее */
+.spell-pool-card.spell-locked-level {
+  opacity: 0.6;
+  filter: grayscale(40%);
+  cursor: default;
+  pointer-events: none;
+}
+
+.spell-pool-card.spell-locked-level:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Оверлей замка поверх иконки спелла */
+.pool-card-lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  font-size: 1.6em;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+
+/* === ЭЛЕМЕНТАЛЬНЫЕ РАМКИ (доступные классовые спеллы) === */
+
+.spell-pool-card.spell-element-fire {
+  border-color: rgba(231, 76, 60, 0.5);
+  border-bottom-color: #e74c3c;
+  border-bottom-width: 3px;
+  box-shadow: 0 0 8px rgba(231, 76, 60, 0.15), inset 0 -2px 6px rgba(231, 76, 60, 0.08);
+}
+
+.spell-pool-card.spell-element-fire:hover {
+  border-color: rgba(231, 76, 60, 0.8);
+  box-shadow: 0 0 16px rgba(231, 76, 60, 0.35);
+}
+
+.spell-pool-card.spell-element-air {
+  border-color: rgba(52, 152, 219, 0.5);
+  border-bottom-color: #3498db;
+  border-bottom-width: 3px;
+  box-shadow: 0 0 8px rgba(52, 152, 219, 0.15), inset 0 -2px 6px rgba(52, 152, 219, 0.08);
+}
+
+.spell-pool-card.spell-element-air:hover {
+  border-color: rgba(52, 152, 219, 0.8);
+  box-shadow: 0 0 16px rgba(52, 152, 219, 0.35);
+}
+
+.spell-pool-card.spell-element-water {
+  border-color: rgba(26, 188, 156, 0.5);
+  border-bottom-color: #1abc9c;
+  border-bottom-width: 3px;
+  box-shadow: 0 0 8px rgba(26, 188, 156, 0.15), inset 0 -2px 6px rgba(26, 188, 156, 0.08);
+}
+
+.spell-pool-card.spell-element-water:hover {
+  border-color: rgba(26, 188, 156, 0.8);
+  box-shadow: 0 0 16px rgba(26, 188, 156, 0.35);
+}
+
+.spell-pool-card.spell-element-earth {
+  border-color: rgba(230, 126, 34, 0.5);
+  border-bottom-color: #e67e22;
+  border-bottom-width: 3px;
+  box-shadow: 0 0 8px rgba(230, 126, 34, 0.15), inset 0 -2px 6px rgba(230, 126, 34, 0.08);
+}
+
+.spell-pool-card.spell-element-earth:hover {
+  border-color: rgba(230, 126, 34, 0.8);
+  box-shadow: 0 0 16px rgba(230, 126, 34, 0.35);
+}
+
+/* === HUD — BADGE КЛАССА === */
+
+.hud-class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: opacity 0.3s ease;
+}
+
+.hud-class-badge.badge-fire  { color: #e74c3c; border-color: rgba(231,76,60,0.4);  background: rgba(231,76,60,0.08); }
+.hud-class-badge.badge-air   { color: #3498db; border-color: rgba(52,152,219,0.4); background: rgba(52,152,219,0.08); }
+.hud-class-badge.badge-water { color: #1abc9c; border-color: rgba(26,188,156,0.4); background: rgba(26,188,156,0.08); }
+.hud-class-badge.badge-earth { color: #e67e22; border-color: rgba(230,126,34,0.4); background: rgba(230,126,34,0.08); }
+
+/* === ФИЛЬТР-ПЕРЕКЛЮЧАТЕЛЬ ПУЛА СПЕЛЛОВ === */
+
+.grimoire-filter-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  justify-content: flex-end;
+}
+
+.grimoire-filter-btn {
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  background: transparent;
+  color: rgba(138, 122, 106, 0.7);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.grimoire-filter-btn:hover {
+  border-color: rgba(201, 168, 76, 0.5);
+  color: rgba(201, 168, 76, 0.9);
+}
+
+.grimoire-filter-btn.grimoire-filter-btn-active {
+  border-color: rgba(201, 168, 76, 0.6);
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.08);
+  text-shadow: var(--glow-gold);
+}
+
+/* Скрываем кнопку My Class когда класс не выбран */
+.grimoire-filter-bar--no-class #filter-btn-myclass {
+  display: none;
 }

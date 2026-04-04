@@ -91,6 +91,7 @@
     <!-- HUD: имя, уровень, золото (левый верхний угол) -->
     <div class="location-hud">
       <span id="loc-hud-name" class="loc-hud-name">Mage</span>
+      <span id="loc-hud-class-badge" class="hud-class-badge" style="display:none"></span>
       <span id="loc-hud-level" class="loc-hud-level">Lv. 1</span>
       <span id="loc-hud-gold" class="loc-hud-gold">🪙 0</span>
       <div class="hud-buffs" id="hud-buffs"></div>
@@ -261,6 +262,12 @@
       <!-- Правая страница: пул заклинаний -->
       <div class="grimoire-page grimoire-page-right">
         <div class="grimoire-page-title">Available Spells</div>
+
+        <div class="grimoire-filter-bar" id="grimoire-filter-bar">
+          <button class="grimoire-filter-btn grimoire-filter-btn-active" data-filter="all" id="filter-btn-all">All</button>
+          <button class="grimoire-filter-btn" data-filter="myclass" id="filter-btn-myclass">My Class</button>
+        </div>
+
         <div class="grimoire-spell-pool" id="grimoire-spell-pool">
           <!-- Генерируется через JS -->
         </div>

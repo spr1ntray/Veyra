@@ -6,7 +6,7 @@
 
 import { loadState, getState, saveState } from './state.js';
 import { initBattle, getFightsRemaining, setOnBattleEnd } from './combat.js';
-import { initGrimoire, bindGrimoireEvents } from './grimoire.js';
+import { initGrimoire, bindGrimoireEvents, updateHudClassBadge } from './grimoire.js';
 import { renderHomeScreen, initEquipmentZones } from './inventory.js';
 import { initMapScreen } from './map.js';
 import { checkAndShowDailyLogin, showDailyLoginPopup, hideDailyLoginPopup, handleClaimDaily } from './dailylogin.js';
@@ -154,6 +154,8 @@ function init() {
  */
 function startGame() {
   updateHUD();
+  // Инициализируем badge класса при загрузке (если класс уже был выбран ранее)
+  updateHudClassBadge();
 
   initMapScreen({
     onGoToSquare: () => goToLocation('square'),
@@ -306,6 +308,8 @@ function bindAwakeningEvents() {
       showNotification(`You have awakened as a ${_awakeningSelected.charAt(0).toUpperCase() + _awakeningSelected.slice(1)}!`, 'success');
       updateHUD();
       updateLocationHUD();
+      // Обновляем бейдж класса в HUD сразу после выбора
+      updateHudClassBadge();
     });
   }
 
