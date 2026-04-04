@@ -156,6 +156,7 @@ export const ITEMS_DATA = {
 // ===== ДАННЫЕ ЗАКЛИНАНИЙ (Grimoire Autocast) =====
 
 export const SPELLS_DATA = {
+  // ===== UNIVERSAL SPELLS (available to all classes) =====
   arcane_bolt: {
     id: 'arcane_bolt',
     name: 'Arcane Bolt',
@@ -164,6 +165,7 @@ export const SPELLS_DATA = {
     castTime: 1.8,
     effect: null,
     unlockLevel: 1,
+    classRestriction: null, elementType: null, passiveTrigger: true,
     description: 'Pure arcane damage. No frills, just power.',
     color: '#4a90d9',
     glowColor: 'rgba(74,144,217,0.6)',
@@ -177,113 +179,10 @@ export const SPELLS_DATA = {
     castTime: 1.0,
     effect: { type: 'multishot', hits: 3 },
     unlockLevel: 4,
+    classRestriction: null, elementType: null, passiveTrigger: true,
     description: 'Three arcane missiles. Fast but lower total damage.',
     color: '#6aabf7',
     glowColor: 'rgba(106,171,247,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
-  },
-  fireball: {
-    id: 'fireball',
-    name: 'Fireball',
-    school: 'fire',
-    baseDmg: { min: 30, max: 50 },
-    castTime: 2.2,
-    effect: null,
-    unlockLevel: 2,
-    description: 'High single-hit damage. A classic.',
-    color: '#e74c3c',
-    glowColor: 'rgba(231,76,60,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
-  },
-  ignite: {
-    id: 'ignite',
-    name: 'Ignite',
-    school: 'fire',
-    baseDmg: { min: 10, max: 15 },
-    castTime: 1.5,
-    effect: { type: 'dot', tickDmg: 8, ticks: 3, interval: 1.5, maxStacks: 3 },
-    unlockLevel: 5,
-    description: 'Weak hit + DoT: 8 dmg/tick, 3 ticks. Stacks up to 3 times.',
-    color: '#e67e22',
-    glowColor: 'rgba(230,126,34,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
-  },
-  inferno: {
-    id: 'inferno',
-    name: 'Inferno',
-    school: 'fire',
-    baseDmg: { min: 50, max: 75 },
-    castTime: 3.5,
-    effect: null,
-    unlockLevel: 8,
-    description: 'Massive fire strike. Highest burst damage in the game. Long cast.',
-    color: '#ff4500',
-    glowColor: 'rgba(255,69,0,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
-  },
-  shadow_bolt: {
-    id: 'shadow_bolt',
-    name: 'Shadow Bolt',
-    school: 'shadow',
-    baseDmg: { min: 20, max: 35 },
-    castTime: 1.8,
-    effect: { type: 'lifesteal', percent: 0.20 },
-    unlockLevel: 2,
-    description: 'Damage + 20% lifesteal.',
-    color: '#8e44ad',
-    glowColor: 'rgba(142,68,173,0.6)',
-    img: 'assets/generated/spell_shadow_pulse.png'
-  },
-  drain_life: {
-    id: 'drain_life',
-    name: 'Drain Life',
-    school: 'shadow',
-    baseDmg: { min: 15, max: 25 },
-    castTime: 2.5,
-    effect: { type: 'lifesteal', percent: 0.50 },
-    unlockLevel: 6,
-    description: 'Medium damage + 50% lifesteal. Core survival tool.',
-    color: '#6c3483',
-    glowColor: 'rgba(108,52,131,0.6)',
-    img: 'assets/generated/spell_shadow_pulse.png'
-  },
-  void_eruption: {
-    id: 'void_eruption',
-    name: 'Void Eruption',
-    school: 'shadow',
-    baseDmg: { min: 40, max: 60 },
-    castTime: 2.8,
-    effect: { type: 'debuff', debuffType: 'void', ampPercent: 0.15, duration: 5 },
-    unlockLevel: 9,
-    description: 'Damage + debuff: enemy takes +15% damage for 5 sec.',
-    color: '#4a235a',
-    glowColor: 'rgba(74,35,90,0.7)',
-    img: 'assets/generated/spell_shadow_pulse.png'
-  },
-  frost_spike: {
-    id: 'frost_spike',
-    name: 'Frost Spike',
-    school: 'frost',
-    baseDmg: { min: 20, max: 30 },
-    castTime: 1.5,
-    effect: { type: 'slow', slowPercent: 0.20, duration: 3 },
-    unlockLevel: 3,
-    description: 'Damage + 20% attack slow for 3 sec.',
-    color: '#3498db',
-    glowColor: 'rgba(52,152,219,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
-  },
-  blizzard: {
-    id: 'blizzard',
-    name: 'Blizzard',
-    school: 'frost',
-    baseDmg: { min: 25, max: 40 },
-    castTime: 2.8,
-    effect: { type: 'slow', slowPercent: 0.40, duration: 4 },
-    unlockLevel: 7,
-    description: 'Damage + 40% attack slow for 4 sec. Overwrites Frost Spike.',
-    color: '#1a6da0',
-    glowColor: 'rgba(26,109,160,0.6)',
     img: 'assets/generated/spell_arcane_bolt.png'
   },
   mana_shield: {
@@ -294,6 +193,7 @@ export const SPELLS_DATA = {
     castTime: 1.2,
     effect: { type: 'shield', baseShield: 40, intMultiplier: 0.8 },
     unlockLevel: 3,
+    classRestriction: null, elementType: null, passiveTrigger: true,
     description: 'Creates a shield of 40 + INT*0.8 HP. Overwrites existing shield.',
     color: '#c9a84c',
     glowColor: 'rgba(201,168,76,0.6)',
@@ -307,10 +207,496 @@ export const SPELLS_DATA = {
     castTime: 1.0,
     effect: { type: 'focus', multiplier: 2.0 },
     unlockLevel: 1,
+    classRestriction: null, elementType: null, passiveTrigger: false,
     description: 'Next damaging spell deals x2.0 damage.',
     color: '#f1c40f',
     glowColor: 'rgba(241,196,15,0.6)',
     img: 'assets/generated/spell_focus.png'
+  },
+  // Universal shadow spells (no class restriction)
+  shadow_bolt: {
+    id: 'shadow_bolt',
+    name: 'Shadow Bolt',
+    school: 'shadow',
+    baseDmg: { min: 20, max: 35 },
+    castTime: 1.8,
+    effect: { type: 'lifesteal', percent: 0.20 },
+    unlockLevel: 2,
+    classRestriction: null, elementType: null, passiveTrigger: true,
+    description: 'Damage + 20% lifesteal.',
+    color: '#8e44ad',
+    glowColor: 'rgba(142,68,173,0.6)',
+    img: 'assets/generated/spell_shadow_pulse.png'
+  },
+  void_eruption: {
+    id: 'void_eruption',
+    name: 'Void Eruption',
+    school: 'shadow',
+    baseDmg: { min: 40, max: 60 },
+    castTime: 2.8,
+    effect: { type: 'debuff', debuffType: 'void', ampPercent: 0.15, duration: 5 },
+    unlockLevel: 9,
+    classRestriction: null, elementType: null, passiveTrigger: true,
+    description: 'Damage + debuff: enemy takes +15% damage for 5 sec.',
+    color: '#4a235a',
+    glowColor: 'rgba(74,35,90,0.7)',
+    img: 'assets/generated/spell_shadow_pulse.png'
+  },
+
+  // ===== PYROMANCER SPELLS (fire element) =====
+  fireball: {
+    id: 'fireball',
+    name: 'Fireball',
+    school: 'fire',
+    baseDmg: { min: 30, max: 50 },
+    castTime: 2.2,
+    effect: null,
+    unlockLevel: 3,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'High single-hit damage. A classic.',
+    color: '#e74c3c',
+    glowColor: 'rgba(231,76,60,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  ignite: {
+    id: 'ignite',
+    name: 'Ignite',
+    school: 'fire',
+    baseDmg: { min: 10, max: 15 },
+    castTime: 1.5,
+    effect: { type: 'dot', tickDmg: 8, ticks: 3, interval: 1.5, maxStacks: 3 },
+    unlockLevel: 6,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Weak hit + DoT: 8 dmg/tick, 3 ticks. Stacks up to 3 times.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  scorch: {
+    id: 'scorch',
+    name: 'Scorch',
+    school: 'fire',
+    baseDmg: { min: 10, max: 15 },
+    castTime: 1.0,
+    effect: { type: 'conditional_bonus', condition: 'target_has_ignite', bonusDmgPercent: 0.50 },
+    unlockLevel: 10,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Fast cast. +50% damage if target has Ignite.',
+    color: '#e74c3c',
+    glowColor: 'rgba(231,76,60,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  inferno: {
+    id: 'inferno',
+    name: 'Inferno',
+    school: 'fire',
+    baseDmg: { min: 50, max: 75 },
+    castTime: 3.5,
+    effect: null,
+    unlockLevel: 15,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Massive fire strike. Highest burst damage in the game. Long cast.',
+    color: '#ff4500',
+    glowColor: 'rgba(255,69,0,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  pyroblast: {
+    id: 'pyroblast',
+    name: 'Pyroblast',
+    school: 'fire',
+    baseDmg: { min: 70, max: 100 },
+    castTime: 3.5,
+    effect: { type: 'ember_bonus', extraEmberStacks: 2 },
+    unlockLevel: 20,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Slow cast, massive damage. Generates 2 Ember stacks instead of 1.',
+    color: '#e74c3c',
+    glowColor: 'rgba(231,76,60,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  living_bomb: {
+    id: 'living_bomb',
+    name: 'Living Bomb',
+    school: 'fire',
+    baseDmg: { min: 25, max: 35 },
+    castTime: 2.0,
+    effect: { type: 'delayed_detonation', delay: 4.0, detonationDmg: 60 },
+    unlockLevel: 28,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Direct damage + timed bomb: detonates after 4s for 60 damage.',
+    color: '#e74c3c',
+    glowColor: 'rgba(231,76,60,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  flame_wave: {
+    id: 'flame_wave',
+    name: 'Flame Wave',
+    school: 'fire',
+    baseDmg: { min: 45, max: 65 },
+    castTime: 2.8,
+    effect: { type: 'ignite_apply', stacks: 1, scorchWindow: 3.0 },
+    unlockLevel: 38,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Damage + applies 1 Ignite stack + Scorch costs 0 cast time for 3s.',
+    color: '#e74c3c',
+    glowColor: 'rgba(231,76,60,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  cataclysm: {
+    id: 'cataclysm',
+    name: 'Cataclysm',
+    school: 'fire',
+    baseDmg: { min: 80, max: 120 },
+    castTime: 5.0,
+    effect: { type: 'dot', tickDmg: 15, ticks: 5, interval: 1.0, maxStacks: 1 },
+    unlockLevel: 50,
+    classRestriction: 'pyromancer', elementType: 'fire', passiveTrigger: true,
+    description: 'Capstone. Massive direct + DoT (15/tick, 5 ticks). Cannot stack.',
+    color: '#ff4500',
+    glowColor: 'rgba(255,69,0,0.8)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+
+  // ===== STORMCALLER SPELLS (air element) =====
+  gust: {
+    id: 'gust',
+    name: 'Gust',
+    school: 'air',
+    baseDmg: { min: 12, max: 18 },
+    castTime: 1.0,
+    effect: { type: 'extra_static', extraCharges: 1 },
+    unlockLevel: 3,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: 'Fastest spell. Generates +1 extra Static charge.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  lightning_bolt: {
+    id: 'lightning_bolt',
+    name: 'Lightning Bolt',
+    school: 'air',
+    baseDmg: { min: 25, max: 35 },
+    castTime: 1.5,
+    effect: { type: 'double_strike', procChance: 0.10 },
+    unlockLevel: 6,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: 'Solid damage. 10% chance to strike twice.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  zephyr: {
+    id: 'zephyr',
+    name: 'Zephyr',
+    school: 'air',
+    baseDmg: { min: 8, max: 12 },
+    castTime: 1.2,
+    effect: { type: 'evasion', dodgeChance: 0.25, duration: 3.0, counterDmgPercent: 0.50 },
+    unlockLevel: 10,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: 'Low damage. Grants 25% dodge for 3s. On dodge: counter-attack 50% of avoided damage.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.5)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  chain_lightning: {
+    id: 'chain_lightning',
+    name: 'Chain Lightning',
+    school: 'air',
+    baseDmg: { min: 30, max: 45 },
+    castTime: 2.0,
+    effect: { type: 'chain', bounces: 2, decayPercent: 0.70 },
+    unlockLevel: 15,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: 'Bounces 2 times, each at 70% of previous damage.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  tailwind: {
+    id: 'tailwind',
+    name: 'Tailwind',
+    school: 'air',
+    baseDmg: { min: 0, max: 0 },
+    castTime: 0.5,
+    effect: { type: 'haste', hastePercent: 0.40, hasteSpells: 3 },
+    unlockLevel: 20,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: false,
+    description: 'Next 3 spells cast 40% faster. No damage.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.5)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  ball_lightning: {
+    id: 'ball_lightning',
+    name: 'Ball Lightning',
+    school: 'air',
+    baseDmg: { min: 20, max: 30 },
+    castTime: 2.5,
+    effect: { type: 'persistent_dot', tickDmg: 10, tickInterval: 1.5, duration: 9.0 },
+    unlockLevel: 28,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: 'Direct damage + persistent: 10 dmg every 1.5s for 9s (60 total).',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  cyclone: {
+    id: 'cyclone',
+    name: 'Cyclone',
+    school: 'air',
+    baseDmg: { min: 35, max: 50 },
+    castTime: 2.0,
+    effect: { type: 'slow', slowPercent: 0.40, duration: 4.0 },
+    unlockLevel: 38,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: "Damage + 40% slow for 4s. Air's only CC.",
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  tempest: {
+    id: 'tempest',
+    name: 'Tempest',
+    school: 'air',
+    baseDmg: { min: 60, max: 90 },
+    castTime: 3.5,
+    effect: { type: 'multi_hit_static', hits: 3, hitInterval: 0.5, extraStaticPerHit: 1 },
+    unlockLevel: 50,
+    classRestriction: 'stormcaller', elementType: 'air', passiveTrigger: true,
+    description: 'Capstone. 3 hits over 1.5s, each generates 1 Static charge.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.8)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+
+  // ===== TIDECASTER SPELLS (water element) =====
+  frost_spike: {
+    id: 'frost_spike',
+    name: 'Frost Spike',
+    school: 'water',
+    baseDmg: { min: 20, max: 30 },
+    castTime: 1.5,
+    effect: { type: 'slow', slowPercent: 0.20, duration: 3 },
+    unlockLevel: 3,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Damage + 20% attack slow for 3 sec.',
+    color: '#3498db',
+    glowColor: 'rgba(52,152,219,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  healing_rain: {
+    id: 'healing_rain',
+    name: 'Healing Rain',
+    school: 'water',
+    baseDmg: { min: 0, max: 0 },
+    castTime: 1.5,
+    effect: { type: 'heal', baseHeal: 30, maxHpPercent: 0.05, emergencyMultiplier: 2.0, emergencyThreshold: 0.50 },
+    unlockLevel: 6,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Heals mage for 30 + 5% max HP. If HP < 50%: heals 2x.',
+    color: '#1abc9c',
+    glowColor: 'rgba(26,188,156,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  tidal_wave: {
+    id: 'tidal_wave',
+    name: 'Tidal Wave',
+    school: 'water',
+    baseDmg: { min: 25, max: 40 },
+    castTime: 2.2,
+    effect: { type: 'slow', slowPercent: 0.30, duration: 2.0 },
+    unlockLevel: 10,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Stronger slow than Frost Spike. 30% for 2s.',
+    color: '#1abc9c',
+    glowColor: 'rgba(26,188,156,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  drain_life: {
+    id: 'drain_life',
+    name: 'Drain Life',
+    school: 'water',
+    baseDmg: { min: 15, max: 25 },
+    castTime: 2.5,
+    effect: { type: 'lifesteal', percent: 0.50 },
+    unlockLevel: 15,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Medium damage + 50% lifesteal. Core survival tool.',
+    color: '#1abc9c',
+    glowColor: 'rgba(26,188,156,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  blizzard: {
+    id: 'blizzard',
+    name: 'Blizzard',
+    school: 'water',
+    baseDmg: { min: 25, max: 40 },
+    castTime: 2.8,
+    effect: { type: 'slow', slowPercent: 0.40, duration: 4 },
+    unlockLevel: 20,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Damage + 40% attack slow for 4 sec.',
+    color: '#1a6da0',
+    glowColor: 'rgba(26,109,160,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  tsunami: {
+    id: 'tsunami',
+    name: 'Tsunami',
+    school: 'water',
+    baseDmg: { min: 50, max: 70 },
+    castTime: 3.5,
+    effect: { type: 'conditional_bonus', condition: 'target_is_slowed', bonusDmgPercent: 0.40, slow: { slowPercent: 0.25, duration: 3.0 } },
+    unlockLevel: 28,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Damage + 25% slow. If enemy already slowed: +40% damage.',
+    color: '#1abc9c',
+    glowColor: 'rgba(26,188,156,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  frozen_tomb: {
+    id: 'frozen_tomb',
+    name: 'Frozen Tomb',
+    school: 'water',
+    baseDmg: { min: 15, max: 20 },
+    castTime: 2.5,
+    effect: { type: 'chill', attackSpeedReduction: 0.70, chillDuration: 2.0, postChillSlow: { slowPercent: 0.40, duration: 3.0 } },
+    unlockLevel: 38,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Soft CC: -70% enemy attack speed for 2s, then 40% slow for 3s.',
+    color: '#1abc9c',
+    glowColor: 'rgba(26,188,156,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  maelstrom: {
+    id: 'maelstrom',
+    name: 'Maelstrom',
+    school: 'water',
+    baseDmg: { min: 45, max: 65 },
+    castTime: 4.0,
+    effect: { type: 'maelstrom', lifestealPercent: 0.30, slow: { slowPercent: 0.35, duration: 5.0 } },
+    unlockLevel: 50,
+    classRestriction: 'tidecaster', elementType: 'water', passiveTrigger: true,
+    description: 'Capstone. Damage + 30% lifesteal + 35% slow for 5s.',
+    color: '#1abc9c',
+    glowColor: 'rgba(26,188,156,0.8)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+
+  // ===== GEOMANCER SPELLS (earth element) =====
+  rock_shard: {
+    id: 'rock_shard',
+    name: 'Rock Shard',
+    school: 'earth',
+    baseDmg: { min: 20, max: 30 },
+    castTime: 2.0,
+    effect: null,
+    unlockLevel: 3,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Solid, reliable damage. Bread & butter.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  stone_skin: {
+    id: 'stone_skin',
+    name: 'Stone Skin',
+    school: 'earth',
+    baseDmg: { min: 0, max: 0 },
+    castTime: 1.5,
+    effect: { type: 'class_shield', baseShield: 25, maxHpPercent: 0.10, stacksWithManaShield: true },
+    unlockLevel: 6,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Shield: absorbs 25 + 10% max HP. Stacks with Mana Shield.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.5)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  tremor: {
+    id: 'tremor',
+    name: 'Tremor',
+    school: 'earth',
+    baseDmg: { min: 15, max: 25 },
+    castTime: 2.5,
+    effect: { type: 'conditional_bonus', condition: 'mage_has_shield', bonusDmgPercent: 0.30, slow: { slowPercent: 0.15, duration: 2.0 } },
+    unlockLevel: 10,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Damage + 15% slow. If mage has shield: +30% damage.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.6)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  earthen_spike: {
+    id: 'earthen_spike',
+    name: 'Earthen Spike',
+    school: 'earth',
+    baseDmg: { min: 35, max: 50 },
+    castTime: 2.2,
+    effect: null,
+    unlockLevel: 15,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Highest base damage Earth spell. Pure damage.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  fortify: {
+    id: 'fortify',
+    name: 'Fortify',
+    school: 'earth',
+    baseDmg: { min: 0, max: 0 },
+    castTime: 2.0,
+    effect: { type: 'fortify', doubleShield: true, fallbackShield: 50, hardCap: 'mageMaxHP' },
+    unlockLevel: 20,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Doubles current shield HP (hard cap: mage max HP). If no shield: creates 50 HP shield.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.5)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  avalanche: {
+    id: 'avalanche',
+    name: 'Avalanche',
+    school: 'earth',
+    baseDmg: { min: 40, max: 60 },
+    castTime: 3.0,
+    effect: { type: 'shield_scaling', shieldDmgPercent: 0.20 },
+    unlockLevel: 28,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Damage + bonus equal to 20% of current shield HP.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  petrify: {
+    id: 'petrify',
+    name: 'Petrify',
+    school: 'earth',
+    baseDmg: { min: 10, max: 15 },
+    castTime: 3.0,
+    effect: { type: 'petrify', stunDuration: 1.5, damageAmpPercent: 0.25, damageAmpDuration: 3.0 },
+    unlockLevel: 38,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Hard CC: 1.5s stun + enemy takes +25% damage for 3s.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.7)',
+    img: 'assets/generated/spell_arcane_bolt.png'
+  },
+  tectonic_shift: {
+    id: 'tectonic_shift',
+    name: 'Tectonic Shift',
+    school: 'earth',
+    baseDmg: { min: 55, max: 80 },
+    castTime: 4.5,
+    effect: { type: 'mega_shield', baseShield: 80, maxHpPercent: 0.20, reflectPercent: 0.25, reflectDuration: 8.0, hardCap: 'mageMaxHP' },
+    unlockLevel: 50,
+    classRestriction: 'geomancer', elementType: 'earth', passiveTrigger: true,
+    description: 'Capstone. Damage + mega-shield (80 + 20% max HP). Reflects 25% for 8s.',
+    color: '#e67e22',
+    glowColor: 'rgba(230,126,34,0.8)',
+    img: 'assets/generated/spell_arcane_bolt.png'
   }
 };
 
@@ -323,8 +709,9 @@ export const ENEMIES_DATA = {
     hp: 200,
     attack: 0,
     attackInterval: 0,
-    resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 1.0 },
+    resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 1.0, air: 1.0, water: 1.0, earth: 1.0 },
     weakness: null,
+    elementType: null, // untyped -- no elemental interaction
     xpReward: 5,
     goldReward: { min: 1, max: 2 },
     description: 'Does not attack. For practice.',
@@ -337,8 +724,9 @@ export const ENEMIES_DATA = {
     hp: 300,
     attack: 12,
     attackInterval: 2.5,
-    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 1.0 },
+    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 1.0, air: 1.0, water: 1.0, earth: 0.8 },
     weakness: 'fire',
+    elementType: 'earth', // Bone and stone
     xpReward: 12,
     goldReward: { min: 4, max: 7 },
     description: 'Slow and predictable. Weak to Fire.',
@@ -351,8 +739,9 @@ export const ENEMIES_DATA = {
     hp: 250,
     attack: 18,
     attackInterval: 1.8,
-    resistances: { arcane: 1.3, fire: 0.7, shadow: 1.0, frost: 1.0 },
+    resistances: { arcane: 1.3, fire: 0.7, shadow: 1.0, frost: 1.0, air: 0.8, water: 1.0, earth: 1.0 },
     weakness: 'arcane',
+    elementType: 'air', // Ethereal
     xpReward: 15,
     goldReward: { min: 5, max: 9 },
     description: 'Fast attacks, medium HP. High DPS pressure.',
@@ -365,8 +754,9 @@ export const ENEMIES_DATA = {
     hp: 400,
     attack: 10,
     attackInterval: 3.0,
-    resistances: { arcane: 1.0, fire: 1.5, shadow: 1.0, frost: 0.5 },
+    resistances: { arcane: 1.0, fire: 1.5, shadow: 1.0, frost: 0.5, air: 1.0, water: 0.5, earth: 1.0 },
     weakness: 'fire',
+    elementType: 'water', // Ice = water
     xpReward: 18,
     goldReward: { min: 6, max: 11 },
     description: 'Huge HP, weak attacks. A tank.',
@@ -379,8 +769,9 @@ export const ENEMIES_DATA = {
     hp: 450,
     attack: 15,
     attackInterval: 2.0,
-    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 0.7 },
+    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 0.7, air: 1.0, water: 1.0, earth: 0.8 },
     weakness: 'fire',
+    elementType: 'earth', // Heavy armor
     xpReward: 25,
     goldReward: { min: 8, max: 14 },
     description: 'Two resistances, one weakness. Prepared mages only.',
@@ -393,8 +784,9 @@ export const ENEMIES_DATA = {
     hp: 600,
     attack: 22,
     attackInterval: 1.5,
-    resistances: { arcane: 1.0, fire: 0.5, shadow: 1.15, frost: 1.3 },
+    resistances: { arcane: 1.0, fire: 0.5, shadow: 1.15, frost: 1.3, air: 1.0, water: 1.3, earth: 1.0 },
     weakness: 'frost',
+    elementType: 'fire', // Infernal
     xpReward: 35,
     goldReward: { min: 12, max: 20 },
     description: 'High DPS and HP. Boss encounter.',
@@ -407,8 +799,9 @@ export const ENEMIES_DATA = {
     hp: 800,
     attack: 25,
     attackInterval: 1.8,
-    resistances: { arcane: 0.7, fire: 1.0, shadow: 1.3, frost: 1.0 },
+    resistances: { arcane: 0.7, fire: 1.0, shadow: 1.3, frost: 1.0, air: 1.0, water: 1.0, earth: 1.0 },
     weakness: 'shadow',
+    elementType: null, // Void = no element
     xpReward: 50,
     goldReward: { min: 18, max: 30 },
     description: 'Endgame. Optimal rotation required.',
@@ -498,6 +891,14 @@ function getDefaultState() {
     timestamps: {
       firstLogin: now,
       lastLogin: now
+    },
+    // Состояние класс-пассивов — сбрасывается при каждом бою
+    battleState: {
+      emberStacks: 0,           // Pyromancer: счётчик Ember (0-5)
+      staticChargeCount: 0,     // Stormcaller: счётчик Static Charge (0-10)
+      riptideUsed: false,       // Tidecaster: сработал ли Riptide в этом бою
+      bedrockActive: false,     // Geomancer: есть ли активный щит (вычисляется по shieldHP)
+      shieldHP: 0               // Текущий HP щита (Mana Shield / Stone Skin)
     }
   };
 }
@@ -543,6 +944,42 @@ export function loadState() {
       if (!_state.attributes) {
         _state.attributes = { strength: 0, intelligence: 0 };
       }
+
+      // === Migration: class system ===
+      if (_state.classType === undefined) {
+        _state.classType = null;
+      }
+
+      // === Migration: grimoire cleanup for class-restricted spells ===
+      // If player has class, remove incompatible spells from grimoire
+      if (_state.classType && Array.isArray(_state.grimoire)) {
+        _state.grimoire = _state.grimoire.map(spellId => {
+          if (!spellId) return null;
+          const spell = SPELLS_DATA[spellId];
+          if (!spell) return null;
+          if (spell.classRestriction && spell.classRestriction !== _state.classType) {
+            return null; // Remove incompatible class spells
+          }
+          return spellId;
+        });
+      }
+
+      // === Migration: battleState fields ===
+      // Старые сейвы не имели battleState — добавляем с дефолтными значениями
+      if (!_state.battleState) {
+        _state.battleState = {
+          emberStacks: 0,
+          staticChargeCount: 0,
+          riptideUsed: false,
+          bedrockActive: false,
+          shieldHP: 0
+        };
+      } else {
+        // Частичная миграция: добавляем только отсутствующие поля
+        const defaults = getDefaultState().battleState;
+        _state.battleState = { ...defaults, ..._state.battleState };
+      }
+
       saveState();
     } else {
       _state = getDefaultState();
@@ -825,12 +1262,94 @@ export function rollItemDrop() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// ===== ELEMENTAL MODIFIER =====
+
+/**
+ * Возвращает множитель урона на основе стихии заклинания и стихии врага.
+ * Цикл преимуществ: fire > earth > air > water > fire
+ *   +10% если spellElement «силён» против enemyElement
+ *   -10% если spellElement «слаб» против enemyElement
+ *   1.0  во всех остальных случаях (null, совпадение стихий, нейтральная)
+ *
+ * @param {string|null} spellElement  - 'fire' | 'air' | 'water' | 'earth' | null
+ * @param {string|null} enemyElement  - 'fire' | 'air' | 'water' | 'earth' | null
+ * @returns {number} 1.10 (advantage), 0.90 (disadvantage), or 1.0 (neutral)
+ */
+export function getElementalModifier(spellElement, enemyElement) {
+  if (!spellElement || !enemyElement) return 1.0;
+
+  // Таблица стихийных преимуществ/слабостей
+  const CYCLE = {
+    fire:  { strong: 'earth', weak: 'water' },
+    air:   { strong: 'water', weak: 'earth' },
+    water: { strong: 'fire',  weak: 'air'   },
+    earth: { strong: 'air',   weak: 'fire'  }
+  };
+
+  const relations = CYCLE[spellElement];
+  if (!relations) return 1.0; // неизвестная стихия — нейтрально
+
+  if (enemyElement === relations.strong) return 1.10; // преимущество +10%
+  if (enemyElement === relations.weak)   return 0.90; // слабость -10%
+  return 1.0;
+}
+
+/**
+ * Checks if a spell is available to the player (level + class restriction).
+ * @param {string} spellId
+ * @param {object} state - player state
+ * @returns {boolean}
+ */
+export function isSpellAvailable(spellId, state) {
+  const spell = SPELLS_DATA[spellId];
+  if (!spell) return false;
+  if (state.level < spell.unlockLevel) return false;
+  if (spell.classRestriction && spell.classRestriction !== state.classType) return false;
+  return true;
+}
+
+/**
+ * Returns the reason a spell is locked, or null if available.
+ * @param {string} spellId
+ * @param {object} state - player state
+ * @returns {{ reason: string, detail: string }|null}
+ */
+export function getSpellLockReason(spellId, state) {
+  const spell = SPELLS_DATA[spellId];
+  if (!spell) return { reason: 'unknown', detail: 'Spell not found' };
+  if (spell.classRestriction && spell.classRestriction !== state.classType) {
+    const className = spell.classRestriction.charAt(0).toUpperCase() + spell.classRestriction.slice(1);
+    return { reason: 'wrong_class', detail: `Requires ${className}` };
+  }
+  if (state.level < spell.unlockLevel) {
+    return { reason: 'level_too_low', detail: `Unlocks at level ${spell.unlockLevel}` };
+  }
+  return null;
+}
+
 /**
  * Возвращает список заклинаний доступных на текущем уровне игрока
+ * Includes class-restricted filtering
  */
 export function getUnlockedSpells() {
   const state = getState();
-  return Object.values(SPELLS_DATA).filter(s => s.unlockLevel <= state.level);
+  return Object.values(SPELLS_DATA).filter(s => isSpellAvailable(s.id, state));
+}
+
+/**
+ * Returns ALL spells visible in the grimoire (including locked ones for display).
+ * Each spell gets an extra `_locked` and `_lockReason` property.
+ */
+export function getAllVisibleSpells() {
+  const state = getState();
+  return Object.values(SPELLS_DATA).map(spell => {
+    const lockReason = getSpellLockReason(spell.id, state);
+    return {
+      ...spell,
+      _locked: lockReason !== null,
+      _lockReason: lockReason
+    };
+  });
 }
 
 /**

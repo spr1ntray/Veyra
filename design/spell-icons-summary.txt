@@ -1,0 +1,58 @@
+VEYRA CLASS SPELLS — PIXEL ART ICONS SUMMARY
+Generated: 2026-03-30
+
+TOTAL ICONS: 32 spell icons (8 per class)
+
+PYROMANCER (Fire) — SPELL_001 to SPELL_008
+  001: Fireball — orange sphere, hot core
+  002: Ignite — upward flame, persistent burn
+  003: Scorch — sharp burn mark, angular
+  004: Inferno — massive flame vortex
+  005: Pyroblast — flaming comet projectile
+  006: Living Bomb — bomb sphere with fuse
+  007: Flame Wave — horizontal shockwave
+  008: Cataclysm — apocalyptic fire, capstone
+
+STORMCALLER (Air) — SPELL_009 to SPELL_016
+  009: Gust — wind burst, diagonal lines
+  010: Lightning Bolt — zigzag arc, electric
+  011: Zephyr — circular wind shield, evasion
+  012: Chain Lightning — branching bolts
+  013: Tailwind — swirling buff aura
+  014: Ball Lightning — crackling sphere
+  015: Cyclone — spinning tornado vortex
+  016: Tempest — multi-strike storm, capstone
+
+TIDECASTER (Water) — SPELL_017 to SPELL_023
+  017: Frost Spike — ice crystal point
+  018: Healing Rain — falling droplets
+  019: Tidal Wave — crashing ocean wave
+  020: Drain Life — siphoning flow
+  021: Tsunami — towering water wall
+  022: Frozen Tomb — crystalline cage
+  023: Maelstrom — chaotic whirlpool, capstone
+
+GEOMANCER (Earth) — SPELL_024 to SPELL_031
+  024: Rock Shard — jagged stone fragment
+  025: Stone Skin — rocky armor plating
+  026: Tremor — radiating shockwave
+  027: Earthen Spike — rising stone pillar
+  028: Fortify — reinforced shield buff
+  029: Avalanche — cascading rocks
+  030: Petrify — crystallization stun
+  031: Tectonic Shift — epic upheaval, capstone
+
+COLOR PALETTES PER CLASS:
+  Pyromancer:  Red (#e74c3c), Orange (#f39c12), Bright Orange (#ff6b00)
+  Stormcaller: Blue (#3498db), Dark Blue (#2980b9), White (#ecf0f1)
+  Tidecaster:  Teal (#1abc9c), Dark Teal (#16a085), Light Blue (#3498db)
+  Geomancer:   Brown (#e67e22), Orange-Brown (#d35400), Dark Brown (#8B4513)
+
+SPECIFICATIONS:
+  Format: 48×48 pixel art
+  Background: Transparent PNG
+  Style: Diablo 2 RPG spell icons
+  Contrast: High, readable at small size
+  Status: All draft, ready for generation
+
+FULL PROMPTS: See /Users/sprintray/claude_soft/Veyra/design/art-prompts-spells.md

@@ -8,6 +8,7 @@ import {
   getState, saveState, getBonusPower, getStats,
   addXP, addGold, addItemToInventory,
   rollItemDrop, checkDailyReset, tickBuffs, getActiveBuffs,
+  getElementalModifier,
   SPELLS_DATA, ENEMIES_DATA
 } from './state.js';
 
@@ -25,7 +26,7 @@ let battleState = {
   active: false,
   mageHP: 100,
   mageMaxHP: 100,
-  shieldHP: 0,          // HP щита (Mana Shield)
+  shieldHP: 0,          // HP щита (Mana Shield / Stone Skin / etc)
   enemyId: null,
   enemyHP: 0,
   enemyMaxHP: 0,
@@ -41,7 +42,34 @@ let battleState = {
   castTimeout: null,    // setTimeout для следующего каста
   enemyAttackTimeout: null,
   timerInterval: null,  // setInterval для секундного таймера
-  dotInterval: null     // setInterval для DoT тиков
+  dotInterval: null,    // setInterval для DoT тиков
+
+  // === Class passive tracking ===
+  emberStacks: 0,                // Pyromancer: current Ember count (0-5)
+  emberDamageAccumulated: 0,     // Pyromancer: total damage during current stack cycle
+  lastEmberTickTimestamps: {},   // Pyromancer: per-DoT-source ember tick tracking
+  staticCharges: 0,              // Stormcaller: current Static count (0-10)
+  riptideTriggered: false,       // Tidecaster: has Riptide fired this fight?
+  // Geomancer Bedrock: passive modifier, no state needed
+
+  // === New combat effects ===
+  evasionActive: false,          // Stormcaller Zephyr: dodge active?
+  evasionExpireAt: 0,
+  evasionChance: 0,              // 0.0-1.0
+  evasionCounterPercent: 0,      // counter-attack damage percent
+  hasteRemaining: 0,             // Stormcaller Tailwind: spells remaining with haste
+  hastePercent: 0,               // how much faster
+  scorchWindowExpireAt: 0,       // Pyromancer Flame Wave: Scorch free cast window
+  chillActive: false,            // Tidecaster Frozen Tomb: enemy attack speed -70%
+  chillExpireAt: 0,
+  petrifyActive: false,          // Geomancer Petrify: enemy stunned
+  petrifyExpireAt: 0,
+  petrifyAmpActive: false,       // +25% damage amp after petrify
+  petrifyAmpExpireAt: 0,
+  reflectActive: false,          // Geomancer Tectonic Shift reflect
+  reflectPercent: 0,
+  reflectExpireAt: 0,
+  livingBombs: []                // Pyromancer: [{detonateAt, damage, intMult, elementalMod}]
 };
 
 // Колбек окончания боя
@@ -126,7 +154,33 @@ export function initBattle(enemyId) {
     castTimeout: null,
     enemyAttackTimeout: null,
     timerInterval: null,
-    dotInterval: null
+    dotInterval: null,
+
+    // Class passive tracking
+    emberStacks: 0,
+    emberDamageAccumulated: 0,
+    lastEmberTickTimestamps: {},
+    staticCharges: 0,
+    riptideTriggered: false,
+
+    // New combat effects
+    evasionActive: false,
+    evasionExpireAt: 0,
+    evasionChance: 0,
+    evasionCounterPercent: 0,
+    hasteRemaining: 0,
+    hastePercent: 0,
+    scorchWindowExpireAt: 0,
+    chillActive: false,
+    chillExpireAt: 0,
+    petrifyActive: false,
+    petrifyExpireAt: 0,
+    petrifyAmpActive: false,
+    petrifyAmpExpireAt: 0,
+    reflectActive: false,
+    reflectPercent: 0,
+    reflectExpireAt: 0,
+    livingBombs: []
   };
 
   renderBattleUI(enemy);
@@ -152,9 +206,49 @@ function startBattleLoop(enemy) {
     if (battleState.voidDebuffActive && now >= battleState.voidDebuffExpireAt) {
       battleState.voidDebuffActive = false;
       addCombatLog('Void debuff expired.', '#888');
-      updateEnemyStatusRow();
+    }
+    // Evasion expiry
+    if (battleState.evasionActive && now >= battleState.evasionExpireAt) {
+      battleState.evasionActive = false;
+      battleState.evasionChance = 0;
+      addCombatLog('Evasion expired.', '#888');
+    }
+    // Chill expiry (Frozen Tomb) -- transition to post-chill slow
+    if (battleState.chillActive && now >= battleState.chillExpireAt) {
+      battleState.chillActive = false;
+      addCombatLog('Chill expired.', '#888');
+    }
+    // Petrify expiry -- transition to damage amp
+    if (battleState.petrifyActive && now >= battleState.petrifyExpireAt) {
+      battleState.petrifyActive = false;
+      addCombatLog('Petrify stun expired.', '#888');
+    }
+    // Petrify damage amp expiry
+    if (battleState.petrifyAmpActive && now >= battleState.petrifyAmpExpireAt) {
+      battleState.petrifyAmpActive = false;
+      addCombatLog('Petrify vulnerability expired.', '#888');
+    }
+    // Reflect expiry
+    if (battleState.reflectActive && now >= battleState.reflectExpireAt) {
+      battleState.reflectActive = false;
+      battleState.reflectPercent = 0;
+      addCombatLog('Damage reflect expired.', '#888');
+    }
+    // Living Bombs detonation
+    for (let i = battleState.livingBombs.length - 1; i >= 0; i--) {
+      const bomb = battleState.livingBombs[i];
+      if (now >= bomb.detonateAt) {
+        const detonationDmg = Math.floor(bomb.damage * bomb.intMult * bomb.elementalMod);
+        battleState.enemyHP -= detonationDmg;
+        addCombatLog(`Living Bomb detonates for ${detonationDmg}!`, '#e74c3c');
+        showDamageNumber(detonationDmg, '#e74c3c');
+        battleState.livingBombs.splice(i, 1);
+        updateEnemyHP();
+        if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+      }
     }
 
+    updateEnemyStatusRow();
     updateTimerDisplay();
 
     // Timeout — ничья
@@ -195,8 +289,40 @@ function scheduleNextCast() {
     return;
   }
 
+  // Проверка ограничения класса: если заклинание недоступно — показываем сообщение и пропускаем
+  const state = getState();
+  if (spell.classRestriction !== null && spell.classRestriction !== undefined && spell.classRestriction !== state.classType) {
+    // Капитализируем название класса для сообщения
+    const className = spell.classRestriction.charAt(0).toUpperCase() + spell.classRestriction.slice(1);
+    addCombatLog(`${spell.name}: Requires ${className}`, '#888');
+    advanceGrimoire();
+    // Небольшая пауза чтобы лог не спамил при нескольких нессовместимых слотах подряд
+    battleState.castTimeout = setTimeout(() => {
+      if (battleState.active) scheduleNextCast();
+    }, CAST_GAP);
+    return;
+  }
+
   // Обновляем трекер — подсвечиваем текущий слот
   updateGrimoireTracker();
+
+  // Calculate effective cast time (haste, scorch window)
+  let effectiveCastTime = spell.castTime;
+
+  // Scorch free-cast window (Flame Wave effect)
+  if (spell.id === 'scorch' && Date.now() < battleState.scorchWindowExpireAt) {
+    effectiveCastTime = 0.1; // near-instant
+    addCombatLog('Scorch: free cast (Flame Wave window)!', spell.color);
+  }
+
+  // Haste (Tailwind / Thunderstorm proc)
+  if (battleState.hasteRemaining > 0 && effectiveCastTime > 0.1) {
+    effectiveCastTime *= (1 - battleState.hastePercent);
+    battleState.hasteRemaining--;
+    if (battleState.hasteRemaining <= 0) {
+      battleState.hastePercent = 0;
+    }
+  }
 
   // Выполняем каст через castTime заклинания
   battleState.castTimeout = setTimeout(async () => {
@@ -209,7 +335,7 @@ function scheduleNextCast() {
         if (battleState.active) scheduleNextCast();
       }, CAST_GAP);
     }
-  }, spell.castTime * 1000);
+  }, effectiveCastTime * 1000);
 }
 
 /**
@@ -220,53 +346,22 @@ function advanceGrimoire() {
 }
 
 /**
- * Выполняет каст заклинания
+ * Выполняет каст заклинания — поддерживает все классовые эффекты и пассивки
  */
 async function performCast(spell) {
   if (!battleState.active) return;
 
   const effect = spell.effect;
-
-  // === UTILITY спеллы (без урона) ===
-
-  if (spell.school === 'utility' && spell.id === 'focus') {
-    // Focus — следующий атакующий каст x2
-    if (battleState.focusCharged) {
-      addCombatLog('Focus already active — wasted!', spell.color);
-    } else {
-      battleState.focusCharged = true;
-      addCombatLog('Focus activated — next spell x2.0', spell.color);
-      await playFocusAnimation();
-    }
-    return;
-  }
-
-  if (spell.id === 'mana_shield') {
-    // Создаём или перезаписываем щит
-    const int = getIntelligence();
-    const shieldVal = Math.floor(40 + int * 0.8);
-    battleState.shieldHP = shieldVal;
-    addCombatLog(`Mana Shield: +${shieldVal} HP shield`, spell.color);
-    await playShieldAnimation(shieldVal);
-    updateMageHP();
-    return;
-  }
-
-  // === АТАКУЮЩИЕ ЗАКЛИНАНИЯ ===
-
+  const state = getState();
   const enemy = ENEMIES_DATA[battleState.enemyId];
   const int = getIntelligence();
-
-  // INT_multiplier
   const intMult = 1 + (int - 5) / 100;
-
-  // school_modifier из данных врага
   const schoolMod = enemy.resistances[spell.school] || 1.0;
-
-  // debuff_modifier (Void Eruption)
+  const elementalMod = getElementalModifier(state.classType, enemy.elementType);
   const debuffMod = battleState.voidDebuffActive ? 1.15 : 1.0;
+  const petrifyAmpMod = battleState.petrifyAmpActive ? 1.25 : 1.0;
+  const buffMod = (state.buffs.mana_surge && state.buffs.mana_surge.active) ? 1.25 : 1.0;
 
-  // focus_modifier
   let focusMod = 1.0;
   let wasFocused = false;
   if (battleState.focusCharged) {
@@ -275,16 +370,167 @@ async function performCast(spell) {
     wasFocused = true;
   }
 
-  // buff_modifier (Mana Surge)
-  const state = getState();
-  const buffMod = (state.buffs.mana_surge && state.buffs.mana_surge.active) ? 1.25 : 1.0;
+  // Helper: calculate standard damage
+  const calcDmg = (base, useSchool = true, useFocus = true, useBuff = true) => {
+    return Math.floor(base * intMult * (useSchool ? schoolMod : 1.0) * elementalMod * debuffMod * petrifyAmpMod * (useFocus ? focusMod : 1.0) * (useBuff ? buffMod : 1.0));
+  };
 
-  // Для Arcane Barrage — 3 попадания
+  // Helper: apply damage and check win
+  const applyDamage = (dmg) => {
+    battleState.enemyHP -= dmg;
+    updateEnemyHP();
+    return battleState.enemyHP <= 0;
+  };
+
+  // Helper: trigger class passives after a spell deals damage
+  const triggerPassives = (damageDealt, spell) => {
+    if (!spell.passiveTrigger || damageDealt <= 0) return;
+
+    // Pyromancer — Combustion
+    if (state.classType === 'pyromancer') {
+      const extraEmber = spell.effect?.extraEmberStacks || 1;
+      battleState.emberStacks += extraEmber;
+      battleState.emberDamageAccumulated += damageDealt;
+
+      if (battleState.emberStacks >= 5) {
+        const bonusDmg = Math.floor(battleState.emberDamageAccumulated * 0.15);
+        battleState.enemyHP -= bonusDmg;
+        addCombatLog(`Combustion detonates for ${bonusDmg} bonus damage!`, '#ff6600');
+        showDamageNumber(bonusDmg, '#ff6600');
+        battleState.emberStacks = 0;
+        battleState.emberDamageAccumulated = 0;
+        updateEnemyHP();
+        if (battleState.enemyHP <= 0) { endBattle('win'); }
+      }
+    }
+
+    // Stormcaller — Static Charge
+    if (state.classType === 'stormcaller') {
+      const extraCharges = spell.effect?.extraCharges || 0;
+      battleState.staticCharges += 1 + extraCharges;
+
+      if (battleState.staticCharges >= 10) {
+        const thunderDmg = 5 * state.level;
+        battleState.enemyHP -= thunderDmg;
+        addCombatLog(`Thunderstorm! ${thunderDmg} bonus damage!`, '#00bfff');
+        showDamageNumber(thunderDmg, '#00bfff');
+        // Bonus: next spell 50% faster
+        battleState.hasteRemaining = Math.max(battleState.hasteRemaining, 1);
+        battleState.hastePercent = Math.max(battleState.hastePercent, 0.50);
+        battleState.staticCharges = 0;
+        updateEnemyHP();
+        if (battleState.enemyHP <= 0) { endBattle('win'); }
+      }
+    }
+  };
+
+  // === FOCUS (utility, no damage) ===
+  if (spell.id === 'focus') {
+    if (battleState.focusCharged) {
+      // Undo the focus consumption above since we re-set it
+      addCombatLog('Focus already active — wasted!', spell.color);
+    } else {
+      battleState.focusCharged = true;
+      addCombatLog('Focus activated — next spell x2.0', spell.color);
+      await playFocusAnimation();
+    }
+    // Restore focusMod since focus doesn't consume itself
+    if (wasFocused) { battleState.focusCharged = true; }
+    return;
+  }
+
+  // === MANA SHIELD (utility, no damage) ===
+  if (spell.id === 'mana_shield') {
+    const shieldVal = Math.floor(40 + int * 0.8);
+    battleState.shieldHP = shieldVal;
+    addCombatLog(`Mana Shield: +${shieldVal} HP shield`, spell.color);
+    await playShieldAnimation(shieldVal);
+    updateMageHP();
+    // Restore focus if was charged (shield doesn't consume focus)
+    if (wasFocused) { battleState.focusCharged = true; }
+    return;
+  }
+
+  // === TAILWIND (Stormcaller, no damage) ===
+  if (effect && effect.type === 'haste') {
+    battleState.hasteRemaining = effect.hasteSpells;
+    battleState.hastePercent = effect.hastePercent;
+    addCombatLog(`${spell.name}: next ${effect.hasteSpells} spells cast ${Math.floor(effect.hastePercent * 100)}% faster`, spell.color);
+    if (wasFocused) { battleState.focusCharged = true; }
+    return;
+  }
+
+  // === HEALING RAIN (Tidecaster, no damage) ===
+  if (effect && effect.type === 'heal') {
+    let healAmount = effect.baseHeal + Math.floor(battleState.mageMaxHP * effect.maxHpPercent);
+    // Emergency heal: x2 if HP < threshold
+    if (battleState.mageHP < battleState.mageMaxHP * effect.emergencyThreshold) {
+      healAmount = Math.floor(healAmount * effect.emergencyMultiplier);
+      addCombatLog(`${spell.name}: EMERGENCY heal ${healAmount} HP!`, '#1abc9c');
+    } else {
+      addCombatLog(`${spell.name}: healed ${healAmount} HP`, '#1abc9c');
+    }
+    battleState.mageHP = Math.min(battleState.mageHP + healAmount, battleState.mageMaxHP);
+    updateMageHP();
+    if (wasFocused) { battleState.focusCharged = true; }
+    triggerPassives(0, spell); // passiveTrigger true but 0 damage -- still counts as cast for Static Charge
+    return;
+  }
+
+  // === STONE SKIN (Geomancer, shield, no damage) ===
+  if (effect && effect.type === 'class_shield') {
+    const shieldVal = effect.baseShield + Math.floor(battleState.mageMaxHP * effect.maxHpPercent);
+    battleState.shieldHP = Math.min(battleState.shieldHP + shieldVal, battleState.mageMaxHP);
+    addCombatLog(`${spell.name}: +${shieldVal} shield (total: ${battleState.shieldHP})`, spell.color);
+    await playShieldAnimation(shieldVal);
+    updateMageHP();
+    if (wasFocused) { battleState.focusCharged = true; }
+    triggerPassives(0, spell);
+    return;
+  }
+
+  // === FORTIFY (Geomancer, shield manipulation) ===
+  if (effect && effect.type === 'fortify') {
+    if (battleState.shieldHP > 0) {
+      battleState.shieldHP = Math.min(battleState.shieldHP * 2, battleState.mageMaxHP);
+      addCombatLog(`${spell.name}: shield doubled to ${battleState.shieldHP}!`, spell.color);
+    } else {
+      battleState.shieldHP = Math.min(effect.fallbackShield, battleState.mageMaxHP);
+      addCombatLog(`${spell.name}: created ${battleState.shieldHP} shield`, spell.color);
+    }
+    await playShieldAnimation(battleState.shieldHP);
+    updateMageHP();
+    if (wasFocused) { battleState.focusCharged = true; }
+    triggerPassives(0, spell);
+    return;
+  }
+
+  // === ZEPHYR (Stormcaller, low damage + evasion) ===
+  if (effect && effect.type === 'evasion') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    if (applyDamage(dmg)) {
+      showDamageNumber(dmg, spell.color);
+      await playSpellAnimation(spell, dmg);
+      endBattle('win'); return;
+    }
+    battleState.evasionActive = true;
+    battleState.evasionChance = effect.dodgeChance;
+    battleState.evasionCounterPercent = effect.counterDmgPercent;
+    battleState.evasionExpireAt = Date.now() + effect.duration * 1000;
+    addCombatLog(`${spell.name}: ${dmg} dmg + ${Math.floor(effect.dodgeChance * 100)}% dodge for ${effect.duration}s`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    triggerPassives(dmg, spell);
+    return;
+  }
+
+  // === ARCANE BARRAGE (multishot) ===
   if (spell.id === 'arcane_barrage') {
     let totalDmg = 0;
     for (let i = 0; i < 3; i++) {
       const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-      const dmg = Math.floor(base * intMult * schoolMod * debuffMod * (i === 0 ? focusMod : 1.0) * buffMod);
+      const dmg = calcDmg(base, true, i === 0);
       totalDmg += dmg;
       battleState.enemyHP -= dmg;
     }
@@ -293,17 +539,91 @@ async function performCast(spell) {
     addCombatLog(`${spell.name} hits for ${totalDmg} (3 missiles)${focusLabel}`, spell.color);
     await playSpellAnimation(spell, totalDmg);
     updateEnemyHP();
+    triggerPassives(totalDmg, spell);
     if (battleState.enemyHP <= 0) { endBattle('win'); return; }
     return;
   }
 
-  // DoT: Ignite
+  // === CHAIN LIGHTNING (Stormcaller) ===
+  if (effect && effect.type === 'chain') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const hit1 = calcDmg(base);
+    const hit2 = Math.floor(hit1 * effect.decayPercent);
+    const hit3 = Math.floor(hit1 * effect.decayPercent * effect.decayPercent);
+    const totalDmg = hit1 + hit2 + hit3;
+    battleState.enemyHP -= totalDmg;
+    showDamageNumber(totalDmg, spell.color);
+    addCombatLog(`${spell.name}: ${hit1} + ${hit2} + ${hit3} = ${totalDmg} chain damage`, spell.color);
+    await playSpellAnimation(spell, totalDmg);
+    updateEnemyHP();
+    triggerPassives(totalDmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === TEMPEST (Stormcaller, multi-hit + static per hit) ===
+  if (effect && effect.type === 'multi_hit_static') {
+    let totalDmg = 0;
+    const perHitMin = Math.floor(spell.baseDmg.min / effect.hits);
+    const perHitMax = Math.floor(spell.baseDmg.max / effect.hits);
+    for (let i = 0; i < effect.hits; i++) {
+      const base = randInt(perHitMin, perHitMax);
+      const hitDmg = calcDmg(base, true, i === 0);
+      totalDmg += hitDmg;
+      battleState.enemyHP -= hitDmg;
+      // Each hit generates Static charge
+      if (state.classType === 'stormcaller') {
+        battleState.staticCharges += effect.extraStaticPerHit;
+      }
+    }
+    showDamageNumber(totalDmg, spell.color);
+    addCombatLog(`${spell.name}: ${totalDmg} dmg (${effect.hits} hits)${wasFocused ? ' (x2 Focus on first!)' : ''}`, spell.color);
+    await playSpellAnimation(spell, totalDmg);
+    updateEnemyHP();
+    // Check Thunderstorm after adding charges
+    if (state.classType === 'stormcaller' && battleState.staticCharges >= 10) {
+      const thunderDmg = 5 * state.level;
+      battleState.enemyHP -= thunderDmg;
+      addCombatLog(`Thunderstorm! ${thunderDmg} bonus damage!`, '#00bfff');
+      showDamageNumber(thunderDmg, '#00bfff');
+      battleState.hasteRemaining = Math.max(battleState.hasteRemaining, 1);
+      battleState.hastePercent = Math.max(battleState.hastePercent, 0.50);
+      battleState.staticCharges = 0;
+      updateEnemyHP();
+    }
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === LIGHTNING BOLT (Stormcaller, double strike chance) ===
+  if (effect && effect.type === 'double_strike') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    let dmg = calcDmg(base);
+    let totalDmg = dmg;
+    let doubleStrike = false;
+    if (Math.random() < effect.procChance) {
+      const base2 = randInt(spell.baseDmg.min, spell.baseDmg.max);
+      const dmg2 = calcDmg(base2, true, false); // no focus on second
+      totalDmg += dmg2;
+      doubleStrike = true;
+    }
+    battleState.enemyHP -= totalDmg;
+    showDamageNumber(totalDmg, spell.color);
+    addCombatLog(`${spell.name}: ${totalDmg} dmg${doubleStrike ? ' (DOUBLE STRIKE!)' : ''}${wasFocused ? ' (x2 Focus!)' : ''}`, spell.color);
+    await playSpellAnimation(spell, totalDmg);
+    updateEnemyHP();
+    triggerPassives(totalDmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === DOT spells (Ignite, Cataclysm) ===
   if (effect && effect.type === 'dot') {
     const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-    const directDmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    const directDmg = calcDmg(base);
     battleState.enemyHP -= directDmg;
 
-    // Добавляем стак DoT (максимум 3)
+    const dotSourceId = spell.id + '_' + Date.now();
     if (battleState.dotStacks.length < effect.maxStacks) {
       battleState.dotStacks.push({
         ticksLeft: effect.ticks,
@@ -312,93 +632,325 @@ async function performCast(spell) {
         dmgPerTick: effect.tickDmg,
         intMult,
         schoolMod,
-        color: spell.color
+        elementalMod,
+        color: spell.color,
+        sourceId: dotSourceId,
+        spellId: spell.id
       });
       addCombatLog(`${spell.name}: ${directDmg} dmg + DoT stack (${battleState.dotStacks.length}/${effect.maxStacks})`, spell.color);
     } else {
       addCombatLog(`${spell.name}: ${directDmg} dmg (DoT stacks maxed)`, spell.color);
     }
+    showDamageNumber(directDmg, spell.color);
     await playSpellAnimation(spell, directDmg);
     updateEnemyHP();
     updateEnemyStatusRow();
+    triggerPassives(directDmg, spell);
     if (battleState.enemyHP <= 0) { endBattle('win'); return; }
     return;
   }
 
-  // Slow: Frost Spike / Blizzard
+  // === PERSISTENT DOT (Ball Lightning) ===
+  if (effect && effect.type === 'persistent_dot') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const directDmg = calcDmg(base);
+    battleState.enemyHP -= directDmg;
+
+    const ticks = Math.floor(effect.duration / effect.tickInterval);
+    const dotSourceId = spell.id + '_' + Date.now();
+    battleState.dotStacks.push({
+      ticksLeft: ticks,
+      interval: effect.tickInterval * 1000,
+      nextTickAt: Date.now() + effect.tickInterval * 1000,
+      dmgPerTick: effect.tickDmg,
+      intMult,
+      schoolMod: 1.0,
+      elementalMod,
+      color: spell.color,
+      sourceId: dotSourceId,
+      spellId: spell.id
+    });
+    addCombatLog(`${spell.name}: ${directDmg} dmg + persistent DoT (${effect.tickDmg}/tick for ${effect.duration}s)`, spell.color);
+    showDamageNumber(directDmg, spell.color);
+    await playSpellAnimation(spell, directDmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    triggerPassives(directDmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === SLOW spells (Frost Spike, Blizzard, Tidal Wave, Cyclone) ===
   if (effect && effect.type === 'slow') {
     const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-    const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    const dmg = calcDmg(base);
     battleState.enemyHP -= dmg;
-
     battleState.enemySlowPercent = effect.slowPercent;
     battleState.enemySlowExpireAt = Date.now() + effect.duration * 1000;
-
-    const slowPct = Math.floor(effect.slowPercent * 100);
     const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
-    addCombatLog(`${spell.name}: ${dmg} dmg + -${slowPct}% attack speed${focusLabel}`, spell.color);
+    addCombatLog(`${spell.name}: ${dmg} dmg + -${Math.floor(effect.slowPercent * 100)}% attack speed${focusLabel}`, spell.color);
+    showDamageNumber(dmg, spell.color);
     await playSpellAnimation(spell, dmg);
     updateEnemyHP();
     updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
     if (battleState.enemyHP <= 0) { endBattle('win'); return; }
     return;
   }
 
-  // Void debuff
+  // === VOID DEBUFF ===
   if (effect && effect.type === 'debuff' && effect.debuffType === 'void') {
     const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-    const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    const dmg = calcDmg(base);
     battleState.enemyHP -= dmg;
-
     battleState.voidDebuffActive = true;
     battleState.voidDebuffExpireAt = Date.now() + effect.duration * 1000;
-
     const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
     addCombatLog(`${spell.name}: ${dmg} dmg + Void Debuff +15%${focusLabel}`, spell.color);
+    showDamageNumber(dmg, spell.color);
     await playSpellAnimation(spell, dmg);
     updateEnemyHP();
     updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
     if (battleState.enemyHP <= 0) { endBattle('win'); return; }
     return;
   }
 
-  // Lifesteal: Shadow Bolt / Drain Life
-  if (effect && effect.type === 'lifesteal') {
+  // === LIFESTEAL (Shadow Bolt, Drain Life, Maelstrom) ===
+  if (effect && (effect.type === 'lifesteal' || effect.type === 'maelstrom')) {
     const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-    const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+    const dmg = calcDmg(base);
     battleState.enemyHP -= dmg;
-
-    // Лайфстил — хилит мага (не больше недостающего HP, не хилит щит)
+    const lsPercent = effect.type === 'maelstrom' ? effect.lifestealPercent : effect.percent;
     const missingHP = battleState.mageMaxHP - battleState.mageHP;
-    const heal = Math.min(missingHP, Math.floor(dmg * effect.percent));
-    if (heal > 0) {
-      battleState.mageHP += heal;
+    const heal = Math.min(missingHP, Math.floor(dmg * lsPercent));
+    if (heal > 0) battleState.mageHP += heal;
+    // Maelstrom also applies slow
+    if (effect.type === 'maelstrom' && effect.slow) {
+      battleState.enemySlowPercent = effect.slow.slowPercent;
+      battleState.enemySlowExpireAt = Date.now() + effect.slow.duration * 1000;
     }
-
-    const healPct = Math.floor(effect.percent * 100);
     const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
-    addCombatLog(`${spell.name}: ${dmg} dmg + healed ${heal} HP (${healPct}% lifesteal)${focusLabel}`, spell.color);
+    addCombatLog(`${spell.name}: ${dmg} dmg + healed ${heal} HP${effect.type === 'maelstrom' ? ' + slow' : ''}${focusLabel}`, spell.color);
+    showDamageNumber(dmg, spell.color);
     await playSpellAnimation(spell, dmg);
     updateEnemyHP();
     updateMageHP();
+    updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
     if (battleState.enemyHP <= 0) { endBattle('win'); return; }
     return;
   }
 
-  // Базовый урон (Arcane Bolt, Fireball, Inferno и др.)
+  // === CONDITIONAL BONUS (Scorch, Tsunami, Tremor) ===
+  if (effect && effect.type === 'conditional_bonus') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    let dmg = calcDmg(base);
+    let conditionMet = false;
+    if (effect.condition === 'target_has_ignite' && battleState.dotStacks.some(d => d.spellId === 'ignite' || d.spellId === 'cataclysm')) {
+      dmg = Math.floor(dmg * (1 + effect.bonusDmgPercent));
+      conditionMet = true;
+    }
+    if (effect.condition === 'target_is_slowed' && battleState.enemySlowPercent > 0) {
+      dmg = Math.floor(dmg * (1 + effect.bonusDmgPercent));
+      conditionMet = true;
+    }
+    if (effect.condition === 'mage_has_shield' && battleState.shieldHP > 0) {
+      dmg = Math.floor(dmg * (1 + effect.bonusDmgPercent));
+      conditionMet = true;
+    }
+    battleState.enemyHP -= dmg;
+    // Some conditional spells also apply slow (Tsunami, Tremor)
+    if (effect.slow) {
+      battleState.enemySlowPercent = effect.slow.slowPercent;
+      battleState.enemySlowExpireAt = Date.now() + effect.slow.duration * 1000;
+    }
+    const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
+    const condLabel = conditionMet ? ' (BONUS!)' : '';
+    addCombatLog(`${spell.name}: ${dmg} dmg${condLabel}${focusLabel}`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === DELAYED DETONATION (Living Bomb) ===
+  if (effect && effect.type === 'delayed_detonation') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const directDmg = calcDmg(base);
+    battleState.enemyHP -= directDmg;
+    // Schedule detonation -- detonation ignores focusMod and buffMod and schoolMod
+    battleState.livingBombs.push({
+      detonateAt: Date.now() + effect.delay * 1000,
+      damage: effect.detonationDmg,
+      intMult,
+      elementalMod
+    });
+    addCombatLog(`${spell.name}: ${directDmg} dmg + bomb planted (${effect.delay}s)`, spell.color);
+    showDamageNumber(directDmg, spell.color);
+    await playSpellAnimation(spell, directDmg);
+    updateEnemyHP();
+    triggerPassives(directDmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === IGNITE APPLY (Flame Wave) ===
+  if (effect && effect.type === 'ignite_apply') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    battleState.enemyHP -= dmg;
+    // Apply Ignite stack
+    const igniteSpell = SPELLS_DATA['ignite'];
+    if (igniteSpell && battleState.dotStacks.filter(d => d.spellId === 'ignite').length < 3) {
+      battleState.dotStacks.push({
+        ticksLeft: 3,
+        interval: 1500,
+        nextTickAt: Date.now() + 1500,
+        dmgPerTick: 8,
+        intMult,
+        schoolMod,
+        elementalMod,
+        color: '#e67e22',
+        sourceId: 'flame_wave_ignite_' + Date.now(),
+        spellId: 'ignite'
+      });
+    }
+    // Set scorch window
+    battleState.scorchWindowExpireAt = Date.now() + effect.scorchWindow * 1000;
+    addCombatLog(`${spell.name}: ${dmg} dmg + Ignite + Scorch window ${effect.scorchWindow}s`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === EMBER BONUS (Pyroblast -- standard damage, extra ember stacks handled by triggerPassives) ===
+  if (effect && effect.type === 'ember_bonus') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    battleState.enemyHP -= dmg;
+    const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
+    addCombatLog(`${spell.name}: ${dmg} dmg${focusLabel}`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === EXTRA STATIC (Gust -- standard damage + extra static handled by triggerPassives) ===
+  if (effect && effect.type === 'extra_static') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    battleState.enemyHP -= dmg;
+    addCombatLog(`${spell.name}: ${dmg} dmg${wasFocused ? ' (x2 Focus!)' : ''}`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === CHILL (Frozen Tomb) ===
+  if (effect && effect.type === 'chill') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    battleState.enemyHP -= dmg;
+    // Apply chill: -70% attack speed for 2s
+    battleState.chillActive = true;
+    battleState.chillExpireAt = Date.now() + effect.chillDuration * 1000;
+    // Post-chill slow
+    battleState.enemySlowPercent = effect.postChillSlow.slowPercent;
+    battleState.enemySlowExpireAt = Date.now() + (effect.chillDuration + effect.postChillSlow.duration) * 1000;
+    addCombatLog(`${spell.name}: ${dmg} dmg + -70% attack speed ${effect.chillDuration}s`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === SHIELD SCALING (Avalanche) ===
+  if (effect && effect.type === 'shield_scaling') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    let dmg = calcDmg(base);
+    const bonusDmg = Math.floor(battleState.shieldHP * effect.shieldDmgPercent);
+    dmg += bonusDmg;
+    battleState.enemyHP -= dmg;
+    addCombatLog(`${spell.name}: ${dmg} dmg (${bonusDmg} from shield)${wasFocused ? ' (x2 Focus!)' : ''}`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === PETRIFY (Geomancer) ===
+  if (effect && effect.type === 'petrify') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    battleState.enemyHP -= dmg;
+    battleState.petrifyActive = true;
+    battleState.petrifyExpireAt = Date.now() + effect.stunDuration * 1000;
+    battleState.petrifyAmpActive = true;
+    battleState.petrifyAmpExpireAt = Date.now() + (effect.stunDuration + effect.damageAmpDuration) * 1000;
+    addCombatLog(`${spell.name}: ${dmg} dmg + stun ${effect.stunDuration}s + +25% vulnerability`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateEnemyStatusRow();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === MEGA SHIELD (Tectonic Shift) ===
+  if (effect && effect.type === 'mega_shield') {
+    const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
+    const dmg = calcDmg(base);
+    battleState.enemyHP -= dmg;
+    const shieldVal = Math.min(effect.baseShield + Math.floor(battleState.mageMaxHP * effect.maxHpPercent), battleState.mageMaxHP);
+    battleState.shieldHP = Math.min(battleState.shieldHP + shieldVal, battleState.mageMaxHP);
+    battleState.reflectActive = true;
+    battleState.reflectPercent = effect.reflectPercent;
+    battleState.reflectExpireAt = Date.now() + effect.reflectDuration * 1000;
+    addCombatLog(`${spell.name}: ${dmg} dmg + ${shieldVal} shield + ${Math.floor(effect.reflectPercent * 100)}% reflect`, spell.color);
+    showDamageNumber(dmg, spell.color);
+    await playSpellAnimation(spell, dmg);
+    updateEnemyHP();
+    updateMageHP();
+    triggerPassives(dmg, spell);
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+
+  // === DEFAULT: Basic damage (Arcane Bolt, Fireball, Inferno, Rock Shard, Earthen Spike, etc.) ===
   const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-  const dmg = Math.floor(base * intMult * schoolMod * debuffMod * focusMod * buffMod);
+  const dmg = calcDmg(base);
   battleState.enemyHP -= dmg;
 
-  // Школьный модификатор в логе
   let schoolNote = '';
   if (schoolMod > 1.0) schoolNote = ' — WEAKNESS!';
   else if (schoolMod < 1.0) schoolNote = ' — RESIST';
   const focusLabel = wasFocused ? ' (x2 Focus!)' : '';
 
   addCombatLog(`${spell.name}: ${dmg} dmg${schoolNote}${focusLabel}`, spell.color);
+  showDamageNumber(dmg, spell.color);
   await playSpellAnimation(spell, dmg);
   updateEnemyHP();
+  triggerPassives(dmg, spell);
   if (battleState.enemyHP <= 0) { endBattle('win'); }
 }
 
@@ -409,16 +961,37 @@ function processDotTicks() {
   if (!battleState.active) return;
   const now = Date.now();
   let changed = false;
+  const state = getState();
 
   for (let i = battleState.dotStacks.length - 1; i >= 0; i--) {
     const stack = battleState.dotStacks[i];
     if (now >= stack.nextTickAt) {
       // Наносим тик урона
-      const tickDmg = Math.floor(stack.dmgPerTick * stack.intMult * stack.schoolMod);
+      const tickDmg = Math.floor(stack.dmgPerTick * stack.intMult * stack.schoolMod * (stack.elementalMod || 1.0));
       battleState.enemyHP -= tickDmg;
       changed = true;
-      addCombatLog(`DoT tick: ${tickDmg} fire damage`, stack.color);
+      addCombatLog(`DoT tick: ${tickDmg} damage`, stack.color);
       showDamageNumber(tickDmg, stack.color);
+
+      // Pyromancer Ember from DoT: max 1 Ember per second per unique DoT source
+      if (state.classType === 'pyromancer') {
+        const sourceId = stack.sourceId || stack.spellId || 'unknown';
+        const lastTs = battleState.lastEmberTickTimestamps[sourceId] || 0;
+        if (now - lastTs >= 1000) {
+          battleState.emberStacks += 1;
+          battleState.emberDamageAccumulated += tickDmg;
+          battleState.lastEmberTickTimestamps[sourceId] = now;
+
+          if (battleState.emberStacks >= 5) {
+            const bonusDmg = Math.floor(battleState.emberDamageAccumulated * 0.15);
+            battleState.enemyHP -= bonusDmg;
+            addCombatLog(`Combustion detonates for ${bonusDmg} bonus damage!`, '#ff6600');
+            showDamageNumber(bonusDmg, '#ff6600');
+            battleState.emberStacks = 0;
+            battleState.emberDamageAccumulated = 0;
+          }
+        }
+      }
 
       stack.ticksLeft--;
       stack.nextTickAt = now + stack.interval;
@@ -446,10 +1019,14 @@ function processDotTicks() {
 function scheduleEnemyAttack(enemy) {
   if (!battleState.active) return;
 
-  // Интервал с учётом замедления
-  const effectiveInterval = battleState.enemySlowPercent > 0
-    ? enemy.attackInterval / (1 - battleState.enemySlowPercent)
-    : enemy.attackInterval;
+  // Интервал с учётом замедления (slow) и заморозки (chill -70% скорости атаки)
+  let effectiveInterval = enemy.attackInterval;
+  if (battleState.chillActive) {
+    // Frozen Tomb: -70% скорости атаки = интервал увеличивается в ~3.33 раза
+    effectiveInterval = enemy.attackInterval / (1 - 0.70);
+  } else if (battleState.enemySlowPercent > 0) {
+    effectiveInterval = enemy.attackInterval / (1 - battleState.enemySlowPercent);
+  }
 
   battleState.enemyAttackTimeout = setTimeout(() => {
     if (!battleState.active) return;
@@ -459,20 +1036,74 @@ function scheduleEnemyAttack(enemy) {
 }
 
 /**
- * Враг атакует мага
+ * Враг атакует мага -- с поддержкой Evasion, Bedrock, Riptide, Chill, Petrify, Reflect
  */
 function performEnemyAttack(enemy) {
   if (!battleState.active) return;
 
+  // Petrify: enemy is stunned, skip attack
+  if (battleState.petrifyActive) {
+    addCombatLog('Enemy is petrified — cannot attack!', '#e67e22');
+    return;
+  }
+
+  // Evasion check (Zephyr)
+  if (battleState.evasionActive && Math.random() < battleState.evasionChance) {
+    const avoidedDmg = enemy.attack;
+    addCombatLog(`Dodge! Avoided ${avoidedDmg} damage`, '#3498db');
+    // Counter-attack: 50% of avoided damage
+    if (battleState.evasionCounterPercent > 0) {
+      const counterDmg = Math.floor(avoidedDmg * battleState.evasionCounterPercent);
+      battleState.enemyHP -= counterDmg;
+      addCombatLog(`Counter-attack: ${counterDmg} damage!`, '#3498db');
+      showDamageNumber(counterDmg, '#3498db');
+      updateEnemyHP();
+      if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    }
+    return;
+  }
+
   let dmg = enemy.attack;
+  const state = getState();
+
+  // Geomancer Bedrock: 15% DR when shield is active
+  if (state.classType === 'geomancer' && battleState.shieldHP > 0) {
+    dmg = Math.floor(dmg * 0.85);
+  }
 
   // Щит поглощает урон первым
+  let shieldAbsorbed = 0;
   if (battleState.shieldHP > 0) {
-    const absorbed = Math.min(battleState.shieldHP, dmg);
-    battleState.shieldHP -= absorbed;
-    dmg -= absorbed;
+    shieldAbsorbed = Math.min(battleState.shieldHP, dmg);
+    battleState.shieldHP -= shieldAbsorbed;
+    dmg -= shieldAbsorbed;
+
+    // Geomancer Bedrock: reflect 10% of absorbed damage
+    if (state.classType === 'geomancer' && shieldAbsorbed > 0) {
+      const reflectDmg = Math.floor(shieldAbsorbed * 0.10);
+      if (reflectDmg > 0) {
+        battleState.enemyHP -= reflectDmg;
+        addCombatLog(`Bedrock reflects ${reflectDmg} damage!`, '#e67e22');
+        showDamageNumber(reflectDmg, '#e67e22');
+        updateEnemyHP();
+        if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+      }
+    }
+
+    // Tectonic Shift reflect (separate from Bedrock)
+    if (battleState.reflectActive && shieldAbsorbed > 0) {
+      const reflectDmg = Math.floor(shieldAbsorbed * battleState.reflectPercent);
+      if (reflectDmg > 0) {
+        battleState.enemyHP -= reflectDmg;
+        addCombatLog(`Shield reflects ${reflectDmg} damage!`, '#e67e22');
+        showDamageNumber(reflectDmg, '#e67e22');
+        updateEnemyHP();
+        if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+      }
+    }
+
     addCombatLog(
-      `Enemy attacks for ${enemy.attack} — Shield absorbs ${absorbed} (shield: ${battleState.shieldHP})`,
+      `Enemy attacks for ${enemy.attack} — Shield absorbs ${shieldAbsorbed} (shield: ${battleState.shieldHP})`,
       '#c9a84c'
     );
     updateMageHP();
@@ -491,6 +1122,20 @@ function performEnemyAttack(enemy) {
   }
 
   updateMageHP();
+
+  // Tidecaster Riptide: авто-хил при падении HP ниже 40%, один раз за бой
+  if (state.classType === 'tidecaster' && !battleState.riptideTriggered && battleState.mageHP > 0
+      && battleState.mageHP < battleState.mageMaxHP * 0.40) {
+    const healAmount = Math.floor(battleState.mageMaxHP * 0.30); // 30% maxHP по спецификации
+    battleState.mageHP = Math.min(battleState.mageHP + healAmount, battleState.mageMaxHP);
+    battleState.riptideTriggered = true;
+    // Apply Drenched (slow)
+    battleState.enemySlowPercent = 0.30;
+    battleState.enemySlowExpireAt = Date.now() + 5000;
+    addCombatLog(`Riptide! Healed ${healAmount} HP + enemy Drenched (-30% speed, 5s)`, '#1abc9c');
+    updateMageHP();
+    updateEnemyStatusRow();
+  }
 
   if (battleState.mageHP <= 0) {
     endBattle('loss');
