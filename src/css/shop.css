@@ -38,6 +38,34 @@
   color: #e0c060;
 }
 
+/* Блок имени и реплики торговца */
+.shop-merchant-voice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 20px 12px;
+  border-bottom: 1px solid rgba(180,140,60,0.15);
+  background: rgba(0,0,0,0.25);
+}
+
+.shop-merchant-name {
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(200,160,70,0.65);
+}
+
+.shop-merchant-line {
+  font-family: var(--font-body, 'Crimson Text', serif);
+  font-size: 1.05rem;
+  font-style: italic;
+  color: rgba(220,200,160,0.88);
+  line-height: 1.4;
+  min-height: 1.4em;
+  transition: opacity 0.3s ease;
+}
+
 .shop-items-list {
   flex: 1;
   overflow-y: auto;

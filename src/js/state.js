@@ -1476,13 +1476,17 @@ export function tickBuffs() {
 
 /**
  * Купить предмет в магазине. Возвращает { success, reason }.
+ * @param {string} itemId
+ * @param {number} [overridePrice] — опциональная цена (например, со скидкой)
  */
-export function buyItem(itemId) {
+export function buyItem(itemId, overridePrice) {
   const state = getState();
   const item = ITEMS_DATA[itemId];
   if (!item || !item.price) return { success: false, reason: 'not_for_sale' };
-  if (state.gold < item.price) return { success: false, reason: 'no_gold' };
-  state.gold -= item.price;
+  // Используем переданную цену или базовую из данных предмета
+  const price = (overridePrice !== undefined) ? overridePrice : item.price;
+  if (state.gold < price) return { success: false, reason: 'no_gold' };
+  state.gold -= price;
   if (!state.inventory[itemId]) state.inventory[itemId] = 0;
   state.inventory[itemId]++;
   saveState();

@@ -1183,6 +1183,17 @@ function endBattle(result) {
       droppedItem = rollItemDrop();
       addItemToInventory(droppedItem);
     }
+
+    // Квест "The Severed Finger" — дроп кольца при победе над Skeleton Warrior
+    // Кольцо выдаётся один раз если квест активен и у игрока его ещё нет
+    if (
+      battleState.enemyId === 'skeleton_warrior' &&
+      state.questSeveredFinger?.status === 'active' &&
+      (state.inventory.skeleton_iron_ring || 0) === 0
+    ) {
+      addItemToInventory('skeleton_iron_ring');
+      droppedItem = 'skeleton_iron_ring'; // показать в result-popup как дроп
+    }
   } else if (result === 'loss') {
     state.combat.consecutiveWins = 0;
     goldEarned = Math.floor(randInt(enemy.goldReward.min, enemy.goldReward.max) * 0.5);

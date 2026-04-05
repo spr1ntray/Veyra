@@ -810,6 +810,17 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.6), -2px 0 12px rgba(201,168,76,0.15); /* золото вместо синего */
 }
 
+/* Лорная реплика NPC — курсив, приглушённый бронзовый акцент */
+.notification.notif-lore {
+  border-left-color: rgba(160,120,60,0.8);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), -2px 0 12px rgba(160,120,60,0.12);
+  font-family: var(--font-body, 'Crimson Text', serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: rgba(220,200,160,0.92);
+  max-width: 380px;
+}
+
 /* === СЕКЦИИ КОНТЕНТА === */
 .screen-content {
   flex: 1;
