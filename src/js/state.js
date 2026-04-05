@@ -150,6 +150,16 @@ export const ITEMS_DATA = {
     img: 'assets/generated/pixel/ICON_020.png',
     buffId: 'shadow_dust_buff', buffCombats: 2,
     price: 80
+  },
+
+  // Квестовый предмет — дроп Skeleton Warrior (квест "The Severed Finger")
+  skeleton_iron_ring: {
+    id: 'skeleton_iron_ring', name: 'Iron Ring',
+    slot: 'quest', bonus: 0, rarity: 'quest',
+    desc: "A worn iron ring. Someone's initials are scratched inside.",
+    canUnequip: false,
+    img: null,
+    price: 0
   }
 };
 
@@ -868,7 +878,9 @@ function getDefaultState() {
       mana_elixir: 0,
       crystal_shard: 0,
       iron_flask: 0,
-      shadow_dust: 0
+      shadow_dust: 0,
+      // Квестовый предмет
+      skeleton_iron_ring: 0
     },
     dailyLogin: {
       currentDay: 1,
@@ -892,6 +904,20 @@ function getDefaultState() {
       firstLogin: now,
       lastLogin: now
     },
+    // Флаги диалогов торговца Morthis Dray
+    merchantFlags: {
+      firstVisit: true,          // true = ещё не посещал магазин
+      visitCount: 0,             // счётчик визитов
+      seenAwakening: false,      // показана ли реплика про пробуждение класса
+      seenVeteran: false,        // показана ли реплика ветерана (lv5+)
+      questDiscount: false       // 10% скидка на расходники (награда за квест)
+    },
+
+    // Квест "The Severed Finger"
+    questSeveredFinger: {
+      status: 'not_started'      // 'not_started' | 'active' | 'hint_shown' | 'completed'
+    },
+
     // Состояние класс-пассивов — сбрасывается при каждом бою
     battleState: {
       emberStacks: 0,           // Pyromancer: счётчик Ember (0-5)
@@ -962,6 +988,23 @@ export function loadState() {
           }
           return spellId;
         });
+      }
+
+      // === Migration: merchantFlags ===
+      if (!_state.merchantFlags) {
+        _state.merchantFlags = getDefaultState().merchantFlags;
+      } else {
+        _state.merchantFlags = { ...getDefaultState().merchantFlags, ..._state.merchantFlags };
+      }
+
+      // === Migration: questSeveredFinger ===
+      if (!_state.questSeveredFinger) {
+        _state.questSeveredFinger = getDefaultState().questSeveredFinger;
+      }
+
+      // === Migration: skeleton_iron_ring в инвентаре ===
+      if (_state.inventory && _state.inventory.skeleton_iron_ring === undefined) {
+        _state.inventory.skeleton_iron_ring = 0;
       }
 
       // === Migration: battleState fields ===
@@ -1265,18 +1308,25 @@ export function rollItemDrop() {
 // ===== ELEMENTAL MODIFIER =====
 
 /**
- * Возвращает множитель урона на основе стихии заклинания и стихии врага.
+ * Возвращает множитель урона на основе класса игрока и стихии врага.
+ * Конвертирует classType → elementType внутри функции.
  * Цикл преимуществ: fire > earth > air > water > fire
- *   +10% если spellElement «силён» против enemyElement
- *   -10% если spellElement «слаб» против enemyElement
+ *   +10% если стихия класса «сильна» против enemyElement
+ *   -10% если стихия класса «слаба» против enemyElement
  *   1.0  во всех остальных случаях (null, совпадение стихий, нейтральная)
  *
- * @param {string|null} spellElement  - 'fire' | 'air' | 'water' | 'earth' | null
- * @param {string|null} enemyElement  - 'fire' | 'air' | 'water' | 'earth' | null
+ * @param {string|null} playerClassType  - 'pyromancer' | 'stormcaller' | 'tidecaster' | 'geomancer'
+ * @param {string|null} enemyElement     - 'fire' | 'air' | 'water' | 'earth' | null
  * @returns {number} 1.10 (advantage), 0.90 (disadvantage), or 1.0 (neutral)
  */
-export function getElementalModifier(spellElement, enemyElement) {
-  if (!spellElement || !enemyElement) return 1.0;
+export function getElementalModifier(playerClassType, enemyElement) {
+  if (!playerClassType || !enemyElement) return 1.0;
+
+  // Маппинг класса на его стихию
+  const CLASS_ELEMENTS = {
+    pyromancer: 'fire', stormcaller: 'air',
+    tidecaster: 'water', geomancer: 'earth'
+  };
 
   // Таблица стихийных преимуществ/слабостей
   const CYCLE = {
@@ -1286,9 +1336,10 @@ export function getElementalModifier(spellElement, enemyElement) {
     earth: { strong: 'air',   weak: 'fire'  }
   };
 
-  const relations = CYCLE[spellElement];
-  if (!relations) return 1.0; // неизвестная стихия — нейтрально
+  const playerElement = CLASS_ELEMENTS[playerClassType];
+  if (!playerElement) return 1.0; // неизвестный класс — нейтрально
 
+  const relations = CYCLE[playerElement];
   if (enemyElement === relations.strong) return 1.10; // преимущество +10%
   if (enemyElement === relations.weak)   return 0.90; // слабость -10%
   return 1.0;

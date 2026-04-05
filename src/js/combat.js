@@ -384,7 +384,7 @@ async function performCast(spell) {
 
   // Helper: trigger class passives after a spell deals damage
   const triggerPassives = (damageDealt, spell) => {
-    if (!spell.passiveTrigger || damageDealt <= 0) return;
+    if (spell.passiveTrigger === false) return;
 
     // Pyromancer — Combustion
     if (state.classType === 'pyromancer') {
@@ -442,7 +442,7 @@ async function performCast(spell) {
   // === MANA SHIELD (utility, no damage) ===
   if (spell.id === 'mana_shield') {
     const shieldVal = Math.floor(40 + int * 0.8);
-    battleState.shieldHP = shieldVal;
+    battleState.shieldHP = Math.min(battleState.shieldHP + shieldVal, battleState.mageMaxHP);
     addCombatLog(`Mana Shield: +${shieldVal} HP shield`, spell.color);
     await playShieldAnimation(shieldVal);
     updateMageHP();
@@ -1126,7 +1126,7 @@ function performEnemyAttack(enemy) {
   // Tidecaster Riptide: авто-хил при падении HP ниже 40%, один раз за бой
   if (state.classType === 'tidecaster' && !battleState.riptideTriggered && battleState.mageHP > 0
       && battleState.mageHP < battleState.mageMaxHP * 0.40) {
-    const healAmount = Math.floor(battleState.mageMaxHP * 0.30); // 30% maxHP по спецификации
+    const healAmount = Math.floor(battleState.mageMaxHP * 0.20); // 20% maxHP по спецификации
     battleState.mageHP = Math.min(battleState.mageHP + healAmount, battleState.mageMaxHP);
     battleState.riptideTriggered = true;
     // Apply Drenched (slow)
