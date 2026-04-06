@@ -575,6 +575,7 @@
 }
 
 /* Оверлей замка поверх иконки спелла */
+/* pointer-events не отключаем — блокировка уже задана через .spell-locked-class и .spell-locked-level */
 .pool-card-lock-overlay {
   position: absolute;
   inset: 0;
@@ -585,7 +586,6 @@
   border-radius: 4px;
   font-size: 1.6em;
   color: rgba(255, 255, 255, 0.7);
-  pointer-events: none;
 }
 
 /* === ЭЛЕМЕНТАЛЬНЫЕ РАМКИ (доступные классовые спеллы) === */
@@ -697,4 +697,26 @@
 /* Скрываем кнопку My Class когда класс не выбран */
 .grimoire-filter-bar--no-class #filter-btn-myclass {
   display: none;
+}
+
+/* Полностью скрываем filter-bar до выбора класса */
+.grimoire-filter-bar--hidden {
+  display: none;
+}
+
+/* Слот с заклинанием чужого класса (старый сейв) */
+.grimoire-slot-wrong-class {
+  outline: 2px solid #c0392b;
+  outline-offset: -2px;
+}
+
+/* Badge "Wrong class" внутри слота */
+.grimoire-slot-wrong-badge {
+  font-size: 0.6em;
+  color: #e74c3c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-ui, sans-serif);
+  margin-top: 2px;
+  text-shadow: 0 0 6px rgba(231, 76, 60, 0.7);
 }

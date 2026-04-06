@@ -67,9 +67,10 @@ export function initGrimoire(enemyId, onBeginBattle, onBack) {
 
   selectedPoolSpellId = null;
 
-  // Загружаем фильтр из sessionStorage если класс выбран, иначе сбрасываем
+  // Если класс выбран — по умолчанию показываем только свои спеллы
+  // Если класса нет — 'all' (но фильтр-бар всё равно скрыт)
   if (state.classType) {
-    poolFilter = sessionStorage.getItem('grimoireFilter') || 'all';
+    poolFilter = sessionStorage.getItem('grimoireFilter') || 'myclass';
   } else {
     poolFilter = 'all';
   }
@@ -145,11 +146,23 @@ function renderSlots() {
 
   const labels = ['I', 'II', 'III', 'IV', 'V'];
 
+  const state = getState();
+
   slots.forEach((spellId, index) => {
     const spell = spellId ? SPELLS_DATA[spellId] : null;
     const slot = document.createElement('div');
     slot.className = 'grimoire-slot' + (spell ? ' grimoire-slot-filled' : ' grimoire-slot-empty');
     slot.dataset.index = index;
+
+    // Проверяем, не принадлежит ли спелл другому классу (старый сейв)
+    const isWrongClass = spell
+      && spell.classRestriction !== null
+      && state.classType !== null
+      && spell.classRestriction !== state.classType;
+
+    if (isWrongClass) {
+      slot.classList.add('grimoire-slot-wrong-class');
+    }
 
     if (spell) {
       slot.style.setProperty('--spell-color', spell.color);
@@ -157,13 +170,21 @@ function renderSlots() {
       const slotIconContent = spell.img
         ? `<img src="${spell.img}" alt="${spell.name}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated">`
         : `<span style="color:${spell.color};font-size:1.4em">${spell.emoji || getSpellEmoji(spell.school)}</span>`;
+      // Для спелла чужого класса — красная рамка вместо цветной + предупреждение
+      const iconBorderColor = isWrongClass ? '#c0392b' : spell.color;
+      const iconBoxShadow   = isWrongClass ? '0 0 10px rgba(192,57,43,0.8)' : `0 0 10px ${spell.glowColor}`;
+      const wrongClassBadge = isWrongClass
+        ? `<div class="grimoire-slot-wrong-badge">Wrong class</div>`
+        : '';
+
       slot.innerHTML = `
         <div class="grimoire-slot-num">${labels[index]}</div>
-        <div class="grimoire-slot-icon" style="border-color:${spell.color};box-shadow:0 0 10px ${spell.glowColor}">
+        <div class="grimoire-slot-icon" style="border-color:${iconBorderColor};box-shadow:${iconBoxShadow}">
           ${slotIconContent}
         </div>
-        <div class="grimoire-slot-spell-name" style="color:${spell.color}">${spell.name}</div>
+        <div class="grimoire-slot-spell-name" style="color:${isWrongClass ? '#c0392b' : spell.color}">${spell.name}</div>
         <div class="grimoire-slot-time">${spell.castTime}s</div>
+        ${wrongClassBadge}
       `;
     } else {
       slot.innerHTML = `
@@ -283,12 +304,16 @@ function renderSpellPool() {
   const playerClass = state.classType;
   const playerLevel = state.level;
 
-  // Управляем видимостью кнопки My Class в filter bar
+  // Управляем видимостью filter-bar:
+  // - без класса: скрываем весь бар (классовых спеллов нет, фильтр бесполезен)
+  // - с классом: показываем бар с обеими кнопками
   const filterBar = document.getElementById('grimoire-filter-bar');
   if (filterBar) {
     if (!playerClass) {
-      filterBar.classList.add('grimoire-filter-bar--no-class');
+      filterBar.classList.add('grimoire-filter-bar--hidden');
+      filterBar.classList.remove('grimoire-filter-bar--no-class');
     } else {
+      filterBar.classList.remove('grimoire-filter-bar--hidden');
       filterBar.classList.remove('grimoire-filter-bar--no-class');
     }
   }
