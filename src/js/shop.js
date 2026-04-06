@@ -8,6 +8,9 @@ import { updateHUD, showNotification } from './ui.js';
 // Предметы в ассортименте магазина
 const SHOP_ITEMS = ['mana_elixir', 'crystal_shard', 'iron_flask', 'shadow_dust'];
 
+// Скидка за выполнение квеста (10% на расходники)
+const QUEST_DISCOUNT = 0.10;
+
 // ===== ДИАЛОГИ MORTHIS DRAY =====
 
 /**
@@ -161,8 +164,8 @@ function getOpeningLine() {
     return pick(MERCHANT_DIALOGUE.first_visit);
   }
 
-  // --- Завершение квеста: игрок принёс кольцо ---
-  if (quest.status === 'active' && (state.inventory.skeleton_iron_ring || 0) >= 1) {
+  // --- Завершение квеста: игрок принёс кольцо и награда ещё не выдана ---
+  if (quest.status === 'active' && !quest.rewardClaimed && (state.inventory.skeleton_iron_ring || 0) >= 1) {
     return pick(MERCHANT_DIALOGUE.quest_complete);
   }
 
@@ -235,9 +238,10 @@ function updateMerchantFlagsOnOpen() {
     }
   }
 
-  // Завершаем квест если игрок принёс кольцо (было определено в getOpeningLine как quest_complete)
-  if (quest.status === 'active' && (state.inventory.skeleton_iron_ring || 0) >= 1) {
+  // Завершаем квест если игрок принёс кольцо и награда ещё не выдавалась
+  if (quest.status === 'active' && !quest.rewardClaimed && (state.inventory.skeleton_iron_ring || 0) >= 1) {
     quest.status = 'completed';
+    quest.rewardClaimed = true;  // защита от повторного триггера quest_complete
     // Выдаём награду: 120 золота и скидку на расходники
     state.gold += 120;
     flags.questDiscount = true;
@@ -334,7 +338,7 @@ function renderShop() {
 
     // Рассчитываем финальную цену с учётом скидки
     const basePrice = item.price;
-    const finalPrice = hasDiscount ? Math.floor(basePrice * 0.9) : basePrice;
+    const finalPrice = hasDiscount ? Math.floor(basePrice * (1 - QUEST_DISCOUNT)) : basePrice;
 
     const row = document.createElement('div');
     row.className = 'shop-item-row';

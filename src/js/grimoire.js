@@ -153,10 +153,14 @@ function renderSlots() {
 
     if (spell) {
       slot.style.setProperty('--spell-color', spell.color);
+      // Иконка слота: картинка если есть, иначе emoji или символ школы
+      const slotIconContent = spell.img
+        ? `<img src="${spell.img}" alt="${spell.name}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated">`
+        : `<span style="color:${spell.color};font-size:1.4em">${spell.emoji || getSpellEmoji(spell.school)}</span>`;
       slot.innerHTML = `
         <div class="grimoire-slot-num">${labels[index]}</div>
         <div class="grimoire-slot-icon" style="border-color:${spell.color};box-shadow:0 0 10px ${spell.glowColor}">
-          <span style="color:${spell.color};font-size:1.4em">${getSpellEmoji(spell.school)}</span>
+          ${slotIconContent}
         </div>
         <div class="grimoire-slot-spell-name" style="color:${spell.color}">${spell.name}</div>
         <div class="grimoire-slot-time">${spell.castTime}s</div>
@@ -275,6 +279,7 @@ function renderSpellPool() {
       selectedPoolSpellId = null;
     }
   }
+
   const playerClass = state.classType;
   const playerLevel = state.level;
 
@@ -357,9 +362,14 @@ function renderSpellPool() {
       ? `<div class="pool-card-lock-overlay">🔒</div>`
       : '';
 
+    // Картинка если есть, иначе emoji или символ школы
+    const poolIconContent = spell.img
+      ? `<img src="${spell.img}" alt="${spell.name}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated">`
+      : `<span style="color:${spell.color}">${spell.emoji || getSpellEmoji(spell.school)}</span>`;
+
     card.innerHTML = `
       <div class="pool-card-icon" style="border-color:${spell.color};box-shadow:0 0 8px ${spell.glowColor}">
-        <span style="color:${spell.color}">${getSpellEmoji(spell.school)}</span>
+        ${poolIconContent}
         ${lockOverlay}
       </div>
       <div class="pool-card-name" style="color:${spell.color}">${spell.name}</div>

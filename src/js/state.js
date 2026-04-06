@@ -266,7 +266,8 @@ export const SPELLS_DATA = {
     description: 'High single-hit damage. A classic.',
     color: '#e74c3c',
     glowColor: 'rgba(231,76,60,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_001_FIREBALL.png'
   },
   ignite: {
     id: 'ignite',
@@ -280,7 +281,8 @@ export const SPELLS_DATA = {
     description: 'Weak hit + DoT: 8 dmg/tick, 3 ticks. Stacks up to 3 times.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_002_IGNITE.png'
   },
   scorch: {
     id: 'scorch',
@@ -294,7 +296,8 @@ export const SPELLS_DATA = {
     description: 'Fast cast. +50% damage if target has Ignite.',
     color: '#e74c3c',
     glowColor: 'rgba(231,76,60,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_003_SCORCH.png'
   },
   inferno: {
     id: 'inferno',
@@ -308,7 +311,8 @@ export const SPELLS_DATA = {
     description: 'Massive fire strike. Highest burst damage in the game. Long cast.',
     color: '#ff4500',
     glowColor: 'rgba(255,69,0,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_004_INFERNO.png'
   },
   pyroblast: {
     id: 'pyroblast',
@@ -322,7 +326,8 @@ export const SPELLS_DATA = {
     description: 'Slow cast, massive damage. Generates 2 Ember stacks instead of 1.',
     color: '#e74c3c',
     glowColor: 'rgba(231,76,60,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_005_PYROBLAST.png'
   },
   living_bomb: {
     id: 'living_bomb',
@@ -336,7 +341,8 @@ export const SPELLS_DATA = {
     description: 'Direct damage + timed bomb: detonates after 4s for 60 damage.',
     color: '#e74c3c',
     glowColor: 'rgba(231,76,60,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '💣',
+    img: 'assets/generated/pixel/SPELL_006_LIVING_BOMB.png'
   },
   flame_wave: {
     id: 'flame_wave',
@@ -350,7 +356,8 @@ export const SPELLS_DATA = {
     description: 'Damage + applies 1 Ignite stack + Scorch costs 0 cast time for 3s.',
     color: '#e74c3c',
     glowColor: 'rgba(231,76,60,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_007_FLAME_WAVE.png'
   },
   cataclysm: {
     id: 'cataclysm',
@@ -364,7 +371,8 @@ export const SPELLS_DATA = {
     description: 'Capstone. Massive direct + DoT (15/tick, 5 ticks). Cannot stack.',
     color: '#ff4500',
     glowColor: 'rgba(255,69,0,0.8)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔥',
+    img: 'assets/generated/pixel/SPELL_008_CATACLYSM.png'
   },
 
   // ===== STORMCALLER SPELLS (air element) =====
@@ -380,7 +388,8 @@ export const SPELLS_DATA = {
     description: 'Fastest spell. Generates +1 extra Static charge.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '💨',
+    img: 'assets/generated/pixel/SPELL_009_GUST.png'
   },
   lightning_bolt: {
     id: 'lightning_bolt',
@@ -394,7 +403,8 @@ export const SPELLS_DATA = {
     description: 'Solid damage. 10% chance to strike twice.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '⚡',
+    img: null
   },
   zephyr: {
     id: 'zephyr',
@@ -408,7 +418,8 @@ export const SPELLS_DATA = {
     description: 'Low damage. Grants 25% dodge for 3s. On dodge: counter-attack 50% of avoided damage.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.5)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🌀',
+    img: null
   },
   chain_lightning: {
     id: 'chain_lightning',
@@ -422,7 +433,8 @@ export const SPELLS_DATA = {
     description: 'Bounces 2 times, each at 70% of previous damage.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '⚡',
+    img: null
   },
   tailwind: {
     id: 'tailwind',
@@ -436,7 +448,8 @@ export const SPELLS_DATA = {
     description: 'Next 3 spells cast 40% faster. No damage.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.5)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '💨',
+    img: null
   },
   ball_lightning: {
     id: 'ball_lightning',
@@ -450,7 +463,8 @@ export const SPELLS_DATA = {
     description: 'Direct damage + persistent: 10 dmg every 1.5s for 9s (60 total).',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🔵',
+    img: null
   },
   cyclone: {
     id: 'cyclone',
@@ -464,7 +478,8 @@ export const SPELLS_DATA = {
     description: "Damage + 40% slow for 4s. Air's only CC.",
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🌪️',
+    img: null
   },
   tempest: {
     id: 'tempest',
@@ -478,7 +493,8 @@ export const SPELLS_DATA = {
     description: 'Capstone. 3 hits over 1.5s, each generates 1 Static charge.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.8)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '⛈️',
+    img: null
   },
 
   // ===== TIDECASTER SPELLS (water element) =====
@@ -494,7 +510,8 @@ export const SPELLS_DATA = {
     description: 'Damage + 20% attack slow for 3 sec.',
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🧊',
+    img: null
   },
   healing_rain: {
     id: 'healing_rain',
@@ -508,7 +525,8 @@ export const SPELLS_DATA = {
     description: 'Heals mage for 30 + 5% max HP. If HP < 50%: heals 2x.',
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '💧',
+    img: null
   },
   tidal_wave: {
     id: 'tidal_wave',
@@ -522,7 +540,8 @@ export const SPELLS_DATA = {
     description: 'Stronger slow than Frost Spike. 30% for 2s.',
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🌊',
+    img: null
   },
   drain_life: {
     id: 'drain_life',
@@ -536,7 +555,8 @@ export const SPELLS_DATA = {
     description: 'Medium damage + 50% lifesteal. Core survival tool.',
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '💀',
+    img: null
   },
   blizzard: {
     id: 'blizzard',
@@ -550,7 +570,8 @@ export const SPELLS_DATA = {
     description: 'Damage + 40% attack slow for 4 sec.',
     color: '#1a6da0',
     glowColor: 'rgba(26,109,160,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '❄️',
+    img: null
   },
   tsunami: {
     id: 'tsunami',
@@ -564,7 +585,8 @@ export const SPELLS_DATA = {
     description: 'Damage + 25% slow. If enemy already slowed: +40% damage.',
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🌊',
+    img: null
   },
   frozen_tomb: {
     id: 'frozen_tomb',
@@ -578,7 +600,8 @@ export const SPELLS_DATA = {
     description: 'Soft CC: -70% enemy attack speed for 2s, then 40% slow for 3s.',
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '❄️',
+    img: null
   },
   maelstrom: {
     id: 'maelstrom',
@@ -592,7 +615,8 @@ export const SPELLS_DATA = {
     description: 'Capstone. Damage + 30% lifesteal + 35% slow for 5s.',
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.8)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🌀',
+    img: null
   },
 
   // ===== GEOMANCER SPELLS (earth element) =====
@@ -608,7 +632,8 @@ export const SPELLS_DATA = {
     description: 'Solid, reliable damage. Bread & butter.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🪨',
+    img: null
   },
   stone_skin: {
     id: 'stone_skin',
@@ -622,7 +647,8 @@ export const SPELLS_DATA = {
     description: 'Shield: absorbs 25 + 10% max HP. Stacks with Mana Shield.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.5)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🛡️',
+    img: null
   },
   tremor: {
     id: 'tremor',
@@ -636,7 +662,8 @@ export const SPELLS_DATA = {
     description: 'Damage + 15% slow. If mage has shield: +30% damage.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '💥',
+    img: null
   },
   earthen_spike: {
     id: 'earthen_spike',
@@ -650,7 +677,8 @@ export const SPELLS_DATA = {
     description: 'Highest base damage Earth spell. Pure damage.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🪨',
+    img: null
   },
   fortify: {
     id: 'fortify',
@@ -664,7 +692,8 @@ export const SPELLS_DATA = {
     description: 'Doubles current shield HP (hard cap: mage max HP). If no shield: creates 50 HP shield.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.5)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🏰',
+    img: null
   },
   avalanche: {
     id: 'avalanche',
@@ -678,7 +707,8 @@ export const SPELLS_DATA = {
     description: 'Damage + bonus equal to 20% of current shield HP.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🪨',
+    img: null
   },
   petrify: {
     id: 'petrify',
@@ -692,7 +722,8 @@ export const SPELLS_DATA = {
     description: 'Hard CC: 1.5s stun + enemy takes +25% damage for 3s.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.7)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🗿',
+    img: null
   },
   tectonic_shift: {
     id: 'tectonic_shift',
@@ -706,7 +737,8 @@ export const SPELLS_DATA = {
     description: 'Capstone. Damage + mega-shield (80 + 20% max HP). Reflects 25% for 8s.',
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.8)',
-    img: 'assets/generated/spell_arcane_bolt.png'
+    emoji: '🌍',
+    img: null
   }
 };
 
@@ -915,7 +947,8 @@ function getDefaultState() {
 
     // Квест "The Severed Finger"
     questSeveredFinger: {
-      status: 'not_started'      // 'not_started' | 'active' | 'hint_shown' | 'completed'
+      status: 'not_started',     // 'not_started' | 'active' | 'hint_shown' | 'completed'
+      rewardClaimed: false       // флаг: награда уже выдана (защита от повторного quest_complete)
     },
 
     // Состояние класс-пассивов — сбрасывается при каждом бою
@@ -996,10 +1029,20 @@ export function loadState() {
       } else {
         _state.merchantFlags = { ...getDefaultState().merchantFlags, ..._state.merchantFlags };
       }
+      // Валидация типов merchantFlags (защита от битых сейвов)
+      if (typeof _state.merchantFlags.firstVisit !== 'boolean') _state.merchantFlags.firstVisit = true;
+      if (typeof _state.merchantFlags.visitCount !== 'number')  _state.merchantFlags.visitCount = 0;
+      if (typeof _state.merchantFlags.questDiscount !== 'boolean') _state.merchantFlags.questDiscount = false;
 
       // === Migration: questSeveredFinger ===
       if (!_state.questSeveredFinger) {
         _state.questSeveredFinger = getDefaultState().questSeveredFinger;
+      } else {
+        // Добавляем rewardClaimed если его нет в старых сейвах
+        if (_state.questSeveredFinger.rewardClaimed === undefined) {
+          // Если квест уже completed — считаем что награда была получена
+          _state.questSeveredFinger.rewardClaimed = _state.questSeveredFinger.status === 'completed';
+        }
       }
 
       // === Migration: skeleton_iron_ring в инвентаре ===
@@ -1489,6 +1532,29 @@ export function buyItem(itemId, overridePrice) {
   state.gold -= price;
   if (!state.inventory[itemId]) state.inventory[itemId] = 0;
   state.inventory[itemId]++;
+  saveState();
+  return { success: true };
+}
+
+/**
+ * Выбросить предмет из инвентаря. Возвращает { success, reason }.
+ * Блокирует выброс кольца квеста пока квест активен.
+ * @param {string} itemId
+ * @returns {{ success: boolean, reason?: string }}
+ */
+export function discardItem(itemId) {
+  const state = getState();
+
+  // Защита: кольцо нельзя выбросить пока квест активен
+  if (itemId === 'skeleton_iron_ring' && state.questSeveredFinger?.status === 'active') {
+    return { success: false, reason: 'quest_locked' };
+  }
+
+  if (!state.inventory[itemId] || state.inventory[itemId] <= 0) {
+    return { success: false, reason: 'not_owned' };
+  }
+
+  state.inventory[itemId]--;
   saveState();
   return { success: true };
 }

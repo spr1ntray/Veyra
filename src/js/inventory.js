@@ -4,7 +4,7 @@
  * Правая часть: сетка предметов 5×7 (60%)
  */
 
-import { getState, ITEMS_DATA, equipItem, getStats, useConsumable, getActiveBuffs } from './state.js';
+import { getState, ITEMS_DATA, equipItem, getStats, useConsumable, getActiveBuffs, discardItem } from './state.js';
 import { updateHUD, showNotification } from './ui.js';
 
 // Emoji для слотов
@@ -375,12 +375,13 @@ function showTooltip(itemId, isEquipped, cellEl) {
 
   _selectedItemId = itemId;
 
-  const tooltip   = document.getElementById('inv-tooltip');
-  const nameEl    = document.getElementById('tooltip-name');
-  const typeEl    = document.getElementById('tooltip-type');
-  const bonusEl   = document.getElementById('tooltip-bonus');
-  const equipBtn  = document.getElementById('tooltip-equip-btn');
-  const useBtn    = document.getElementById('tooltip-use-btn');
+  const tooltip      = document.getElementById('inv-tooltip');
+  const nameEl       = document.getElementById('tooltip-name');
+  const typeEl       = document.getElementById('tooltip-type');
+  const bonusEl      = document.getElementById('tooltip-bonus');
+  const equipBtn     = document.getElementById('tooltip-equip-btn');
+  const useBtn       = document.getElementById('tooltip-use-btn');
+  const discardBtn   = document.getElementById('tooltip-discard-btn');
 
   if (nameEl)  nameEl.textContent  = item.name;
   if (nameEl)  nameEl.style.color  = RARITY_COLORS[item.rarity];
@@ -415,6 +416,20 @@ function showTooltip(itemId, isEquipped, cellEl) {
       useBtn.style.opacity = '1';
     } else {
       useBtn.style.display = 'none';
+    }
+  }
+
+  // Discard button — скрыт для экипированных предметов; для кольца квеста заблокирован
+  if (discardBtn) {
+    if (isEquipped) {
+      discardBtn.style.display = 'none';
+    } else {
+      discardBtn.style.display = '';
+      const questLocked = itemId === 'skeleton_iron_ring' &&
+        getState().questSeveredFinger?.status === 'active';
+      discardBtn.disabled = questLocked;
+      discardBtn.style.opacity = questLocked ? '0.4' : '1';
+      discardBtn.title = questLocked ? 'Bound to active quest' : '';
     }
   }
 
@@ -460,6 +475,26 @@ export function initEquipmentZones() {
         renderHomeScreen();
       } else {
         showNotification('Cannot use this item', 'warning');
+      }
+    });
+  }
+
+  // Кнопка выброса предмета
+  const discardBtn = document.getElementById('tooltip-discard-btn');
+  if (discardBtn) {
+    discardBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!_selectedItemId) return;
+      const result = discardItem(_selectedItemId);
+      if (result.success) {
+        const item = ITEMS_DATA[_selectedItemId];
+        hideTooltip();
+        showNotification(`Discarded: ${item?.name || _selectedItemId}`, 'info');
+        updateHUD();
+        renderHomeScreen();
+      } else if (result.reason === 'quest_locked') {
+        // Кольцо квеста — заблокировано
+        showNotification('Bound to active quest — cannot discard.', 'warning');
       }
     });
   }
