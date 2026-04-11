@@ -1280,6 +1280,12 @@ export function loadState() {
         _state.tower = getDefaultState().tower;
       } else {
         _state.tower = { ...getDefaultState().tower, ..._state.tower };
+        // Sanitize currentRun: если это не валидный объект с числовыми полями,
+        // сбрасываем в null чтобы не блокировать запуск игры (BUG-001 fix)
+        const cr = _state.tower.currentRun;
+        if (cr && (typeof cr.floorsCleared !== 'number' || cr.floorsCleared <= 0)) {
+          _state.tower.currentRun = null;
+        }
       }
 
       // === Migration: staff_of_archon in inventory ===

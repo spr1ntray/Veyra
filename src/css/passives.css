@@ -1,6 +1,6 @@
 /* ===== PASSIVES SCREEN — Ley Loom ===== */
 
-#screen-passives {
+#screen-passives.active {
   background: #080c1e;
   display: flex;
   flex-direction: column;

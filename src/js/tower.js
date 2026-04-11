@@ -81,7 +81,18 @@ export function openTowerScreen() {
 export function restoreTowerSummary() {
   const state = getState();
   const run = state.tower?.currentRun;
-  if (!run || run.floorsCleared <= 0) return false;
+
+  // Жёсткая проверка: показываем summary только если run — валидный объект
+  // с реальными данными прохождения. Пустой объект {} или повреждённые данные
+  // не должны блокировать запуск игры.
+  if (!run || typeof run.floorsCleared !== 'number' || run.floorsCleared <= 0) {
+    // Очищаем невалидный currentRun чтобы не блокировать повторно
+    if (run && (typeof run.floorsCleared !== 'number' || run.floorsCleared <= 0)) {
+      state.tower.currentRun = null;
+      saveState();
+    }
+    return false;
+  }
 
   const isFullClear = run.floorsCleared >= TOWER_FLOORS.length;
   _renderSummaryScreen(run.floorsCleared, run.goldEarned, run.xpEarned, isFullClear);
