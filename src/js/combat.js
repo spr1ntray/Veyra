@@ -90,6 +90,7 @@ export function setOnBattleEnd(callback) {
 /**
  * Возвращает максимальное HP мага по формуле:
  * 100 + (level - 1) * 15 + floor(BonusPower * 0.5)
+ * Пассивные бонусы maxHpPercent умножают результат.
  * Экспортируется для использования в tower.js (избегаем дублирования формулы).
  */
 export function calcMageMaxHP() {
@@ -97,6 +98,19 @@ export function calcMageMaxHP() {
   const bp = getBonusPower();
   let base = 100 + (state.level - 1) * 15 + Math.floor(bp * 0.5);
   if (state.buffs?.iron_flask_buff?.active) base += 40;
+
+  // Apply passive maxHpPercent bonuses from unlocked nodes
+  const nodeMap = (typeof window !== 'undefined' && window._passiveNodesMap) || null;
+  const unlocked = (state.passives && state.passives.unlocked) || [];
+  if (nodeMap && unlocked.length > 0) {
+    let hpMult = 1.0;
+    for (const id of unlocked) {
+      const node = nodeMap[id];
+      if (node && node.effect.maxHpPercent) hpMult += node.effect.maxHpPercent;
+    }
+    base = Math.floor(base * hpMult);
+  }
+
   return base;
 }
 
@@ -204,7 +218,10 @@ export function initBattle(enemyId, options = {}) {
     reflectActive: false,
     reflectPercent: 0,
     reflectExpireAt: 0,
-    livingBombs: []
+    livingBombs: [],
+
+    // === Passive skill tree procs ===
+    _secondWindUsed: false  // U7: resets each fight
   };
 
   renderBattleUI(enemy);
@@ -394,9 +411,21 @@ async function performCast(spell) {
     wasFocused = true;
   }
 
+  // U8 Executioner: +15% damage vs enemies below 25% HP
+  let executionerMod = 1.0;
+  const passiveUnlocked = (state.passives && state.passives.unlocked) || [];
+  if (passiveUnlocked.includes('U8')) {
+    const nodeMap = (typeof window !== 'undefined' && window._passiveNodesMap) || null;
+    const u8Node = nodeMap && nodeMap['U8'];
+    const execBonus = u8Node ? (u8Node.effect.executioner || 0.15) : 0.15;
+    if (battleState.enemyHP < battleState.enemyMaxHP * 0.25) {
+      executionerMod = 1 + execBonus;
+    }
+  }
+
   // Helper: calculate standard damage
   const calcDmg = (base, useSchool = true, useFocus = true, useBuff = true) => {
-    return Math.floor(base * intMult * (useSchool ? schoolMod : 1.0) * elementalMod * debuffMod * petrifyAmpMod * (useFocus ? focusMod : 1.0) * (useBuff ? buffMod : 1.0));
+    return Math.floor(base * intMult * (useSchool ? schoolMod : 1.0) * elementalMod * debuffMod * petrifyAmpMod * (useFocus ? focusMod : 1.0) * (useBuff ? buffMod : 1.0) * executionerMod);
   };
 
   // Helper: apply damage and check win
@@ -1097,6 +1126,7 @@ function performEnemyAttack(enemy) {
 
   // Щит поглощает урон первым
   let shieldAbsorbed = 0;
+  const prevShieldHP = battleState.shieldHP;
   if (battleState.shieldHP > 0) {
     shieldAbsorbed = Math.min(battleState.shieldHP, dmg);
     battleState.shieldHP -= shieldAbsorbed;
@@ -1121,6 +1151,22 @@ function performEnemyAttack(enemy) {
         battleState.enemyHP -= reflectDmg;
         addCombatLog(`Shield reflects ${reflectDmg} damage!`, '#e67e22');
         showDamageNumber(reflectDmg, '#e67e22');
+        updateEnemyHP();
+        if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+      }
+    }
+
+    // U6 Mana Overflow: when shield is completely destroyed, deal 30% of destroyed shield as arcane damage
+    const passiveIds = (state.passives && state.passives.unlocked) || [];
+    if (passiveIds.includes('U6') && prevShieldHP > 0 && battleState.shieldHP <= 0) {
+      const nodeMap = (typeof window !== 'undefined' && window._passiveNodesMap) || null;
+      const u6Node = nodeMap && nodeMap['U6'];
+      const burstPct = u6Node ? (u6Node.effect.shieldBurstDamage || 0.30) : 0.30;
+      const burstDmg = Math.floor(prevShieldHP * burstPct);
+      if (burstDmg > 0) {
+        battleState.enemyHP -= burstDmg;
+        addCombatLog(`Mana Overflow! Shield burst: ${burstDmg} arcane damage!`, '#c9a84c');
+        showDamageNumber(burstDmg, '#c9a84c');
         updateEnemyHP();
         if (battleState.enemyHP <= 0) { endBattle('win'); return; }
       }
@@ -1159,6 +1205,21 @@ function performEnemyAttack(enemy) {
     addCombatLog(`Riptide! Healed ${healAmount} HP + enemy Drenched (-30% speed, 5s)`, '#1abc9c');
     updateMageHP();
     updateEnemyStatusRow();
+  }
+
+  // U7 Second Wind: once per battle, when HP drops below 15%, heal 20% max HP
+  const passiveIdsForWind = (state.passives && state.passives.unlocked) || [];
+  if (
+    passiveIdsForWind.includes('U7') &&
+    !battleState._secondWindUsed &&
+    battleState.mageHP > 0 &&
+    battleState.mageHP < battleState.mageMaxHP * 0.15
+  ) {
+    const swHeal = Math.floor(battleState.mageMaxHP * 0.20);
+    battleState.mageHP = Math.min(battleState.mageHP + swHeal, battleState.mageMaxHP);
+    battleState._secondWindUsed = true;
+    addCombatLog(`Second Wind! Healed ${swHeal} HP!`, '#f0c86a');
+    updateMageHP();
   }
 
   if (battleState.mageHP <= 0) {
@@ -1230,6 +1291,22 @@ function endBattle(result) {
     // Crystal Fortune buff — +15 bonus gold
     if (state.buffs.crystal_fortune && state.buffs.crystal_fortune.active) {
       goldEarned += 15;
+    }
+
+    // Passive bonuses: U2 Quick Study (+xpBonus), U3 Fortune Seeker (+goldBonus)
+    const passiveIds = (state.passives && state.passives.unlocked) || [];
+    const nodeMap = (typeof window !== 'undefined' && window._passiveNodesMap) || null;
+    if (nodeMap && passiveIds.length > 0) {
+      let xpMult = 1.0;
+      let goldMult = 1.0;
+      for (const id of passiveIds) {
+        const node = nodeMap[id];
+        if (!node) continue;
+        if (node.effect.xpBonus)   xpMult   += node.effect.xpBonus;
+        if (node.effect.goldBonus) goldMult  += node.effect.goldBonus;
+      }
+      xpEarned   = Math.floor(xpEarned   * xpMult);
+      goldEarned  = Math.floor(goldEarned * goldMult);
     }
 
     // Квест "The Severed Finger" — дроп кольца при победе над Skeleton Warrior.

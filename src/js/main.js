@@ -17,6 +17,7 @@ import {
 } from './ui.js';
 import { openShop, bindShopEvents } from './shop.js';
 import { initTower, openTowerScreen, onFloorWon, onFloorLost, restoreTowerSummary } from './tower.js';
+import { initPassivesScreen, renderPassivesScreen, bindPassivesEvents } from './passives_ui.js';
 
 // Текущая локация (используется для восстановления экрана после боя)
 let currentLocation = 'square';
@@ -143,6 +144,10 @@ function init() {
 
   // Инициализируем систему башни (один раз)
   initTower({ onExitToMap: () => goToLocation('square') });
+
+  // Инициализируем экран пассивных навыков (один раз)
+  initPassivesScreen({ onBack: () => goToLocation('home') });
+  bindPassivesEvents();
 
   // Привязываем события Awakening popup (один раз)
   bindAwakeningEvents();
@@ -417,6 +422,12 @@ function bindEvents() {
   document.getElementById('btn-home-back')?.addEventListener('click', () => {
     navigateTo('screen-map');
     requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  });
+
+  // Пассивные навыки (кнопка Ley Loom в инвентаре)
+  document.getElementById('btn-open-passives')?.addEventListener('click', () => {
+    navigateTo('screen-passives');
+    renderPassivesScreen();
   });
 
   // Daily Login

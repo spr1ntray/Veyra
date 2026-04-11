@@ -164,6 +164,16 @@ export const ITEMS_DATA = {
     canUnequip: false,
     img: null,
     price: 0
+  },
+
+  // Легендарная награда за первый полный клир башни
+  staff_of_archon: {
+    id: 'staff_of_archon', name: 'Staff of the Archon',
+    slot: 'staff', bonus: 45, rarity: 'legendary',
+    desc: 'Torn from the grip of Colwick himself. The magic within has not forgotten.',
+    canUnequip: true,
+    img: 'assets/generated/pixel/ICON_008.png', // reuse epic icon until art arrives
+    price: 0
   }
 };
 
@@ -847,12 +857,164 @@ export const ENEMIES_DATA = {
     attackInterval: 1.8,
     resistances: { arcane: 0.7, fire: 1.0, shadow: 1.3, frost: 1.0, air: 1.0, water: 1.0, earth: 1.0 },
     weakness: 'shadow',
-    elementType: null, // Void = no element
+    elementType: null,
     xpReward: 50,
     goldReward: { min: 18, max: 30 },
     description: 'Endgame. Optimal rotation required.',
     recommendedLevel: 9,
     img: 'assets/generated/training_dummy.png'
+  },
+
+  // ===== THE SPIRE OF COLWICK — башня (этажи 1-10) =====
+  spire_sentinel: {
+    id: 'spire_sentinel',
+    name: 'Spire Sentinel',
+    hp: 350,
+    attack: 10,
+    attackInterval: 2.5,
+    resistances: { arcane: 1.0, fire: 1.3, shadow: 1.0, frost: 1.0, air: 1.0, water: 1.0, earth: 0.7 },
+    weakness: 'fire',
+    elementType: 'earth',
+    xpReward: 0, // награды начисляются через tower.js
+    goldReward: { min: 0, max: 0 },
+    description: 'Stone guardian of the first floor.',
+    recommendedLevel: 3,
+    img: 'assets/generated/pixel/Spire_Sentinel.png'
+  },
+  ember_wraith: {
+    id: 'ember_wraith',
+    name: 'Ember Wraith',
+    hp: 300,
+    attack: 16,
+    attackInterval: 1.8,
+    resistances: { arcane: 1.0, fire: 0.5, shadow: 1.0, frost: 1.5, air: 1.0, water: 1.3, earth: 1.0 },
+    weakness: 'water',
+    elementType: 'fire',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'A wraith wreathed in smouldering embers.',
+    recommendedLevel: 4,
+    img: 'assets/generated/pixel/Ember_Wraith.png'
+  },
+  storm_gargoyle: {
+    id: 'storm_gargoyle',
+    name: 'Storm Gargoyle',
+    hp: 450,
+    attack: 14,
+    attackInterval: 2.2,
+    resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 1.0, air: 0.5, water: 1.0, earth: 1.3 },
+    weakness: 'earth',
+    elementType: 'air',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'Wings of crackling lightning.',
+    recommendedLevel: 5,
+    img: 'assets/generated/pixel/Storm_Gargoyle.png'
+  },
+  frost_warden: {
+    id: 'frost_warden',
+    name: 'Frost Warden',
+    hp: 500,
+    attack: 12,
+    attackInterval: 2.8,
+    resistances: { arcane: 1.0, fire: 1.5, shadow: 1.0, frost: 0.3, air: 1.0, water: 0.5, earth: 1.0 },
+    weakness: 'fire',
+    elementType: 'water',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'A warden encased in perpetual frost.',
+    recommendedLevel: 6,
+    img: 'assets/generated/pixel/Frost_Warden.png'
+  },
+  bone_colossus: {
+    id: 'bone_colossus',
+    name: 'Bone Colossus',
+    hp: 650,
+    attack: 18,
+    attackInterval: 2.0,
+    resistances: { arcane: 1.0, fire: 1.3, shadow: 0.7, frost: 1.0, air: 1.0, water: 1.0, earth: 0.8 },
+    weakness: 'fire',
+    elementType: 'earth',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'A colossus built from a thousand fallen knights.',
+    recommendedLevel: 7,
+    img: 'assets/generated/pixel/Bone_Colossus.png'
+  },
+  phantom_duelist: {
+    id: 'phantom_duelist',
+    name: 'Phantom Duelist',
+    hp: 400,
+    attack: 24,
+    attackInterval: 1.4,
+    resistances: { arcane: 1.3, fire: 1.0, shadow: 0.7, frost: 1.0, air: 0.8, water: 1.0, earth: 1.0 },
+    weakness: 'shadow',
+    elementType: 'air',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'Blinks between strikes. Hard to pin down.',
+    recommendedLevel: 8,
+    img: 'assets/generated/pixel/Phantom_Duelist.png'
+  },
+  abyssal_tide: {
+    id: 'abyssal_tide',
+    name: 'Abyssal Tide',
+    hp: 700,
+    attack: 20,
+    attackInterval: 1.8,
+    resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 0.7, air: 1.0, water: 0.5, earth: 1.3 },
+    weakness: 'earth',
+    elementType: 'water',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'A roiling wall of deep-sea darkness.',
+    recommendedLevel: 9,
+    img: 'assets/generated/pixel/Abyssal_Tide.png' // emoji fallback if missing
+  },
+  infernal_knight: {
+    id: 'infernal_knight',
+    name: 'Infernal Knight',
+    hp: 800,
+    attack: 22,
+    attackInterval: 1.6,
+    resistances: { arcane: 1.0, fire: 0.4, shadow: 1.1, frost: 1.5, air: 1.0, water: 1.4, earth: 1.0 },
+    weakness: 'water',
+    elementType: 'fire',
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'Forged in the pits of the lower spire.',
+    recommendedLevel: 10,
+    img: 'assets/generated/pixel/Infernal_Knight.png'
+  },
+  void_sentinel: {
+    id: 'void_sentinel',
+    name: 'Void Sentinel',
+    hp: 900,
+    attack: 25,
+    attackInterval: 1.5,
+    resistances: { arcane: 0.8, fire: 1.0, shadow: 1.3, frost: 1.0, air: 1.0, water: 1.0, earth: 1.0 },
+    weakness: null,
+    elementType: null,
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'Exists outside the elemental order. Resists nothing, fears nothing.',
+    recommendedLevel: 11,
+    img: 'assets/generated/pixel/Void_Sentinel.png'
+  },
+  archon_of_colwick: {
+    id: 'archon_of_colwick',
+    name: 'Archon of Colwick',
+    hp: 1200,
+    attack: 28,
+    attackInterval: 1.3,
+    resistances: { arcane: 1.0, fire: 1.0, shadow: 1.0, frost: 1.0, air: 1.0, water: 1.0, earth: 1.0 },
+    weakness: null,
+    elementType: null,
+    xpReward: 0,
+    goldReward: { min: 0, max: 0 },
+    description: 'The master of the Spire. He has been waiting.',
+    recommendedLevel: 12,
+    img: 'assets/generated/pixel/Archon_of_Colwick.png'
   }
 };
 
@@ -916,7 +1078,9 @@ function getDefaultState() {
       iron_flask: 0,
       shadow_dust: 0,
       // Квестовый предмет
-      skeleton_iron_ring: 0
+      skeleton_iron_ring: 0,
+      // Башня — легендарная награда за первый клир
+      staff_of_archon: 0
     },
     dailyLogin: {
       currentDay: 1,
@@ -962,6 +1126,24 @@ function getDefaultState() {
       riptideUsed: false,       // Tidecaster: сработал ли Riptide в этом бою
       bedrockActive: false,     // Geomancer: есть ли активный щит (вычисляется по shieldHP)
       shieldHP: 0               // Текущий HP щита (Mana Shield / Stone Skin)
+    },
+
+    // Башня магов — The Spire of Colwick
+    tower: {
+      attemptsToday: 0,         // попыток использовано сегодня (макс 3)
+      lastAttemptDate: '',      // дата последней попытки (toDateString())
+      bestFloorToday: 0,        // лучший достигнутый этаж сегодня
+      allTimeBest: 0,           // рекорд за всё время
+      firstClearDone: false,    // получена ли легендарная награда за первый полный клир
+      currentRun: null          // данные текущего рана или null если не в башне
+    },
+
+    // Пассивное дерево навыков — Ley Loom
+    passives: {
+      leyThreads: 0,       // доступные потоки для трат
+      leyThreadsTotal: 0,  // всего заработано (не уменьшается при трате)
+      unlocked: [],        // массив id разблокированных нод
+      respecCount: 0       // количество выполненных респеков
     }
   };
 }
@@ -1093,6 +1275,35 @@ export function loadState() {
         _state.battleState = { ...defaults, ..._state.battleState };
       }
 
+      // === Migration: tower system ===
+      if (!_state.tower) {
+        _state.tower = getDefaultState().tower;
+      } else {
+        _state.tower = { ...getDefaultState().tower, ..._state.tower };
+      }
+
+      // === Migration: staff_of_archon in inventory ===
+      if (_state.inventory && _state.inventory.staff_of_archon === undefined) {
+        _state.inventory.staff_of_archon = 0;
+      }
+
+      // === Migration v3: passive skill tree (Ley Loom) ===
+      if (!_state.passives) {
+        const defaultPassives = getDefaultState().passives;
+        // Grant retroactive Ley Threads for levels already earned (1 per level after 1)
+        const retroThreads = Math.max(0, (_state.level || 1) - 1);
+        _state.passives = {
+          ...defaultPassives,
+          leyThreads: retroThreads,
+          leyThreadsTotal: retroThreads
+        };
+      } else {
+        _state.passives = { ...getDefaultState().passives, ..._state.passives };
+      }
+      if (!_state.version || _state.version < 3) {
+        _state.version = 3;
+      }
+
       saveState();
     } else {
       _state = getDefaultState();
@@ -1140,6 +1351,7 @@ export function getBonusPower() {
 
 /**
  * Вычисляет производные статы персонажа на основе уровня и экипировки.
+ * Также применяет простые пассивные бонусы из разблокированных нод.
  * Возвращает текущие значения и максимумы для прогресс-баров.
  */
 export function getStats() {
@@ -1154,6 +1366,47 @@ export function getStats() {
   const maxStr = 5 + 49 * 2 + 49 * 3 + Math.floor(150 * 0.4);  // ~310
   const maxInt = 5 + 49 * 3 + 49 * 4 + 150;                      // ~498
 
+  // Aggregate passive bonuses from unlocked nodes
+  const unlocked = (state.passives && state.passives.unlocked) || [];
+  let passiveDamageReduction = 0;
+  let passiveFireBonus = 0;
+  let passiveWaterBonus = 0;
+  let passiveAirBonus = 0;
+  let passiveEarthBonus = 0;
+  let passiveShieldBonus = 0;
+  let passiveXpBonus = 0;
+  let passiveGoldBonus = 0;
+  let passiveMaxHpPercent = 0;
+
+  // Inline aggregation to avoid circular import — passives.js imports nothing from state.js
+  for (const id of unlocked) {
+    // We map known effect keys manually to avoid importing passives.js here
+    // (passives.js is UI/game-logic only; state.js must stay dependency-free)
+    // The full aggregation is available via passives.js aggregatePassiveBonuses()
+    // For getStats() we expose the stats-relevant subset only.
+    // Note: passives.js is loaded by the UI module so we access bonuses there;
+    // here we re-read the effect objects from a shared import-free approach.
+    // Since PASSIVE_NODES is in passives.js which cannot be imported here without circular dep,
+    // we duplicate only the stat-relevant effect keys using the raw node data already in memory.
+    // The passives module exports PASSIVE_NODES_MAP — we access it through the window
+    // if it was already loaded, otherwise fall back to zero bonuses.
+    // This avoids ES module circular dependency while keeping state.js clean.
+    const nodeMap = (typeof window !== 'undefined' && window._passiveNodesMap) || null;
+    if (!nodeMap) break; // passives module not yet loaded — bonuses applied at combat start
+    const node = nodeMap[id];
+    if (!node) continue;
+    const e = node.effect;
+    if (e.maxHpPercent)     passiveMaxHpPercent  += e.maxHpPercent;
+    if (e.damageReduction)  passiveDamageReduction += e.damageReduction;
+    if (e.fireDamageBonus)  passiveFireBonus     += e.fireDamageBonus;
+    if (e.waterDamageBonus) passiveWaterBonus    += e.waterDamageBonus;
+    if (e.airDamageBonus)   passiveAirBonus      += e.airDamageBonus;
+    if (e.earthDamageBonus) passiveEarthBonus    += e.earthDamageBonus;
+    if (e.shieldBonus)      passiveShieldBonus   += e.shieldBonus;
+    if (e.xpBonus)          passiveXpBonus       += e.xpBonus;
+    if (e.goldBonus)        passiveGoldBonus     += e.goldBonus;
+  }
+
   return {
     strength: str,
     intelligence: int,
@@ -1161,7 +1414,17 @@ export function getStats() {
     maxIntelligence: maxInt,
     // Derived bonuses from attribute points
     physicalResistBonus: ap.strength * 2,      // +2% physical resistance per STR point
-    spellDamageBonus:    ap.intelligence * 3   // +3% spell damage per INT point
+    spellDamageBonus:    ap.intelligence * 3,  // +3% spell damage per INT point
+    // Passive bonuses (stat-relevant subset)
+    passiveMaxHpPercent:     passiveMaxHpPercent,
+    passiveDamageReduction:  passiveDamageReduction,
+    passiveFireBonus:        passiveFireBonus,
+    passiveWaterBonus:       passiveWaterBonus,
+    passiveAirBonus:         passiveAirBonus,
+    passiveEarthBonus:       passiveEarthBonus,
+    passiveShieldBonus:      passiveShieldBonus,
+    passiveXpBonus:          passiveXpBonus,
+    passiveGoldBonus:        passiveGoldBonus
   };
 }
 
@@ -1191,6 +1454,13 @@ export function addXP(amount) {
 
       // +1 attribute point per level up
       state.attributePoints = (state.attributePoints || 0) + 1;
+
+      // +1 Ley Thread per level up (passive skill tree resource)
+      if (!state.passives) {
+        state.passives = { leyThreads: 0, leyThreadsTotal: 0, unlocked: [], respecCount: 0 };
+      }
+      state.passives.leyThreads++;
+      state.passives.leyThreadsTotal++;
 
       // Награда за уровень
       const goldReward = 5 * state.level;
