@@ -1326,7 +1326,6 @@ async function playSpellAnimation(spell, damage) {
   // Попадание
   projectileEl.style.display = 'none';
   enemyEl.classList.add('dummy-hit');
-  showDamageNumber(damage, spell.color);
 
   await delay(350);
 

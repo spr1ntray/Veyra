@@ -4,7 +4,7 @@
  * Правая часть: сетка предметов 5×7 (60%)
  */
 
-import { getState, ITEMS_DATA, equipItem, getStats, useConsumable, getActiveBuffs, discardItem } from './state.js';
+import { getState, ITEMS_DATA, equipItem, getStats, useConsumable, getActiveBuffs, discardItem, xpForLevel } from './state.js';
 import { updateHUD, showNotification } from './ui.js';
 
 // Emoji для слотов
@@ -67,8 +67,8 @@ function calcDynamicRows() {
 
   // Размер ячейки: ширина сетки / 5 (квадрат через aspect-ratio: 1)
   const gridWidth = grid.clientWidth || rightPanel.clientWidth - parseFloat(getComputedStyle(rightPanel).paddingLeft || 0) - parseFloat(getComputedStyle(rightPanel).paddingRight || 0);
-  const gap = 6; // row-gap из CSS
-  const cellSize = (gridWidth - (GRID_COLS - 1) * 10) / GRID_COLS; // 10px column-gap
+  const gap = 10; // gap из CSS (единый для row и column)
+  const cellSize = (gridWidth - (GRID_COLS - 1) * gap) / GRID_COLS;
 
   if (cellSize <= 0) return 4;
 
@@ -180,6 +180,14 @@ function renderCharBlock() {
   if (levelEl) levelEl.textContent = `Level ${state.level}`;
   if (goldEl)  goldEl.textContent  = `🪙 ${state.gold}`;
 
+  // XP progress bar
+  const xpNeeded = xpForLevel(state.level);
+  const xpPercent = xpNeeded > 0 ? Math.min(100, Math.round((state.xp / xpNeeded) * 100)) : 0;
+  const xpBar = document.getElementById('inv-xp-bar');
+  const xpText = document.getElementById('inv-xp-text');
+  if (xpBar) xpBar.style.width = `${xpPercent}%`;
+  if (xpText) xpText.textContent = `${state.xp} / ${xpNeeded} XP`;
+
   const strBar = document.getElementById('inv-str-bar');
   const strVal = document.getElementById('inv-str-val');
   if (strBar) strBar.style.width = `${Math.min(100, Math.round((stats.strength / stats.maxStrength) * 100))}%`;
@@ -221,8 +229,8 @@ function renderGrid() {
     ? ownedItems.filter(({ item }) => item.slot === _activeFilter)
     : ownedItems;
 
-  // Динамический размер страницы: 5 колонок × N строк (зависит от высоты viewport)
-  const PAGE_SIZE = GRID_COLS * _dynamicRows;
+  // Фиксированный размер страницы: 5 колонок × 6 строк = 30 ячеек
+  const PAGE_SIZE = 30;
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
 
   // Сбрасываем страницу если вышла за пределы (например при смене фильтра)
@@ -419,9 +427,9 @@ function showTooltip(itemId, isEquipped, cellEl) {
     }
   }
 
-  // Discard button — скрыт для экипированных предметов; для кольца квеста заблокирован
+  // Discard button — скрыт для экипированных предметов и расходников; для кольца квеста заблокирован
   if (discardBtn) {
-    if (isEquipped) {
+    if (isEquipped || isConsumable) {
       discardBtn.style.display = 'none';
     } else {
       discardBtn.style.display = '';

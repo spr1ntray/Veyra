@@ -304,18 +304,10 @@ function renderSpellPool() {
   const playerClass = state.classType;
   const playerLevel = state.level;
 
-  // Управляем видимостью filter-bar:
-  // - без класса: скрываем весь бар (классовых спеллов нет, фильтр бесполезен)
-  // - с классом: показываем бар с обеими кнопками
+  // Показываем фильтр-бар: All (свои + универсальные) / My Class (только свои)
   const filterBar = document.getElementById('grimoire-filter-bar');
   if (filterBar) {
-    if (!playerClass) {
-      filterBar.classList.add('grimoire-filter-bar--hidden');
-      filterBar.classList.remove('grimoire-filter-bar--no-class');
-    } else {
-      filterBar.classList.remove('grimoire-filter-bar--hidden');
-      filterBar.classList.remove('grimoire-filter-bar--no-class');
-    }
+    filterBar.classList.remove('grimoire-filter-bar--hidden');
   }
 
   // Синхронизируем состояние кнопок фильтра
@@ -324,37 +316,28 @@ function renderSpellPool() {
   // Получаем все спеллы и классифицируем каждый
   const allSpells = Object.values(SPELLS_DATA);
 
-  // Разбиваем на три группы по приоритету отображения
+  // Разбиваем на группы по приоритету отображения
   const available = [];
   const lockedLevel = [];
-  const lockedClass = [];
 
   allSpells.forEach(spell => {
     const spellState = getSpellPoolState(spell, playerClass, playerLevel);
 
-    // Фильтр "My Class": скрываем locked-class полностью
-    if (poolFilter === 'myclass' && spellState === 'locked-class') return;
+    // Никогда не показываем спеллы чужих классов — игроку они не нужны
+    if (spellState === 'locked-class') return;
+
+    // Фильтр 'myclass': показываем ТОЛЬКО спеллы своего класса (не универсальные)
+    if (poolFilter === 'myclass' && playerClass && spell.classRestriction === null) return;
 
     if (spellState === 'available') {
       available.push({ spell, spellState });
     } else if (spellState === 'locked-level') {
       lockedLevel.push({ spell, spellState });
-    } else {
-      lockedClass.push({ spell, spellState });
     }
   });
 
-  // Сортируем locked-class по классу, потом по уровню (для читаемости дерева)
-  const classOrder = ['pyromancer', 'stormcaller', 'tidecaster', 'geomancer'];
-  lockedClass.sort((a, b) => {
-    const ca = classOrder.indexOf(a.spell.classRestriction);
-    const cb = classOrder.indexOf(b.spell.classRestriction);
-    if (ca !== cb) return ca - cb;
-    return a.spell.unlockLevel - b.spell.unlockLevel;
-  });
-
-  // Итоговый упорядоченный список для рендера
-  const ordered = [...available, ...lockedLevel, ...lockedClass];
+  // Итоговый упорядоченный список для рендера (only available + locked-by-level)
+  const ordered = [...available, ...lockedLevel];
 
   // Рендерим карточки
   ordered.forEach(({ spell, spellState }) => {
@@ -362,10 +345,8 @@ function renderSpellPool() {
     card.className = 'spell-pool-card';
     card.dataset.spellId = spell.id;
 
-    // Добавляем классы состояния
-    if (spellState === 'locked-class') {
-      card.classList.add('spell-locked-class');
-    } else if (spellState === 'locked-level') {
+    // Добавляем классы состояния (locked-class спеллы уже отфильтрованы выше)
+    if (spellState === 'locked-level') {
       card.classList.add('spell-locked-level');
     }
 
@@ -423,17 +404,30 @@ function renderSpellPool() {
       });
       card.addEventListener('dragend', () => card.classList.remove('dragging'));
 
-      // Одиночный клик — выбираем заклинание (потом клик по слоту)
+      // Одиночный клик:
+      // - Первый клик — выбираем заклинание (подсветка)
+      // - Повторный клик на уже выбранное — ставим в первый свободный слот
+      //   (позволяет заполнить всю ротацию одним спеллом)
       card.addEventListener('click', () => {
         if (selectedPoolSpellId === spell.id) {
-          selectedPoolSpellId = null;
+          // Спелл уже выбран — добавляем в первый пустой слот
+          const emptyIndex = slots.findIndex(s => s === null);
+          if (emptyIndex !== -1) {
+            slots[emptyIndex] = spell.id;
+            // Не сбрасываем selectedPoolSpellId — позволяет продолжать клики
+            onSlotsChanged();
+          } else {
+            // Все слоты заняты — снимаем выделение
+            selectedPoolSpellId = null;
+            renderSpellPool();
+          }
         } else {
           selectedPoolSpellId = spell.id;
+          renderSpellPool();
         }
-        renderSpellPool();
       });
 
-      // Двойной клик — ставим в первый свободный слот
+      // Двойной клик — ставим в первый свободный слот (legacy, работает как раньше)
       card.addEventListener('dblclick', () => {
         const emptyIndex = slots.findIndex(s => s === null);
         if (emptyIndex !== -1) {

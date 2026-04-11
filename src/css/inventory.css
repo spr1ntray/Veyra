@@ -81,7 +81,7 @@
 .inv-layout {
   display: flex;
   flex: 1;
-  overflow: visible;
+  overflow: hidden;
   min-height: 0; /* flex-дети не растягивают родителя за пределы экрана */
 }
 
@@ -187,7 +187,38 @@
   font-weight: 500;
   letter-spacing: 1px;
   color: var(--color-gold);
+  margin-bottom: 4px;
+}
+
+/* ===== XP PROGRESS BAR ===== */
+.inv-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
+}
+.inv-xp-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(201, 168, 76, 0.2);
+}
+.inv-xp-bar {
+  height: 100%;
+  background: linear-gradient(to right, #8b6914, #c9a84c, #e8c46a);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 6px rgba(201, 168, 76, 0.4);
+}
+.inv-xp-text {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: rgba(201, 168, 76, 0.7);
+  white-space: nowrap;
+  min-width: 90px;
+  text-align: right;
 }
 .inv-stat-row {
   display: flex;
@@ -254,12 +285,14 @@
 .inv-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  column-gap: 10px;
-  row-gap: 6px;
+  gap: 10px;
   width: 100%;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   align-content: start;
+  min-height: 0; /* allow flex shrink for scrolling */
+  box-sizing: border-box;
 }
 
 /* ===== ПАГИНАЦИЯ ===== */
@@ -322,6 +355,7 @@
   position: relative;
   cursor: default;
   transition: all 0.15s ease;
+  background: rgba(15, 12, 8, 0.6);
 }
 
 /* Фон BG_SELL через ::before — не переопределяется inline background из JS */

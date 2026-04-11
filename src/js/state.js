@@ -123,6 +123,7 @@ export const ITEMS_DATA = {
     id: 'mana_elixir', name: 'Mana Elixir',
     slot: 'consumable', bonus: 0, rarity: 'common',
     desc: '+25% spell damage for 3 combats', canUnequip: false,
+    lore: 'Brewed in the cellars beneath the old college. The recipe was banned after three students dissolved. Morthis acquired the last working batch through channels he declines to name.',
     img: 'assets/generated/pixel/ICON_017.png',
     buffId: 'mana_surge', buffCombats: 3,
     price: 50
@@ -131,6 +132,7 @@ export const ITEMS_DATA = {
     id: 'crystal_shard', name: 'Crystal Shard',
     slot: 'consumable', bonus: 0, rarity: 'common',
     desc: '+15 bonus gold per victory for 5 combats', canUnequip: false,
+    lore: 'A splinter from the Fortune Vein — a crystal seam that runs beneath the eastern marshes. Prospectors who found it grew rich. Then they grew teeth in places teeth should not be. The shard still draws gold like a wound draws flies.',
     img: 'assets/generated/pixel/ICON_018.png',
     buffId: 'crystal_fortune', buffCombats: 5,
     price: 40
@@ -139,6 +141,7 @@ export const ITEMS_DATA = {
     id: 'iron_flask', name: 'Iron Flask',
     slot: 'consumable', bonus: 0, rarity: 'uncommon',
     desc: '+40 max HP for 3 combats', canUnequip: false,
+    lore: 'Forged by a blacksmith who believed the body was just another piece of armor. The runes along the rim harden flesh and thicken blood. It tastes like rust and regret, but the ones who drink it tend to walk home.',
     img: 'assets/generated/pixel/ICON_019.png',
     buffId: 'iron_flask_buff', buffCombats: 3,
     price: 60
@@ -147,6 +150,7 @@ export const ITEMS_DATA = {
     id: 'shadow_dust', name: 'Shadow Dust',
     slot: 'consumable', bonus: 0, rarity: 'rare',
     desc: '×2 XP for 2 combats', canUnequip: false,
+    lore: 'Scraped from the walls of places where something died violently and often. The dust remembers the lessons those deaths taught. Inhale it before a fight and you will learn twice as fast — though the nightmares are part of the price.',
     img: 'assets/generated/pixel/ICON_020.png',
     buffId: 'shadow_dust_buff', buffCombats: 2,
     price: 80
@@ -404,7 +408,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
     emoji: '⚡',
-    img: null
+    img: 'assets/generated/pixel/SPELL_010_LIGHTNING_BOLT.png'
   },
   zephyr: {
     id: 'zephyr',
@@ -419,7 +423,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.5)',
     emoji: '🌀',
-    img: null
+    img: 'assets/generated/pixel/SPELL_011_ZEPHYR.png'
   },
   chain_lightning: {
     id: 'chain_lightning',
@@ -434,7 +438,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.7)',
     emoji: '⚡',
-    img: null
+    img: 'assets/generated/pixel/SPELL_012_CHAIN_LIGHTNING.png'
   },
   tailwind: {
     id: 'tailwind',
@@ -449,7 +453,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.5)',
     emoji: '💨',
-    img: null
+    img: 'assets/generated/pixel/SPELL_013_TAIWIND.png'
   },
   ball_lightning: {
     id: 'ball_lightning',
@@ -464,7 +468,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
     emoji: '🔵',
-    img: null
+    img: 'assets/generated/pixel/SPELL_014_BALL_LIGHTNING.png'
   },
   cyclone: {
     id: 'cyclone',
@@ -479,7 +483,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
     emoji: '🌪️',
-    img: null
+    img: 'assets/generated/pixel/SPELL_015_CYCLONE.png'
   },
   tempest: {
     id: 'tempest',
@@ -494,7 +498,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.8)',
     emoji: '⛈️',
-    img: null
+    img: 'assets/generated/pixel/SPELL_016_TEMPEST.png'
   },
 
   // ===== TIDECASTER SPELLS (water element) =====
@@ -511,7 +515,7 @@ export const SPELLS_DATA = {
     color: '#3498db',
     glowColor: 'rgba(52,152,219,0.6)',
     emoji: '🧊',
-    img: null
+    img: 'assets/generated/pixel/SPELL_017_FROST_SPIKE.png'
   },
   healing_rain: {
     id: 'healing_rain',
@@ -526,7 +530,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.6)',
     emoji: '💧',
-    img: null
+    img: 'assets/generated/pixel/SPELL_018_HEALING_RAIN.png'
   },
   tidal_wave: {
     id: 'tidal_wave',
@@ -541,7 +545,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.6)',
     emoji: '🌊',
-    img: null
+    img: 'assets/generated/pixel/SPELL_019_TIDAL_WAVE.png'
   },
   drain_life: {
     id: 'drain_life',
@@ -556,7 +560,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.6)',
     emoji: '💀',
-    img: null
+    img: 'assets/generated/pixel/SPELL_020_TSUNAMI.png'
   },
   blizzard: {
     id: 'blizzard',
@@ -571,7 +575,7 @@ export const SPELLS_DATA = {
     color: '#1a6da0',
     glowColor: 'rgba(26,109,160,0.6)',
     emoji: '❄️',
-    img: null
+    img: 'assets/generated/pixel/SPELL_021_TSUNAMI.png'
   },
   tsunami: {
     id: 'tsunami',
@@ -586,7 +590,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.7)',
     emoji: '🌊',
-    img: null
+    img: null  /* TODO: needs unique icon — SPELL_020 used for Drain Life */
   },
   frozen_tomb: {
     id: 'frozen_tomb',
@@ -601,7 +605,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.7)',
     emoji: '❄️',
-    img: null
+    img: 'assets/generated/pixel/SPELL_022_FROZEN_TOMB.png'
   },
   maelstrom: {
     id: 'maelstrom',
@@ -616,7 +620,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.8)',
     emoji: '🌀',
-    img: null
+    img: 'assets/generated/pixel/SPELL_023_MAELSTROM.png'
   },
 
   // ===== GEOMANCER SPELLS (earth element) =====
@@ -633,7 +637,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.6)',
     emoji: '🪨',
-    img: null
+    img: 'assets/generated/pixel/SPELL_024_ROCK_SHARD.png'
   },
   stone_skin: {
     id: 'stone_skin',
@@ -648,7 +652,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.5)',
     emoji: '🛡️',
-    img: null
+    img: 'assets/generated/pixel/SPELL_025_STONE_SKIN.png'
   },
   tremor: {
     id: 'tremor',
@@ -663,7 +667,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.6)',
     emoji: '💥',
-    img: null
+    img: 'assets/generated/pixel/SPELL_026_TREMOR.png'
   },
   earthen_spike: {
     id: 'earthen_spike',
@@ -678,7 +682,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.7)',
     emoji: '🪨',
-    img: null
+    img: 'assets/generated/pixel/SPELL_027_EARTHEN_SPIKE.png'
   },
   fortify: {
     id: 'fortify',
@@ -693,7 +697,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.5)',
     emoji: '🏰',
-    img: null
+    img: 'assets/generated/pixel/SPELL_028_FORTIFY.png'
   },
   avalanche: {
     id: 'avalanche',
@@ -708,7 +712,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.7)',
     emoji: '🪨',
-    img: null
+    img: 'assets/generated/pixel/SPELL_029_AVALANCHE.png'
   },
   petrify: {
     id: 'petrify',
@@ -723,7 +727,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.7)',
     emoji: '🗿',
-    img: null
+    img: 'assets/generated/pixel/SPELL_030_PETRIFY.png'
   },
   tectonic_shift: {
     id: 'tectonic_shift',
@@ -738,7 +742,7 @@ export const SPELLS_DATA = {
     color: '#e67e22',
     glowColor: 'rgba(230,126,34,0.8)',
     emoji: '🌍',
-    img: null
+    img: 'assets/generated/pixel/SPELL_031_TECTONIC_SHIFT.png'
   }
 };
 
@@ -878,7 +882,7 @@ export const ITEM_POOLS = {
 function getDefaultState() {
   const now = Date.now();
   return {
-    version: 1,
+    version: 2,
     name: 'Unnamed Wizard',
     level: 1,
     xp: 0,
@@ -1045,9 +1049,32 @@ export function loadState() {
         }
       }
 
-      // === Migration: skeleton_iron_ring в инвентаре ===
-      if (_state.inventory && _state.inventory.skeleton_iron_ring === undefined) {
-        _state.inventory.skeleton_iron_ring = 0;
+      // === Migration: inventory — grant starter items for old saves ===
+      // Saves from version <2 (or no version) started with all inventory counts at 0.
+      // Current defaults give 12 equipment items with count 1.
+      // This migration grants those items once for returning players.
+      if (!_state.version || _state.version < 2) {
+        const defaultInv = getDefaultState().inventory;
+        if (_state.inventory) {
+          for (const [itemId, defaultCount] of Object.entries(defaultInv)) {
+            if (_state.inventory[itemId] === undefined) {
+              // New item added in later version — grant it, but consumables start at 0
+              const itemData = ITEMS_DATA[itemId];
+              if (itemData && itemData.slot !== 'consumable') {
+                _state.inventory[itemId] = defaultCount;
+              } else {
+                _state.inventory[itemId] = 0;
+              }
+            } else if (defaultCount > 0 && _state.inventory[itemId] === 0) {
+              // Starter equipment that old save never received — grant it
+              const itemData = ITEMS_DATA[itemId];
+              if (itemData && itemData.slot !== 'consumable') {
+                _state.inventory[itemId] = defaultCount;
+              }
+            }
+          }
+        }
+        _state.version = 2;
       }
 
       // === Migration: battleState fields ===
