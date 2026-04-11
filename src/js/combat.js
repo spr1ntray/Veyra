@@ -12,6 +12,9 @@ import {
   SPELLS_DATA, ENEMIES_DATA
 } from './state.js';
 
+// BUG-005: import aggregatePassiveBonuses directly to avoid window._passiveNodesMap race condition
+import { aggregatePassiveBonuses } from './passives.js';
+
 // Экспортируем данные для обратной совместимости с main.js
 export { SPELLS_DATA as SPELLS };
 
@@ -221,7 +224,8 @@ export function initBattle(enemyId, options = {}) {
     livingBombs: [],
 
     // === Passive skill tree procs ===
-    _secondWindUsed: false  // U7: resets each fight
+    _secondWindUsed: false,  // U7: resets each fight
+    _phoenixUsed: false      // P-K2: resets each fight
   };
 
   renderBattleUI(enemy);
@@ -1124,6 +1128,13 @@ function performEnemyAttack(enemy) {
     dmg = Math.floor(dmg * 0.85);
   }
 
+  // BUG-001: Apply passive damage reduction from unlocked nodes (U5: +5% DR, T10: +8% DR, etc.)
+  // Uses direct import of aggregatePassiveBonuses to avoid window._passiveNodesMap race condition (BUG-005)
+  const passiveDR = aggregatePassiveBonuses(state.passives?.unlocked || []).damageReduction || 0;
+  if (passiveDR > 0) {
+    dmg = Math.floor(dmg * (1 - passiveDR));
+  }
+
   // Щит поглощает урон первым
   let shieldAbsorbed = 0;
   const prevShieldHP = battleState.shieldHP;
@@ -1223,7 +1234,23 @@ function performEnemyAttack(enemy) {
   }
 
   if (battleState.mageHP <= 0) {
-    endBattle('loss');
+    // BUG-003: Phoenix Protocol (P-K2) — once per fight, resurrect with 30% HP instead of dying
+    const passiveIds = (state.passives && state.passives.unlocked) || [];
+    if (passiveIds.includes('P-K2') && !battleState._phoenixUsed) {
+      const reviveHP = Math.floor(battleState.mageMaxHP * 0.30);
+      battleState.mageHP = reviveHP;
+      battleState._phoenixUsed = true;
+      addCombatLog('Phoenix Protocol activated! Revived with 30% HP!', '#e67e22');
+      updateMageHP();
+      // Flash the mage element to signal the resurrection
+      const mageEl = document.getElementById('combat-mage');
+      if (mageEl) {
+        mageEl.classList.add('mage-hit');
+        setTimeout(() => mageEl.classList.remove('mage-hit'), 600);
+      }
+    } else {
+      endBattle('loss');
+    }
   }
 }
 

@@ -1044,7 +1044,7 @@ export const ITEM_POOLS = {
 function getDefaultState() {
   const now = Date.now();
   return {
-    version: 2,
+    version: 3,
     name: 'Unnamed Wizard',
     level: 1,
     xp: 0,

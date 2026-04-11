@@ -1,6 +1,6 @@
 /**
  * passives.js — Passive Skill Tree (Ley Loom)
- * 88 nodes: 8 Universal + 20 per class (4 classes)
+ * 80 nodes: 8 Universal + 18 per class (4 classes × 10 minor + 6 major + 2 keystone)
  * Each node has: id, name, type, cost, classRestriction, requires[], effect{}, description
  */
 
@@ -57,7 +57,7 @@ export const PASSIVE_NODES = [
     description: '+15% damage vs enemies below 25% HP'
   },
 
-  // ===== PYROMANCER (20 nodes) =====
+  // ===== PYROMANCER (18 nodes: 10 minor + 6 major + 2 keystone) =====
 
   // --- Minor ---
   {
@@ -173,7 +173,7 @@ export const PASSIVE_NODES = [
     description: 'Once per battle: resurrect with 30% HP. -15% max HP.'
   },
 
-  // ===== STORMCALLER (20 nodes) =====
+  // ===== STORMCALLER (18 nodes: 10 minor + 6 major + 2 keystone) =====
 
   // --- Minor ---
   {
@@ -289,7 +289,7 @@ export const PASSIVE_NODES = [
     description: '-20% incoming damage, 40% lightning counter on hit. Dodge disabled.'
   },
 
-  // ===== TIDECASTER (20 nodes) =====
+  // ===== TIDECASTER (18 nodes: 10 minor + 6 major + 2 keystone) =====
 
   // --- Minor ---
   {
@@ -405,7 +405,7 @@ export const PASSIVE_NODES = [
     description: 'Lifesteal overflow converts to shield (cap 30% maxHP). Drain Life 70% lifesteal. Non-lifesteal heals -40%.'
   },
 
-  // ===== GEOMANCER (20 nodes) =====
+  // ===== GEOMANCER (18 nodes: 10 minor + 6 major + 2 keystone) =====
 
   // --- Minor ---
   {
@@ -590,6 +590,11 @@ export function calcRespecCost(unlockedIds) {
 /**
  * Aggregates all passive bonuses from unlocked nodes into a single flat object.
  * Additive effects are summed; boolean flags are OR'd.
+ *
+ * Note: proc-based passives (infernalMomentum, phoenixProtocol, etc.) are intentionally
+ * omitted here — they are checked directly in combat.js via state.passives.unlocked.
+ * This function handles only stat-modifying bonuses (DR, damage%, HP%, etc.).
+ *
  * @param {string[]} unlockedIds
  * @returns {object}
  */
