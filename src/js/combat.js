@@ -75,6 +75,11 @@ let battleState = {
 // Колбек окончания боя
 let _onBattleEnd = null;
 
+// Флаги текущего контекста боя
+let _isTowerCombat = false;   // если true — бой в башне (flee скрыт, награды не начисляются)
+let _towerCarryHP  = null;    // HP мага при переносе между этажами (null = полное HP)
+let _towerCarryShield = 0;    // Щит мага при переносе между этажами
+
 /**
  * Устанавливает колбек окончания боя (вызывается из main.js)
  */
@@ -85,8 +90,9 @@ export function setOnBattleEnd(callback) {
 /**
  * Возвращает максимальное HP мага по формуле:
  * 100 + (level - 1) * 15 + floor(BonusPower * 0.5)
+ * Экспортируется для использования в tower.js (избегаем дублирования формулы).
  */
-function calcMageMaxHP() {
+export function calcMageMaxHP() {
   const state = getState();
   const bp = getBonusPower();
   let base = 100 + (state.level - 1) * 15 + Math.floor(bp * 0.5);
@@ -113,8 +119,14 @@ function randInt(min, max) {
 /**
  * Инициализирует бой с конкретным врагом.
  * Вызывается из main.js после экрана гримуара.
+ *
+ * @param {string} enemyId
+ * @param {object} [options]
+ * @param {boolean} [options.isTowerCombat=false] — бой в башне (flee скрыт, rewards через tower.js)
+ * @param {number|null} [options.carryHP=null]    — перенесённое HP (null = начать с макс)
+ * @param {number} [options.carryShield=0]        — перенесённый щит
  */
-export function initBattle(enemyId) {
+export function initBattle(enemyId, options = {}) {
   checkDailyReset();
 
   // Очищаем таймеры предыдущего боя во избежание двойного срабатывания
@@ -131,14 +143,26 @@ export function initBattle(enemyId) {
   const activeSlots = state.grimoire.filter(id => id !== null);
   if (activeSlots.length < 3) return false;
 
+  // Сохраняем контекст башни
+  _isTowerCombat   = options.isTowerCombat === true;
+  _towerCarryHP    = options.carryHP    ?? null;
+  _towerCarryShield = options.carryShield ?? 0;
+
   const mageMaxHP = calcMageMaxHP();
+  // Начальное HP: либо перенесённое (не превышает макс), либо полное
+  const startHP     = _towerCarryHP !== null ? Math.min(_towerCarryHP, mageMaxHP) : mageMaxHP;
+  const startShield = _isTowerCombat ? _towerCarryShield : 0;
+
+  // Скрываем / показываем кнопку flee в зависимости от контекста
+  const backBtn = document.getElementById('btn-combat-back');
+  if (backBtn) backBtn.style.display = _isTowerCombat ? 'none' : '';
 
   // Сброс состояния боя
   battleState = {
     active: true,
-    mageHP: mageMaxHP,
+    mageHP: startHP,
     mageMaxHP,
-    shieldHP: 0,
+    shieldHP: startShield,
     enemyId,
     enemyHP: enemy.hp,
     enemyMaxHP: enemy.hp,
@@ -1158,6 +1182,36 @@ function endBattle(result) {
   const state = getState();
   const enemy = ENEMIES_DATA[battleState.enemyId];
 
+  // === Бой в башне: обычная боевая бухгалтерия не применяется ===
+  // Счётчики, буффы и награды управляются через tower.js
+  if (_isTowerCombat) {
+    saveState();
+    const mageHPLeft    = Math.max(0, battleState.mageHP);
+    const shieldHPLeft  = Math.max(0, battleState.shieldHP);
+    setTimeout(() => {
+      if (_onBattleEnd) {
+        _onBattleEnd({
+          result,
+          won: result === 'win',
+          isTowerCombat: true,
+          goldEarned: 0,
+          xpEarned: 0,
+          droppedItem: null,
+          fightsLeft: FIGHTS_LIMIT - state.combat.fightsToday,
+          levelUps: [],
+          expiredBuffs: [],
+          enemyName: enemy.name,
+          enemyHPLeft: Math.max(0, battleState.enemyHP),
+          mageHPLeft,
+          shieldHPLeft,  // передаём щит для carryover следующего этажа
+          elapsedTime: battleState.elapsedTime
+        });
+      }
+    }, 600);
+    return;
+  }
+
+  // === Обычный бой (не башня) ===
   state.combat.fightsToday++;
   state.combat.lastFightDate = new Date().toDateString();
 
@@ -1213,6 +1267,7 @@ function endBattle(result) {
       _onBattleEnd({
         result,        // 'win' | 'loss' | 'timeout'
         won: result === 'win',
+        isTowerCombat: false,
         goldEarned,
         xpEarned,
         droppedItem,
@@ -1222,6 +1277,7 @@ function endBattle(result) {
         enemyName: enemy.name,
         enemyHPLeft: Math.max(0, battleState.enemyHP),
         mageHPLeft: Math.max(0, battleState.mageHP),
+        shieldHPLeft: 0,
         elapsedTime: battleState.elapsedTime
       });
     }

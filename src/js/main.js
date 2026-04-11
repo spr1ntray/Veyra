@@ -16,6 +16,7 @@ import {
   showPopupLevelUp, hidePopupLevelUp, renderHudBuffs
 } from './ui.js';
 import { openShop, bindShopEvents } from './shop.js';
+import { initTower, openTowerScreen, onFloorWon, onFloorLost, restoreTowerSummary } from './tower.js';
 
 // Текущая локация (используется для восстановления экрана после боя)
 let currentLocation = 'square';
@@ -140,6 +141,9 @@ function init() {
   // Привязываем события магазина (один раз)
   bindShopEvents();
 
+  // Инициализируем систему башни (один раз)
+  initTower({ onExitToMap: () => goToLocation('square') });
+
   // Привязываем события Awakening popup (один раз)
   bindAwakeningEvents();
 
@@ -159,10 +163,19 @@ function startGame() {
 
   initMapScreen({
     onGoToSquare: () => goToLocation('square'),
-    onGoToHome:   () => goToLocation('home')
+    onGoToHome:   () => goToLocation('home'),
+    onGoToTower:  () => openTowerScreen()
   });
 
   initEquipmentZones();
+
+  // BUG-001: если игрок закрыл вкладку после прохождения этажей не забрав награды —
+  // currentRun остался в state. Восстанавливаем summary чтобы награды не потерялись.
+  if (restoreTowerSummary()) {
+    // Summary показан — не переходим на карту, ждём пока игрок нажмёт Claim
+    return;
+  }
+
   goToLocation('square');
 
   setTimeout(checkAndShowDailyLogin, 700);
@@ -203,11 +216,25 @@ function enterGrimoireScreen(enemyId) {
 }
 
 /**
- * Колбек результата боя — вызывается из combat.js
+ * Колбек результата боя — вызывается из combat.js.
+ * Если это башенный бой — маршрутизируем в tower.js,
+ * иначе обрабатываем как обычный бой.
  */
 function handleBattleEnd(result) {
   updateHUD();
   updateLocationHUD();
+
+  // === Башенный бой ===
+  if (result.isTowerCombat) {
+    if (result.won) {
+      onFloorWon(result);
+    } else {
+      onFloorLost();
+    }
+    return;
+  }
+
+  // === Обычный бой ===
   showPopupResult(result);
 
   if (result.expiredBuffs && result.expiredBuffs.length > 0) {
