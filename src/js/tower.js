@@ -33,10 +33,10 @@ const TOWER_FLOORS = [
   { floor: 4,  enemyId: 'frost_warden',       gold: 20,  xp: 35,  sprite: 'assets/generated/pixel/Frost_Warden.png',      element: '🧊', elementLabel: 'Water' },
   { floor: 5,  enemyId: 'bone_colossus',      gold: 25,  xp: 45,  sprite: 'assets/generated/pixel/Bone_Colossus.png',     element: '🪨', elementLabel: 'Earth' },
   { floor: 6,  enemyId: 'phantom_duelist',    gold: 30,  xp: 55,  sprite: 'assets/generated/pixel/Phantom_Duelist.png',   element: '💨', elementLabel: 'Air'   },
-  { floor: 7,  enemyId: 'abyssal_tide',       gold: 40,  xp: 70,  sprite: null,                                            element: '🌊', elementLabel: 'Water' },
-  { floor: 8,  enemyId: 'infernal_knight',    gold: 50,  xp: 85,  sprite: null,                                            element: '🔥', elementLabel: 'Fire'  },
-  { floor: 9,  enemyId: 'void_sentinel',      gold: 60,  xp: 100, sprite: null,                                            element: '🌑', elementLabel: 'Void'  },
-  { floor: 10, enemyId: 'archon_of_colwick',  gold: 100, xp: 150, sprite: null,                                            element: '👁️', elementLabel: 'Void'  }
+  { floor: 7,  enemyId: 'abyssal_tide',       gold: 40,  xp: 70,  sprite: null,                                                          element: '🌊', elementLabel: 'Water' },
+  { floor: 8,  enemyId: 'infernal_knight',    gold: 50,  xp: 85,  sprite: 'assets/generated/pixel/Infernal_Knight.png',                   element: '🔥', elementLabel: 'Fire'  },
+  { floor: 9,  enemyId: 'void_sentinel',      gold: 60,  xp: 100, sprite: 'assets/generated/pixel/Void_Sentinel.png',                    element: '🌑', elementLabel: 'Void'  },
+  { floor: 10, enemyId: 'archon_of_colwick',  gold: 100, xp: 150, sprite: 'assets/generated/pixel/Archon_of_Colwick.png',                element: '👁️', elementLabel: 'Void'  }
 ];
 
 const FULL_CLEAR_BONUS_GOLD = 360;

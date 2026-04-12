@@ -26,7 +26,10 @@
 │   ├── progression-system.md  -- GDD системы прогрессии (max lvl 50, attribute points, новые заклинания/враги/PvP)
 │   ├── mage-classes.md        -- GDD системы классов магов (4 класса, пассивки, заклинания, баланс)
 │   ├── combat-class-mechanics.md -- спецификация интеграции классов в combat.js (REVISED)
-│   └── art-prompts-consumables.md -- промпты для pixel art иконок расходников
+│   ├── art-prompts-consumables.md -- промпты для pixel art иконок расходников
+│   ├── mage-tower.md             -- GDD башни магов (10 этажей, враги, баланс, награды)
+│   ├── passive-skill-tree.md     -- GDD пассивных навыков (Ley Threads, 88 нод)
+│   └── art-prompt-tower.md       -- промпты для арта башни (фон, иконка, 10 врагов)
 ├── src/
 │   ├── css/
 │   │   ├── main.css         -- переменные, глобальные стили, шрифты
@@ -280,6 +283,104 @@
 - **Агент**: DevOps
 - **Суть**: Убрать токен из remote URL, настроить credential helper
 
+### [DONE] Убрана кнопка Discard для зелий
+- **Агент**: Coder
+- **Суть**: В `showTooltip()` (inventory.js) добавлено условие `isConsumable` в проверку скрытия Discard кнопки. Теперь зелья (slot === 'consumable') не показывают кнопку Discard.
+- **Файл**: `src/js/inventory.js`
+- **Дата**: 2026-04-06
+
+### [DONE] Баг ячеек инвентаря — hover scale обрезка
+- **Агент**: Coder
+- **Суть**: Ячейки инвентаря обрезались при hover (scale 1.06) из-за overflow:hidden на .inv-grid и .inv-cell. Фикс: .inv-grid overflow:visible + padding/margin компенсация; .inv-cell.has-item:hover получает overflow:visible. Анимация hover сохранена.
+- **Файл**: `src/css/inventory.css`
+- **Дата**: 2026-04-06
+
+### [DONE] Убраны спеллы чужих классов из гримуара
+- **Агент**: Coder
+- **Суть**: В renderSpellPool() (grimoire.js) спеллы с locked-class состоянием теперь полностью фильтруются. Игрок видит только: универсальные спеллы + спеллы своего класса (доступные + locked-by-level). Фильтр-бар All/MyClass скрыт (больше не нужен). Удалён мёртвый код для lockedClass.
+- **Файл**: `src/js/grimoire.js`
+- **Дата**: 2026-04-06
+
+### [DONE] Hover-тултип с лором у торговца + увеличение ячеек
+- **Агент**: Coder + Lore Writer
+- **Суть**: При наведении на товар в магазине появляется lore-tooltip справа от popup-box с текстом лора предмета. Добавлено поле `lore` к 4 расходникам в ITEMS_DATA (state.js). CSS: hover-эффект scale(1.03) + border glow на .shop-item-row. Tooltip создаётся динамически, позиционируется через getBoundingClientRect.
+- **Файлы**: `src/js/shop.js`, `src/js/state.js`, `src/css/shop.css`
+- **Дата**: 2026-04-06
+
+### [PROPOSED] Новая боевая локация: Шпиль Колвика (The Spire of Colwick)
+- **Агент**: Game Designer + Lore Writer
+- **Суть**: Предложена концепция башни с 10 этажами. Подробности в секции ниже. Ожидает одобрения пользователя.
+- **Дата**: 2026-04-06
+
+### [DONE] XP-бар в инвентаре
+- **Суть**: Добавлена визуальная шкала опыта под строкой уровня в экране инвентаря. Тонкая полоска с золотым градиентом, текст "X / Y XP" справа. Анимация перехода ширины (transition 0.5s).
+- **Файлы**: `index.html` (HTML-разметка), `src/js/inventory.js` (логика: импорт xpForLevel, рендеринг в renderCharBlock), `src/css/inventory.css` (стили: .inv-xp-row, .inv-xp-bar-wrap, .inv-xp-bar, .inv-xp-text)
+- **Дата**: 2026-04-10
+
+### [DONE] Баг: grimoire повторный клик на спелл
+- **Суть**: Баг — повторный клик на уже выбранный спелл в пуле снимал выделение вместо добавления в ротацию. Фикс: повторный клик теперь ставит спелл в первый пустой слот (позволяет заполнить всю ротацию одним спеллом многократными кликами). Выделение сохраняется для продолжения кликов. Снимается только когда все слоты заняты.
+- **Файл**: `src/js/grimoire.js` (обработчик click в renderSpellPool)
+- **Дата**: 2026-04-10
+
+### [DONE] Интеграция иконок спеллов SPELL_001-031
+- **Суть**: 31 файл SPELL_001-031.png в assets/generated/pixel/ привязаны к спеллам в SPELLS_DATA (state.js). Pyromancer (SPELL_001-008), Stormcaller (SPELL_009-016), Tidecaster (SPELL_017-023), Geomancer (SPELL_024-031).
+- **Файл**: `src/js/state.js`
+- **Верификация (2026-04-10)**:
+  - 31 файл на диске, все 31 привязки в state.js корректны
+  - **tsunami** -- img: null (SPELL_020 занят drain_life, SPELL_021 -- blizzard). Нужна уникальная иконка.
+  - **6 универсальных спеллов** (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption) используют старые иконки из assets/generated/ (не pixel/ каталог). Файлы существуют и работают, но стиль может отличаться от pixel-набора.
+- **Открытые вопросы**:
+  1. Нужна иконка для tsunami (SPELL_032_TSUNAMI.png)
+  2. Нужны pixel-иконки для 6 универсальных спеллов (SPELL_033-038)
+- **Дата**: 2026-04-10
+
+### [DONE] GDD: Башня магов — The Spire of Colwick
+- **Суть**: Полный GDD башни магов — 10 этажей с уникальными врагами, HP carryover между этажами, 3 попытки в день, система наград, first-clear бонус. Баланс: реально прокачанный персонаж (lv30+, хорошая экипировка, оптимизированный гримуар) может дойти до 10 этажа. Lv35-40 для reliable clear. Каждый класс имеет свою стратегию прохождения.
+- **Файл**: `design/mage-tower.md`
+- **Дата**: 2026-04-10
+
+### [DONE] Арт-промпты для башни магов
+- **Суть**: Детальные промпты для Stable Diffusion / DALL-E: фон входа в башню (1920x1080), иконка для карты (128x128), 10 спрайтов врагов (128x128). Pixel art стиль, dark fantasy, без Midjourney.
+- **Файл**: `design/art-prompt-tower.md`
+- **Дата**: 2026-04-10
+
+### [DONE] Ресёрч: пассивные деревья навыков в RPG
+- **Суть**: Проанализированы Path of Exile, Diablo 4, Lost Ark, Hades 2, Vampire Survivors, Melvor Idle. Ключевые выводы: 3-tier node system (minor/major/keystone), отдельные деревья для классов + shared core, ресурс "Ley Threads" для Veyra, respec должен быть дешёвым, 20-25 нод на класс оптимально.
+- **Файл**: `research/passive-skill-trees-research.md`
+- **Дата**: 2026-04-10
+
+### [DONE] GDD: Пассивное дерево навыков
+- **Суть**: Полный GDD системы пассивных навыков. Ресурс: Ley Threads (1/level + бонусы от башни, квестов, prestige). Структура: 8 universal core + 20 class ring = 28 нод на игрока. Типы: Minor (1 thread), Major (2 threads), Keystone (3 threads). Полная таблица всех 88 нод (8 universal + 20*4 class). Каждый класс имеет тему: Pyro=escalation, Storm=speed/chain, Tide=endurance, Geo=fortification. Keystones — build-defining с tradeoff.
+- **Файл**: `design/passive-skill-tree.md`
+- **Дата**: 2026-04-10
+
+---
+
+## Сессия 2026-04-11
+
+### [DONE] Баги исправлены
+- **Инвентарь**: убран `margin: -4px` (наложение ячеек), восстановлен фон, добавлен скролл сетки
+- **Гримуар**: фильтр "My Class" по умолчанию — игрок видит только спеллы своего класса
+- **Бой**: убран дублирующий вызов `showDamageNumber()` (была двойная отрисовка цифр урона)
+- **Миграция сейвов v2→v3**: equipment items с `count=0` получают дефолтные значения, consumables стартуют с 0
+
+### [DONE] The Spire of Colwick (башня магов)
+- **MVP реализован**: 10-этажный гаунтлет с HP/shield carryover между этажами
+- **Механика**: 3 попытки в день, anti-farm — награды только за этажи выше рекорда дня
+- **Враги**: 6 спрайтов (этажи 1-6), эмодзи-заглушки (🌊🔥🌑👁️) для этажей 7-10
+- **UI**: вход, переход между этажами, итог рана; восстановление summary при перезагрузке если есть непринятые награды
+- **Файлы**: `src/js/tower.js`, `src/css/tower.css`
+
+### [DONE] Passive Skill Tree — Ley Loom
+- **80 пассивных нод**: 8 universal + 18 на класс (4 класса)
+- **Ресурс**: Ley Threads (+1 за level up, бонусы от башни/квестов)
+- **Типы**: Minor (1 thread), Major (2), Keystone (3) с build-defining tradeoffs
+- **Respec**: полный сброс за 50g × потраченные threads
+- **Проки в бою**: Second Wind, Executioner, Mana Overflow, Phoenix Protocol (остальные в TODO)
+- **Файлы**: `src/js/passives.js`, `src/js/passives_ui.js`, `src/css/passives.css`
+
+### Next: Протестировать башню и пассивное дерево в браузере → доимплементить проки → спрайты башни этажей 7-10 → добавить Ley Threads в квесты и башню
+
 ---
 
 ## 7. История решений
@@ -298,14 +399,37 @@
 | 2026-03-30 | Attribute Points: flat structure (attributePoints + attributes) | Проще чем nested object из GDD, легче мигрировать |
 | 2026-03-30 | STR: +3 per point, INT: +4 per point | Из GDD progression-system.md, баланс для ~50 points |
 | 2026-03-30 | Выбор класса на уровне 3 (не 5) | Решение Game Designer — быстрее вовлечение |
+| 2026-04-06 | Спеллы чужих классов полностью скрыты в гримуаре | Пользователь: "зачем мне видеть все спеллы в игре" |
+| 2026-04-06 | Discard убран для consumables | Зелья не должны выбрасываться |
+| 2026-04-06 | Поле `lore` добавлено в ITEMS_DATA для расходников | Для hover-tooltip у торговца |
+| 2026-04-10 | XP-бар в инвентаре: под Level, золотой градиент | Визуализация прогресса — ключевой engagement hook |
+| 2026-04-10 | Grimoire: повторный клик = добавить в слот (не toggle) | Пользователь хочет заполнять ротацию одним спеллом |
+| 2026-04-10 | Иконки SPELL_010-031 привязаны к спеллам в SPELLS_DATA | 31 спелл из 32 теперь имеет pixel art иконку |
+| 2026-04-10 | Башня: 10 этажей, HP carryover, 3 попытки/день | Эндгейм контент, не gear check а skill check |
+| 2026-04-10 | Пассивные навыки: Ley Threads, 8 universal + 20 class | Отдельно от гримуара, ~68 threads к max level |
+| 2026-04-10 | SPELL_020=drain_life, SPELL_021=blizzard (оба файла TSUNAMI) | Временное решение, tsunami нужна своя иконка |
+| 2026-04-10 | Верификация иконок: 31/31 SPELL файлов на диске, привязки ОК | tsunami без иконки, 6 universal спеллов на старых ассетах |
 
 ---
 
-## 8. Как продолжить работу после перезапуска
+## 8. Открытые задачи / TODO
+
+- [ ] Иконка для tsunami (SPELL_032_TSUNAMI.png) — нужна генерация
+- [ ] Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption)
+- [ ] Реализация башни tower.js (Phase 1 MVP) — GDD готов
+- [ ] Реализация пассивных навыков (Phase 1 Foundation) — GDD готов
+- [ ] GitHub: убрать токен из remote URL, настроить credential helper
+
+---
+
+## 9. Как продолжить работу после перезапуска
 
 1. Прочитай этот файл (CAPTAIN_LOG.md)
 2. Проверь секцию "Активные задачи" -- там текущий статус
-3. Проверь `git status` и `git diff` чтобы увидеть незакоммиченные изменения
-4. Прочитай `design/progression-system.md` если нужен контекст по дизайну прогрессии
-5. Прочитай `design/mage-classes.md` если нужен контекст по системе классов магов
-6. Помни: ты -- дирижёр, делегируй работу агентам (Coder, Game Designer и т.д.)
+3. Проверь секцию "Открытые задачи / TODO" -- там бэклог
+4. Проверь `git status` и `git diff` чтобы увидеть незакоммиченные изменения
+5. Прочитай `design/progression-system.md` если нужен контекст по дизайну прогрессии
+6. Прочитай `design/mage-classes.md` если нужен контекст по системе классов магов
+7. Прочитай `design/mage-tower.md` если нужен контекст по башне (GDD одобрен)
+8. Прочитай `design/passive-skill-tree.md` если нужен контекст по пассивным навыкам (GDD одобрен)
+9. Помни: ты -- дирижёр, делегируй работу агентам (Coder, Game Designer и т.д.)

@@ -378,9 +378,9 @@
   z-index: 1;
 }
 
-/* Пустые ячейки получают дефолтный тёмный фон; заполненные — только rarityBg из JS */
+/* Пустые ячейки получают дефолтный тёмный фон; заполненные — rarityBg из JS */
 .inv-cell:not(.has-item) {
-  background-color: rgba(255, 255, 255, 0.04);
+  background: rgba(15, 12, 8, 0.6);
 }
 .inv-cell.has-item {
   border-color: rgba(201, 168, 76, 0.3);

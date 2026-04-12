@@ -6,7 +6,8 @@
 
 // Колбеки навигации, устанавливаются при инициализации
 let _onGoToSquare = null;
-let _onGoToHome = null;
+let _onGoToHome   = null;
+let _onGoToTower  = null;
 
 /**
  * Инициализирует экран карты — привязывает клики на хотспоты.
@@ -15,10 +16,12 @@ let _onGoToHome = null;
  * @param {Object} callbacks
  * @param {Function} callbacks.onGoToSquare - переход на площадь
  * @param {Function} callbacks.onGoToHome   - переход в дом
+ * @param {Function} [callbacks.onGoToTower] - переход к башне
  */
 export function initMapScreen(callbacks) {
   _onGoToSquare = callbacks.onGoToSquare;
   _onGoToHome   = callbacks.onGoToHome;
+  _onGoToTower  = callbacks.onGoToTower || null;
 
   // Хотспот площади
   const hotspotSquare = document.getElementById('hotspot-square');
@@ -33,6 +36,14 @@ export function initMapScreen(callbacks) {
   if (hotspotHome) {
     hotspotHome.addEventListener('click', () => {
       if (_onGoToHome) _onGoToHome();
+    });
+  }
+
+  // Хотспот башни
+  const hotspotTower = document.getElementById('hotspot-tower');
+  if (hotspotTower) {
+    hotspotTower.addEventListener('click', () => {
+      if (_onGoToTower) _onGoToTower();
     });
   }
 
@@ -71,7 +82,8 @@ function positionMapMarkers() {
 
   const markers = [
     { id: 'hotspot-square', ix: 0.505, iy: 0.507 },
-    { id: 'hotspot-home',   ix: 0.577, iy: 0.785 }
+    { id: 'hotspot-home',   ix: 0.577, iy: 0.785 },
+    { id: 'hotspot-tower',  ix: 0.820, iy: 0.280 }  // верхний правый угол карты
   ];
 
   markers.forEach(({ id, ix, iy }) => {

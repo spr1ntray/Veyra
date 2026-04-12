@@ -329,6 +329,9 @@ function renderShop() {
   if (!listEl) return;
   listEl.innerHTML = '';
 
+  // Создаём (или находим) lore-tooltip элемент
+  ensureLoreTooltip();
+
   // Применяем скидку квеста (10% на расходники)
   const hasDiscount = state.merchantFlags?.questDiscount === true;
 
@@ -393,6 +396,16 @@ function renderShop() {
       }
     });
 
+    // Hover tooltip с lore-описанием предмета
+    if (item.lore || item.desc) {
+      row.addEventListener('mouseenter', (e) => {
+        showLoreTooltip(item, row);
+      });
+      row.addEventListener('mouseleave', () => {
+        hideLoreTooltip();
+      });
+    }
+
     row.appendChild(iconEl);
     row.appendChild(infoEl);
     row.appendChild(priceEl);
@@ -405,9 +418,78 @@ function renderShop() {
   if (goldEl) goldEl.textContent = `🪙 ${state.gold}`;
 }
 
+// ===== LORE TOOLTIP =====
+
+/**
+ * Создаёт DOM-элемент для lore-tooltip если его ещё нет.
+ */
+function ensureLoreTooltip() {
+  if (document.getElementById('shop-lore-tooltip')) return;
+  const tooltip = document.createElement('div');
+  tooltip.id = 'shop-lore-tooltip';
+  tooltip.className = 'shop-lore-tooltip';
+  tooltip.innerHTML = `
+    <div class="shop-lore-name" id="shop-lore-name"></div>
+    <div class="shop-lore-text" id="shop-lore-text"></div>
+  `;
+  // Добавляем в popup-shop чтобы позиционировался внутри попапа
+  const popup = document.getElementById('popup-shop');
+  if (popup) {
+    popup.appendChild(tooltip);
+  } else {
+    document.body.appendChild(tooltip);
+  }
+}
+
+/**
+ * Показывает lore-tooltip рядом с товарной строкой.
+ * @param {object} item — объект из ITEMS_DATA
+ * @param {HTMLElement} rowEl — строка товара (.shop-item-row)
+ */
+function showLoreTooltip(item, rowEl) {
+  const tooltip = document.getElementById('shop-lore-tooltip');
+  if (!tooltip) return;
+
+  const nameEl = document.getElementById('shop-lore-name');
+  const textEl = document.getElementById('shop-lore-text');
+
+  if (nameEl) {
+    nameEl.textContent = item.name;
+  }
+  if (textEl) {
+    textEl.textContent = item.lore || item.desc || '';
+  }
+
+  // Позиционируем tooltip справа от popup-box
+  const popupBox = rowEl.closest('.shop-popup-box');
+  if (popupBox) {
+    const boxRect = popupBox.getBoundingClientRect();
+    const rowRect = rowEl.getBoundingClientRect();
+    const popupRect = tooltip.closest('#popup-shop')?.getBoundingClientRect() || { left: 0, top: 0 };
+
+    // Показываем справа от popup-box, вертикально по центру строки
+    tooltip.style.left = `${boxRect.right - popupRect.left + 12}px`;
+    tooltip.style.top = `${rowRect.top - popupRect.top + rowRect.height / 2}px`;
+    tooltip.style.transform = 'translateY(-50%)';
+  }
+
+  tooltip.classList.add('visible');
+}
+
+/**
+ * Скрывает lore-tooltip.
+ */
+function hideLoreTooltip() {
+  const tooltip = document.getElementById('shop-lore-tooltip');
+  if (tooltip) tooltip.classList.remove('visible');
+}
+
 /**
  * Инициализирует кнопку закрытия магазина
  */
 export function bindShopEvents() {
-  document.getElementById('btn-close-shop')?.addEventListener('click', closeShop);
+  document.getElementById('btn-close-shop')?.addEventListener('click', () => {
+    hideLoreTooltip();
+    closeShop();
+  });
 }
