@@ -5,6 +5,7 @@
  */
 
 import { loadState, getState, saveState } from './state.js';
+import { initDevPanel } from './devpanel.js';
 import { initBattle, getFightsRemaining, setOnBattleEnd } from './combat.js';
 import { initGrimoire, bindGrimoireEvents, updateHudClassBadge } from './grimoire.js';
 import { renderHomeScreen, initEquipmentZones } from './inventory.js';
@@ -124,6 +125,10 @@ function updateLocationActions(locationId) {
  * Инициализация игры при загрузке страницы
  */
 function init() {
+  // Dev panel — инициализируется до всего остального,
+  // доступна только при вводе пароля (Ctrl+Shift+D)
+  initDevPanel();
+
   initStarBackground();
 
   const state = loadState();
@@ -476,6 +481,16 @@ function bindEvents() {
         overlay.classList.remove('visible');
       }
     });
+  });
+
+  // Dev panel actions — позволяет devpanel.js обновлять HUD без прямого импорта
+  window.addEventListener('devpanel:action', (e) => {
+    const { action } = e.detail || {};
+    if (action === 'updateHUD') {
+      updateHUD();
+      updateLocationHUD();
+      updateHudClassBadge();
+    }
   });
 
   // Клавиатура

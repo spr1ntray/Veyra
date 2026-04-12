@@ -281,17 +281,15 @@
   height: 100%;
 }
 
-/* Сетка: 5 колонок, ячейки квадратные через aspect-ratio */
+/* Сетка: auto-fill по 5 колонок, рендерятся только реальные предметы */
 .inv-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   width: 100%;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 0 0 auto; /* не растягивать — высота определяется контентом */
+  overflow: visible;
   align-content: start;
-  min-height: 0; /* allow flex shrink for scrolling */
   box-sizing: border-box;
   padding: 2px; /* prevent border clipping */
 }
@@ -380,10 +378,7 @@
   z-index: 1;
 }
 
-/* Пустые ячейки получают дефолтный тёмный фон; заполненные — rarityBg из JS */
-.inv-cell:not(.has-item) {
-  background: rgba(15, 12, 8, 0.85);
-}
+/* Заполненные ячейки — rarityBg задаётся из JS */
 .inv-cell.has-item {
   border-color: rgba(201, 168, 76, 0.3);
   cursor: pointer;
@@ -581,14 +576,6 @@
 }
 .buff-pill-count::before { content: '('; }
 .buff-pill-count::after  { content: ')'; }
-
-/* Пустая ячейка инвентаря — пунктирная рамка */
-.cell-empty-inner {
-  width: 60%;
-  height: 60%;
-  border: 1px dashed rgba(201, 168, 76, 0.15);
-  border-radius: 4px;
-}
 
 /* ===== ФИЛЬТР ПО СЛОТАМ ===== */
 

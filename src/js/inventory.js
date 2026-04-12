@@ -236,12 +236,10 @@ function renderGrid() {
   // Сбрасываем страницу если вышла за пределы (например при смене фильтра)
   if (_currentPage >= totalPages) _currentPage = 0;
 
-  // Срез предметов текущей страницы
+  // Срез предметов текущей страницы — только реальные предметы, без пустых ячеек
   const pageItems = filteredItems.slice(_currentPage * PAGE_SIZE, _currentPage * PAGE_SIZE + PAGE_SIZE);
 
-  // Всегда рисуем ровно 20 ячеек
-  for (let i = 0; i < PAGE_SIZE; i++) {
-    const entry = pageItems[i] || null;
+  for (const entry of pageItems) {
     container.appendChild(createCell(entry, state));
   }
 

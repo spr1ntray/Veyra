@@ -71,9 +71,6 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* === ЗВЁЗДНЫЙ ФОН === */
@@ -111,36 +108,15 @@ body {
 }
 
 /* === КОНТЕЙНЕР ИГРЫ === */
-/* Design resolution: 1920x1080. Scales proportionally to fit any viewport >= 1280px */
+/* Заполняет весь экран без полос и без фиксированного соотношения сторон */
 #game-container {
   position: relative;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
-  max-width: 100vw;
-  max-height: 100vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   z-index: 1;
-  aspect-ratio: 16 / 9;
-}
-
-/* Scale game to fit viewport while maintaining aspect ratio */
-@media (min-aspect-ratio: 16/9) {
-  /* Viewport is wider than 16:9 — constrain by height */
-  #game-container {
-    height: 100vh;
-    width: calc(100vh * 16 / 9);
-    margin: 0 auto;
-  }
-}
-@media (max-aspect-ratio: 16/9) {
-  /* Viewport is taller than 16:9 — constrain by width */
-  #game-container {
-    width: 100vw;
-    height: calc(100vw * 9 / 16);
-    margin: auto 0;
-  }
 }
 
 /* === ЭКРАНЫ === */

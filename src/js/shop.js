@@ -381,13 +381,7 @@ function renderShop() {
       // buyItem из state.js использует item.price, поэтому патчим временно если есть скидка
       const result = buyItem(itemId, finalPrice);
       if (result.success) {
-        const purchaseLine = getPurchaseLine(itemId);
-        if (purchaseLine) {
-          // Реплика торговца в нотификации
-          showNotification(`"${purchaseLine}"`, 'lore');
-        } else {
-          showNotification(`Bought: ${item.name}`, 'success');
-        }
+        showNotification(`Purchased: ${item.name}`, 'success');
         updateHUD();
         renderShop(); // обновить золото и состояние кнопок
       } else if (result.reason === 'no_gold') {

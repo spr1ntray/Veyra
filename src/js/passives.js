@@ -122,53 +122,61 @@ export const PASSIVE_NODES = [
   },
 
   // --- Major ---
+  // P11 requires P1 (Searing Touch) + P4 (Burning Blood) — two minor nodes on fire-damage branch
   {
     id: 'P11', name: 'Infernal Momentum',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P1'],
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P1', 'P4'],
     effect: { infernalMomentum: true },
     description: 'Each fire cast grants +5% to the next (max 25%); resets on non-fire spell'
   },
+  // P12 requires P2 (Pyromaniac) + P7 (Crucible) — two minor nodes on DoT/Ignite branch
   {
     id: 'P12', name: 'Living Furnace',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2'],
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2', 'P7'],
     effect: { igniteMaxStacks: 5 },
     description: 'Ignite max stacks increased from 3 to 5'
   },
+  // P13 requires P1 (Searing Touch) + P6 (Kindling) — fire damage + first-strike branch
   {
     id: 'P13', name: 'Meltdown',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P1'],
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P1', 'P6'],
     effect: { meltdown: 0.20 },
     description: '+20% fire damage vs enemies below 30% HP'
   },
+  // P14 requires P2 (Pyromaniac) + P3 (Heat Wave) — DoT synergy branch
   {
     id: 'P14', name: 'Backdraft',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2'],
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2', 'P3'],
     effect: { backdraft: 0.50 },
     description: 'When Ignite expires: final explosion for 50% of total DoT dealt'
   },
+  // P15 requires P4 (Burning Blood) + P8 (Flash Point) — sustain/survivability branch
   {
     id: 'P15', name: 'Forge Shield',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P4'],
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P4', 'P8'],
     effect: { forgeShield: 0.15 },
     description: 'Every 4th fire cast: gain shield equal to 15% of damage dealt'
   },
+  // P16 requires P2 (Pyromaniac) + P5 (Volatile Embers) — ember/DoT explosion branch
   {
     id: 'P16', name: 'Chain Reaction',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2'],
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2', 'P5'],
     effect: { chainReaction: 0.30 },
     description: 'Living Bomb explosion: 30% chance to apply 1 Ignite stack'
   },
 
   // --- Keystone ---
+  // Path to P-K1: P1 → P4 → P11 (Major) + P6 → P13 (Major) + P9 (extra minor) = 5 nodes, ~9 threads
   {
     id: 'P-K1', name: 'Conflagration',
-    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['P11'],
+    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['P11', 'P9'],
     effect: { conflagration: true },
     description: '+20% Ignite chance, Ignite damage +30%, direct fire damage -10%'
   },
+  // Path to P-K2: P2 → P7 → P12 (Major) + P9 (Fire Eater) as extra minor = 4 nodes, ~8 threads
   {
     id: 'P-K2', name: 'Phoenix Protocol',
-    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['P12'],
+    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['P12', 'P10'],
     effect: { phoenixProtocol: true, maxHpPercent: -0.15 },
     description: 'Once per battle: resurrect with 30% HP. -15% max HP.'
   },
@@ -238,53 +246,61 @@ export const PASSIVE_NODES = [
   },
 
   // --- Major ---
+  // S11 requires S1 (Charged Atmosphere) + S4 (Storm Surge) — raw air damage branch
   {
     id: 'S11', name: 'Eye of the Storm',
-    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S1'],
+    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S1', 'S4'],
     effect: { eyeOfStorm: true },
     description: 'Every 5th cast: next air spell deals ×2 damage'
   },
+  // S12 requires S3 (Overcharge) + S10 (Crackling Energy) — Static charge branch
   {
     id: 'S12', name: 'Supercell',
-    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S3'],
+    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S3', 'S10'],
     effect: { supercell: 0.30 },
     description: 'Static Discharge: 30% chance to proc a second time'
   },
+  // S13 requires S2 (Quick Fingers) + S8 (Tailwind Boost) — cast speed / haste branch
   {
     id: 'S13', name: 'Jet Stream',
-    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S2'],
+    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S2', 'S8'],
     effect: { jetStream: 0.20 },
     description: '3 spells cast in 4s: +20% damage for 3s'
   },
+  // S14 requires S3 (Overcharge) + S6 (Conductive) — chain/bounce branch
   {
     id: 'S14', name: 'Ball Lightning Echo',
-    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S3'],
+    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S3', 'S6'],
     effect: { ballLightningEcho: 0.15 },
     description: 'Ball Lightning ticks: 15% chance to chain to a second hit'
   },
+  // S15 requires S5 (Wind Walker) + S9 (Galvanic) — dodge/counter branch
   {
     id: 'S15', name: 'Storm Shield',
-    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S5'],
+    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S5', 'S9'],
     effect: { stormShield: 0.25 },
     description: 'Zephyr dodge: reflect 25% of avoided damage'
   },
+  // S16 requires S1 (Charged Atmosphere) + S7 (Thunder Clap) — air control branch
   {
     id: 'S16', name: 'Magnetic Field',
-    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S1'],
+    type: 'major', cost: 2, classRestriction: 'stormcaller', requires: ['S1', 'S7'],
     effect: { magneticField: 0.10 },
     description: 'Cyclone slow: enemy takes +10% air damage'
   },
 
   // --- Keystone ---
+  // Path to S-K1: S3 → S10 → S12 (Major) + S4 → S11 (Major) + S4 extra = 5 nodes, ~9 threads
   {
     id: 'S-K1', name: 'Perpetual Storm',
-    type: 'keystone', cost: 3, classRestriction: 'stormcaller', requires: ['S11'],
+    type: 'keystone', cost: 3, classRestriction: 'stormcaller', requires: ['S12', 'S4'],
     effect: { perpetualStorm: true },
     description: 'Static charges no longer auto-discharge. At 10 charges: mega-discharge ×3 damage'
   },
+  // Path to S-K2: S5 → S9 → S15 (Major) + S7 (Thunder Clap) as extra minor = 4 nodes, ~8 threads
   {
     id: 'S-K2', name: 'Lightning Rod',
-    type: 'keystone', cost: 3, classRestriction: 'stormcaller', requires: ['S15'],
+    type: 'keystone', cost: 3, classRestriction: 'stormcaller', requires: ['S15', 'S7'],
     effect: { lightningRod: true },
     description: '-20% incoming damage, 40% lightning counter on hit. Dodge disabled.'
   },
@@ -354,53 +370,61 @@ export const PASSIVE_NODES = [
   },
 
   // --- Major ---
+  // T11 requires T2 (Deep Currents) + T9 (Ebb and Flow) — lifesteal/healing synergy branch
   {
     id: 'T11', name: 'Riptide Mastery',
-    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T2'],
+    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T2', 'T9'],
     effect: { riptideMastery: true },
     description: 'Riptide heals 4% max HP (was 3%), triggers after 4 casts (was 5)'
   },
+  // T12 requires T3 (Numbing Cold) + T8 (Cold Snap) — slow control branch
   {
     id: 'T12', name: 'Frozen Ground',
-    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T3'],
+    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T3', 'T8'],
     effect: { frozenGround: 0.15 },
     description: 'Enemies slowed below 40% attack speed deal -15% damage'
   },
+  // T13 requires T4 (Rejuvenation) + T6 (Water Shield) — healing/shield branch
   {
     id: 'T13', name: 'Wellspring',
-    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T4'],
+    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T4', 'T6'],
     effect: { wellspring: 0.15 },
     description: 'Healing Rain: convert 15% of next spell damage to bonus heal'
   },
+  // T14 requires T3 (Numbing Cold) + T5 (Permafrost) — frost/slow damage branch
   {
     id: 'T14', name: 'Glacial Armor',
-    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T3'],
+    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T3', 'T5'],
     effect: { glacialArmor: 50 },
     description: 'Frozen Tomb: grants +50 shield for its duration'
   },
+  // T15 requires T5 (Permafrost) + T7 (Undertow) — bonus damage vs slowed branch
   {
     id: 'T15', name: 'Drown',
-    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T5'],
+    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T5', 'T7'],
     effect: { drown: 0.60 },
     description: 'Tsunami bonus vs slowed enemies increased to 60% (was 40%)'
   },
+  // T16 requires T1 (Tidal Strength) + T10 (Thick Skin) — raw water damage + survivability branch
   {
     id: 'T16', name: 'Tidal Surge',
-    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T1'],
+    type: 'major', cost: 2, classRestriction: 'tidecaster', requires: ['T1', 'T10'],
     effect: { tidalSurge: true },
     description: 'Every 3rd water cast: +25% damage and -0.3s cast time'
   },
 
   // --- Keystone ---
+  // Path to T-K1: T3 → T8 → T12 (Major) + T5 → T14 (Major) + T7 extra = 5 nodes, ~9 threads
   {
     id: 'T-K1', name: 'Absolute Zero',
-    type: 'keystone', cost: 3, classRestriction: 'tidecaster', requires: ['T12'],
+    type: 'keystone', cost: 3, classRestriction: 'tidecaster', requires: ['T12', 'T7'],
     effect: { absoluteZero: true },
     description: 'All slows reduce enemy damage (50% of slow%). Frozen Tomb +1s. Water casts +0.3s.'
   },
+  // Path to T-K2: T2 → T9 → T11 (Major) + T6 (Water Shield) as extra minor = 4 nodes, ~8 threads
   {
     id: 'T-K2', name: 'Leviathan',
-    type: 'keystone', cost: 3, classRestriction: 'tidecaster', requires: ['T11'],
+    type: 'keystone', cost: 3, classRestriction: 'tidecaster', requires: ['T11', 'T6'],
     effect: { leviathan: true },
     description: 'Lifesteal overflow converts to shield (cap 30% maxHP). Drain Life 70% lifesteal. Non-lifesteal heals -40%.'
   },
@@ -470,53 +494,61 @@ export const PASSIVE_NODES = [
   },
 
   // --- Major ---
+  // G11 requires G2 (Iron Will) + G4 (Stoneskin Boost) — shield sustain branch
   {
     id: 'G11', name: 'Tectonic Plates',
-    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G2'],
+    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G2', 'G4'],
     effect: { tectonicPlates: 0.03 },
     description: 'Shield regenerates 3% of max shield per second'
   },
+  // G12 requires G3 (Aftershock) + G6 (Quake) — stun/tremor branch
   {
     id: 'G12', name: 'Earthquake',
-    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G3'],
+    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G3', 'G6'],
     effect: { earthquake: true },
     description: 'Petrify stun +0.5s and +10% damage amplification'
   },
+  // G13 requires G1 (Bedrock Strength) + G8 (Geological Survey) — offensive damage branch
   {
     id: 'G13', name: 'Magma Core',
-    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G1'],
+    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G1', 'G8'],
     effect: { magmaCore: 0.10 },
     description: 'While shielded: +10% fire damage bonus'
   },
+  // G14 requires G5 (Unmovable) + G7 (Rubble) — damage reduction / counter branch
   {
     id: 'G14', name: 'Obsidian Armor',
-    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G5'],
+    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G5', 'G7'],
     effect: { obsidianArmor: true },
     description: 'Bedrock passive damage reduction: 3% → 5%'
   },
+  // G15 requires G4 (Stoneskin Boost) + G9 (Dense Core) — bulk/shield scaling branch
   {
     id: 'G15', name: 'Landslide',
-    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G4'],
+    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G4', 'G9'],
     effect: { landslide: 0.30 },
     description: 'Avalanche shield scaling increased to 30% (was 20%)'
   },
+  // G16 requires G2 (Iron Will) + G5 (Unmovable) — fortify/shield mastery branch
   {
     id: 'G16', name: 'Living Mountain',
-    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G2'],
+    type: 'major', cost: 2, classRestriction: 'geomancer', requires: ['G2', 'G5'],
     effect: { livingMountain: true },
     description: 'Fortify triples the shield (was doubled)'
   },
 
   // --- Keystone ---
+  // Path to G-K1: G2 → G5 → G16 (Major) + G4 → G11 (Major) + G9 extra = 5 nodes, ~9 threads
   {
     id: 'G-K1', name: 'Unbreakable',
-    type: 'keystone', cost: 3, classRestriction: 'geomancer', requires: ['G16'],
+    type: 'keystone', cost: 3, classRestriction: 'geomancer', requires: ['G16', 'G9'],
     effect: { unbreakable: true },
     description: 'Shield cap 150% maxHP (was 100%). Hits below 15% HP blocked while shield > 50% HP. Healing -50%.'
   },
+  // Path to G-K2: G2 → G4 → G11 (Major) + G3 → G6 → G12 (Major) + G10 extra = 5 nodes, ~9 threads
   {
     id: 'G-K2', name: 'Seismic Wrath',
-    type: 'keystone', cost: 3, classRestriction: 'geomancer', requires: ['G11'],
+    type: 'keystone', cost: 3, classRestriction: 'geomancer', requires: ['G12', 'G10'],
     effect: { seismicWrath: true },
     description: 'Each hit taken: +1 Wrath stack (max 10). +4% damage per stack. At 10: ×3 next earth spell. Shield gen -25%.'
   }
