@@ -162,7 +162,7 @@ export const ITEMS_DATA = {
     slot: 'quest', bonus: 0, rarity: 'quest',
     desc: "A worn iron ring. Someone's initials are scratched inside.",
     canUnequip: false,
-    img: null,
+    img: 'assets/generated/pixel/ICON_020.png',
     price: 0
   },
 
@@ -183,7 +183,7 @@ export const SPELLS_DATA = {
   // ===== UNIVERSAL SPELLS (available to all classes) =====
   arcane_bolt: {
     id: 'arcane_bolt',
-    name: 'Arcane Bolt',
+    name: 'Arc Bolt',
     school: 'arcane',
     baseDmg: { min: 25, max: 40 },
     castTime: 1.8,
@@ -197,7 +197,7 @@ export const SPELLS_DATA = {
   },
   arcane_barrage: {
     id: 'arcane_barrage',
-    name: 'Arcane Barrage',
+    name: 'Arc Barrage',
     school: 'arcane',
     baseDmg: { min: 15, max: 20 },
     castTime: 1.0,
@@ -211,7 +211,7 @@ export const SPELLS_DATA = {
   },
   mana_shield: {
     id: 'mana_shield',
-    name: 'Mana Shield',
+    name: 'Mana Ward',
     school: 'utility',
     baseDmg: { min: 0, max: 0 },
     castTime: 1.2,
@@ -240,7 +240,7 @@ export const SPELLS_DATA = {
   // Universal shadow spells (no class restriction)
   shadow_bolt: {
     id: 'shadow_bolt',
-    name: 'Shadow Bolt',
+    name: 'Shade Bolt',
     school: 'shadow',
     baseDmg: { min: 20, max: 35 },
     castTime: 1.8,
@@ -254,7 +254,7 @@ export const SPELLS_DATA = {
   },
   void_eruption: {
     id: 'void_eruption',
-    name: 'Void Eruption',
+    name: 'Void Burst',
     school: 'shadow',
     baseDmg: { min: 40, max: 60 },
     castTime: 2.8,
@@ -345,7 +345,7 @@ export const SPELLS_DATA = {
   },
   living_bomb: {
     id: 'living_bomb',
-    name: 'Living Bomb',
+    name: 'Live Bomb',
     school: 'fire',
     baseDmg: { min: 25, max: 35 },
     castTime: 2.0,
@@ -360,7 +360,7 @@ export const SPELLS_DATA = {
   },
   flame_wave: {
     id: 'flame_wave',
-    name: 'Flame Wave',
+    name: 'Flamwave',
     school: 'fire',
     baseDmg: { min: 45, max: 65 },
     castTime: 2.8,
@@ -407,7 +407,7 @@ export const SPELLS_DATA = {
   },
   lightning_bolt: {
     id: 'lightning_bolt',
-    name: 'Lightning Bolt',
+    name: 'L. Bolt',
     school: 'air',
     baseDmg: { min: 25, max: 35 },
     castTime: 1.5,
@@ -437,7 +437,7 @@ export const SPELLS_DATA = {
   },
   chain_lightning: {
     id: 'chain_lightning',
-    name: 'Chain Lightning',
+    name: 'Chain L.',
     school: 'air',
     baseDmg: { min: 30, max: 45 },
     castTime: 2.0,
@@ -467,7 +467,7 @@ export const SPELLS_DATA = {
   },
   ball_lightning: {
     id: 'ball_lightning',
-    name: 'Ball Lightning',
+    name: 'Ball L.',
     school: 'air',
     baseDmg: { min: 20, max: 30 },
     castTime: 2.5,
@@ -514,7 +514,7 @@ export const SPELLS_DATA = {
   // ===== TIDECASTER SPELLS (water element) =====
   frost_spike: {
     id: 'frost_spike',
-    name: 'Frost Spike',
+    name: 'Frostpike',
     school: 'water',
     baseDmg: { min: 20, max: 30 },
     castTime: 1.5,
@@ -529,7 +529,7 @@ export const SPELLS_DATA = {
   },
   healing_rain: {
     id: 'healing_rain',
-    name: 'Healing Rain',
+    name: 'Heal Rain',
     school: 'water',
     baseDmg: { min: 0, max: 0 },
     castTime: 1.5,
@@ -544,7 +544,7 @@ export const SPELLS_DATA = {
   },
   tidal_wave: {
     id: 'tidal_wave',
-    name: 'Tidal Wave',
+    name: 'Tidwave',
     school: 'water',
     baseDmg: { min: 25, max: 40 },
     castTime: 2.2,
@@ -559,7 +559,7 @@ export const SPELLS_DATA = {
   },
   drain_life: {
     id: 'drain_life',
-    name: 'Drain Life',
+    name: 'Drain',
     school: 'water',
     baseDmg: { min: 15, max: 25 },
     castTime: 2.5,
@@ -600,11 +600,11 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.7)',
     emoji: '🌊',
-    img: null  /* TODO: needs unique icon — SPELL_020 used for Drain Life */
+    img: 'assets/generated/pixel/SPELL_022_FROZEN_TOMB.png'  /* reuse frozen_tomb icon until unique art arrives */
   },
   frozen_tomb: {
     id: 'frozen_tomb',
-    name: 'Frozen Tomb',
+    name: 'Frostomb',
     school: 'water',
     baseDmg: { min: 15, max: 20 },
     castTime: 2.5,
@@ -636,7 +636,7 @@ export const SPELLS_DATA = {
   // ===== GEOMANCER SPELLS (earth element) =====
   rock_shard: {
     id: 'rock_shard',
-    name: 'Rock Shard',
+    name: 'Rockshard',
     school: 'earth',
     baseDmg: { min: 20, max: 30 },
     castTime: 2.0,
@@ -651,7 +651,7 @@ export const SPELLS_DATA = {
   },
   stone_skin: {
     id: 'stone_skin',
-    name: 'Stone Skin',
+    name: 'Stoneskin',
     school: 'earth',
     baseDmg: { min: 0, max: 0 },
     castTime: 1.5,
@@ -681,7 +681,7 @@ export const SPELLS_DATA = {
   },
   earthen_spike: {
     id: 'earthen_spike',
-    name: 'Earthen Spike',
+    name: 'E. Spike',
     school: 'earth',
     baseDmg: { min: 35, max: 50 },
     castTime: 2.2,
@@ -741,7 +741,7 @@ export const SPELLS_DATA = {
   },
   tectonic_shift: {
     id: 'tectonic_shift',
-    name: 'Tectonic Shift',
+    name: 'Tectonic',
     school: 'earth',
     baseDmg: { min: 55, max: 80 },
     castTime: 4.5,
@@ -802,7 +802,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 5, max: 9 },
     description: 'Fast attacks, medium HP. High DPS pressure.',
     recommendedLevel: 3,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/Ember_Wraith.png'
   },
   frost_elemental: {
     id: 'frost_elemental',
@@ -817,7 +817,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 6, max: 11 },
     description: 'Huge HP, weak attacks. A tank.',
     recommendedLevel: 4,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/Frost_Warden.png'
   },
   undead_knight: {
     id: 'undead_knight',
@@ -832,7 +832,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 8, max: 14 },
     description: 'Two resistances, one weakness. Prepared mages only.',
     recommendedLevel: 5,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/Bone_Colossus.png'
   },
   demon_lord: {
     id: 'demon_lord',
@@ -847,7 +847,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 12, max: 20 },
     description: 'High DPS and HP. Boss encounter.',
     recommendedLevel: 7,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/Infernal_Knight.png'
   },
   void_horror: {
     id: 'void_horror',
@@ -862,7 +862,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 18, max: 30 },
     description: 'Endgame. Optimal rotation required.',
     recommendedLevel: 9,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/Void_Sentinel.png'
   },
 
   // ===== THE SPIRE OF COLWICK — башня (этажи 1-10) =====

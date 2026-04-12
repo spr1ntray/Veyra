@@ -326,8 +326,9 @@ function renderSpellPool() {
     // Никогда не показываем спеллы чужих классов — игроку они не нужны
     if (spellState === 'locked-class') return;
 
-    // Фильтр 'myclass': показываем ТОЛЬКО спеллы своего класса (не универсальные)
-    if (poolFilter === 'myclass' && playerClass && spell.classRestriction === null) return;
+    // Если класс выбран — скрываем универсальные спеллы (classRestriction: null)
+    // Они предназначены только для pre-class фазы игры
+    if (playerClass && spell.classRestriction === null) return;
 
     if (spellState === 'available') {
       available.push({ spell, spellState });

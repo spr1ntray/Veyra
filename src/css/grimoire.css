@@ -215,10 +215,10 @@
   letter-spacing: 0.5px;
   text-align: center;
   text-transform: uppercase;
-  max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 120px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.2;
 }
 
 .grimoire-slot-time {
@@ -359,10 +359,10 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   text-align: center;
-  max-width: 118px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 120px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.2;
 }
 
 .pool-card-stats {

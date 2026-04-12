@@ -614,7 +614,11 @@ export function aggregatePassiveBonuses(unlockedIds) {
     executioner: 0,
     shieldBurstDamage: 0,
     secondWind: false,
-    lifeStealBonus: 0
+    lifeStealBonus: 0,
+    infernalMomentum: false,
+    meltdown: 0,
+    backdraft: 0,
+    igniteMaxStacks: 0
   };
 
   for (const id of unlockedIds) {
@@ -637,6 +641,10 @@ export function aggregatePassiveBonuses(unlockedIds) {
     if (e.shieldBurstDamage)  bonuses.shieldBurstDamage  += e.shieldBurstDamage;
     if (e.secondWind)         bonuses.secondWind          = true;
     if (e.lifeStealBonus)     bonuses.lifeStealBonus     += e.lifeStealBonus;
+    if (e.infernalMomentum)   bonuses.infernalMomentum    = true;
+    if (e.meltdown)           bonuses.meltdown            += e.meltdown;
+    if (e.backdraft)          bonuses.backdraft           += e.backdraft;
+    if (e.igniteMaxStacks)    bonuses.igniteMaxStacks     = Math.max(bonuses.igniteMaxStacks, e.igniteMaxStacks);
   }
 
   return bonuses;

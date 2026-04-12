@@ -83,7 +83,7 @@ function positionMapMarkers() {
   const markers = [
     { id: 'hotspot-square', ix: 0.505, iy: 0.507 },
     { id: 'hotspot-home',   ix: 0.577, iy: 0.785 },
-    { id: 'hotspot-tower',  ix: 0.820, iy: 0.280 }  // верхний правый угол карты
+    { id: 'hotspot-tower',  ix: 0.430, iy: 0.300 }  // верхний правый угол карты
   ];
 
   markers.forEach(({ id, ix, iy }) => {

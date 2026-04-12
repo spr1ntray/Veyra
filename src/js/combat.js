@@ -204,6 +204,10 @@ export function initBattle(enemyId, options = {}) {
     staticCharges: 0,
     riptideTriggered: false,
 
+    // Pyromancer proc passives
+    infernalMomentumStacks: 0,  // +5% per fire cast, max 25% (5 stacks)
+    igniteDoTDealt: {},         // { dotId: totalDmgDealt } for Backdraft explosion
+
     // New combat effects
     evasionActive: false,
     evasionExpireAt: 0,
@@ -427,9 +431,35 @@ async function performCast(spell) {
     }
   }
 
+  // --- Pyromancer proc passives ---
+  const pBonuses = aggregatePassiveBonuses(passiveUnlocked);
+
+  // P11 Infernal Momentum: +5% per consecutive fire cast (max 25%), resets on non-fire
+  let infernalMod = 1.0;
+  if (pBonuses.infernalMomentum && state.classType === 'pyromancer') {
+    if (spell.school === 'fire') {
+      infernalMod = 1 + battleState.infernalMomentumStacks * 0.05;
+      // Stack will be incremented AFTER damage (in triggerPassives)
+    } else {
+      // Non-fire spell — reset stacks
+      if (battleState.infernalMomentumStacks > 0) {
+        addCombatLog('Infernal Momentum reset', '#e67e22');
+      }
+      battleState.infernalMomentumStacks = 0;
+    }
+  }
+
+  // P13 Meltdown: +20% fire damage vs enemies below 30% HP
+  let meltdownMod = 1.0;
+  if (pBonuses.meltdown > 0 && state.classType === 'pyromancer' && spell.school === 'fire') {
+    if (battleState.enemyHP < battleState.enemyMaxHP * 0.30) {
+      meltdownMod = 1 + pBonuses.meltdown;
+    }
+  }
+
   // Helper: calculate standard damage
   const calcDmg = (base, useSchool = true, useFocus = true, useBuff = true) => {
-    return Math.floor(base * intMult * (useSchool ? schoolMod : 1.0) * elementalMod * debuffMod * petrifyAmpMod * (useFocus ? focusMod : 1.0) * (useBuff ? buffMod : 1.0) * executionerMod);
+    return Math.floor(base * intMult * (useSchool ? schoolMod : 1.0) * elementalMod * debuffMod * petrifyAmpMod * (useFocus ? focusMod : 1.0) * (useBuff ? buffMod : 1.0) * executionerMod * infernalMod * meltdownMod);
   };
 
   // Helper: apply damage and check win
@@ -458,6 +488,13 @@ async function performCast(spell) {
         battleState.emberDamageAccumulated = 0;
         updateEnemyHP();
         if (battleState.enemyHP <= 0) { endBattle('win'); }
+      }
+
+      // P11 Infernal Momentum: increment stacks after fire cast (max 5 = 25%)
+      const pBonus = aggregatePassiveBonuses(state.passives?.unlocked || []);
+      if (pBonus.infernalMomentum && spell.school === 'fire') {
+        battleState.infernalMomentumStacks = Math.min(battleState.infernalMomentumStacks + 1, 5);
+        addCombatLog(`Infernal Momentum: +${battleState.infernalMomentumStacks * 5}%`, '#ff6600');
       }
     }
 
@@ -681,7 +718,13 @@ async function performCast(spell) {
     battleState.enemyHP -= directDmg;
 
     const dotSourceId = spell.id + '_' + Date.now();
-    if (battleState.dotStacks.length < effect.maxStacks) {
+    // P12 Living Furnace: increase Ignite max stacks (3 -> 5)
+    let effectiveMaxStacks = effect.maxStacks;
+    if (spell.id === 'ignite' && state.classType === 'pyromancer') {
+      const furnaceStacks = pBonuses.igniteMaxStacks;
+      if (furnaceStacks > 0) effectiveMaxStacks = furnaceStacks;
+    }
+    if (battleState.dotStacks.length < effectiveMaxStacks) {
       battleState.dotStacks.push({
         ticksLeft: effect.ticks,
         interval: effect.interval * 1000,
@@ -694,7 +737,7 @@ async function performCast(spell) {
         sourceId: dotSourceId,
         spellId: spell.id
       });
-      addCombatLog(`${spell.name}: ${directDmg} dmg + DoT stack (${battleState.dotStacks.length}/${effect.maxStacks})`, spell.color);
+      addCombatLog(`${spell.name}: ${directDmg} dmg + DoT stack (${battleState.dotStacks.length}/${effectiveMaxStacks})`, spell.color);
     } else {
       addCombatLog(`${spell.name}: ${directDmg} dmg (DoT stacks maxed)`, spell.color);
     }
@@ -1050,10 +1093,26 @@ function processDotTicks() {
         }
       }
 
+      // Track total DoT damage for Backdraft
+      if (!stack._totalDmgDealt) stack._totalDmgDealt = 0;
+      stack._totalDmgDealt += tickDmg;
+
       stack.ticksLeft--;
       stack.nextTickAt = now + stack.interval;
 
       if (stack.ticksLeft <= 0) {
+        // P14 Backdraft: when Ignite expires, explode for 50% of total DoT dealt
+        if (state.classType === 'pyromancer' && (stack.spellId === 'ignite' || stack.spellId === 'cataclysm')) {
+          const pBonus = aggregatePassiveBonuses(state.passives?.unlocked || []);
+          if (pBonus.backdraft > 0) {
+            const backdraftDmg = Math.floor(stack._totalDmgDealt * pBonus.backdraft);
+            if (backdraftDmg > 0) {
+              battleState.enemyHP -= backdraftDmg;
+              addCombatLog(`Backdraft explosion: ${backdraftDmg} damage!`, '#ff4500');
+              showDamageNumber(backdraftDmg, '#ff4500');
+            }
+          }
+        }
         battleState.dotStacks.splice(i, 1);
       }
 
