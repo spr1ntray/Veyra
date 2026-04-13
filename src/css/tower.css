@@ -44,180 +44,330 @@
 
 #screen-tower.active {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   overflow: hidden;
 }
 
-.tower-entrance-content {
+/* --- Двухколоночный layout --- */
+.tower-entrance-layout {
   position: relative;
   z-index: 2;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
   width: 100%;
-  max-width: 760px;
-  padding: 32px 28px 28px;
-  max-height: 100vh;
-  overflow-y: auto;
+  height: 100%;
+  min-height: 0;
 }
 
-/* --- Заголовок --- */
-.tower-title-wrap {
+/* ===== ЛЕВАЯ ПАНЕЛЬ: лента этажей (40% ширины) ===== */
+
+.tower-left-panel {
+  width: 40%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 5, 22, 0.82);
+  border-right: 1px solid rgba(201, 168, 76, 0.2);
+  overflow: hidden;
+}
+
+.tower-left-heading {
+  font-family: var(--font-title);
+  font-size: var(--fs-xs);
+  color: var(--color-gold);
+  letter-spacing: 6px;
+  text-transform: uppercase;
   text-align: center;
+  padding: 14px 0 10px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+  flex-shrink: 0;
+}
+
+/* Прокручиваемая лента этажей */
+.tower-floor-strip {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  /* Скрываем скроллбар визуально, оставляем функциональность */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,168,76,0.3) transparent;
+}
+
+.tower-floor-strip::-webkit-scrollbar {
+  width: 4px;
+}
+.tower-floor-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tower-floor-strip::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.3);
+  border-radius: 2px;
+}
+
+/* Одна строка этажа */
+.tower-strip-row {
+  display: grid;
+  grid-template-columns: 28px 34px 1fr 24px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  transition: background 0.15s;
+}
+
+/* Состояние: пройдено */
+.tower-strip-row.floor-cleared {
+  color: var(--color-gold);
+}
+
+.tower-strip-row.floor-cleared .strip-floor-num {
+  color: var(--color-gold);
+  opacity: 0.9;
+}
+
+/* Состояние: текущий/следующий */
+.tower-strip-row.floor-current {
+  color: #fff;
+  background: rgba(201, 168, 76, 0.08);
+  animation: strip-row-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes strip-row-pulse {
+  0%, 100% { box-shadow: inset 2px 0 0 rgba(201, 168, 76, 0.5); }
+  50%       { box-shadow: inset 2px 0 0 rgba(201, 168, 76, 1);   }
+}
+
+/* Состояние: заблокировано */
+.tower-strip-row.floor-locked {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.tower-strip-row.floor-locked .strip-floor-num {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Элементы строки */
+.strip-floor-num {
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  text-align: right;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1;
+}
+
+.strip-enemy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+}
+
+.strip-enemy-sprite {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  /* Блокированные этажи — серый фильтр через родителя */
+}
+
+.tower-strip-row.floor-locked .strip-enemy-sprite {
+  filter: grayscale(1) brightness(0.35);
+}
+
+.tower-strip-row.floor-cleared .strip-enemy-sprite {
+  filter: sepia(0.4) saturate(0.7) brightness(0.9);
+}
+
+.strip-enemy-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.strip-enemy-name {
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strip-status-icon {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-align: center;
+}
+
+.strip-status-floor-cleared { color: var(--color-gold); }
+.strip-status-floor-current { color: #fff; }
+.strip-status-floor-locked  { color: rgba(255,255,255,0.2); }
+
+/* Разделитель между этажами */
+.strip-separator {
+  height: 1px;
+  margin: 0 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== ПРАВАЯ ПАНЕЛЬ: заголовок, статы, кнопки (60% ширины) ===== */
+
+.tower-right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 40px 48px;
+  text-align: center;
+}
+
+/* --- Блок заголовка --- */
+.tower-title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .tower-title-ornament {
   color: var(--color-gold);
   font-size: var(--fs-sm);
-  letter-spacing: 8px;
-  opacity: 0.7;
-  margin-bottom: 6px;
+  letter-spacing: 6px;
+  opacity: 0.65;
 }
 
 .tower-title {
   font-family: var(--font-title);
-  font-size: clamp(26px, 4vw, 42px);
+  font-size: clamp(22px, 3.2vw, 40px);
   color: var(--color-gold-light);
   text-shadow:
-    0 0 20px rgba(201, 168, 76, 0.7),
-    0 0 50px rgba(201, 168, 76, 0.3);
-  letter-spacing: 3px;
-  margin: 4px 0;
+    0 0 18px rgba(201, 168, 76, 0.75),
+    0 0 48px rgba(201, 168, 76, 0.35),
+    0 0 80px rgba(201, 168, 76, 0.15);
+  letter-spacing: 4px;
+  margin: 0;
+  line-height: 1.15;
 }
 
-/* --- Счётчики (attempts / best) --- */
-.tower-meta-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.tower-meta-badge {
+.tower-subtitle {
   font-family: var(--font-ui);
   font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-  background: rgba(20, 15, 40, 0.7);
-  border: 1px solid rgba(201, 168, 76, 0.25);
-  border-radius: 4px;
-  padding: 4px 14px;
-  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 1.5px;
+  font-style: italic;
 }
 
-/* --- Список этажей --- */
-.tower-floor-list {
-  width: 100%;
+/* --- Блок статистики --- */
+.tower-stats-block {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: rgba(10, 7, 30, 0.7);
+  border: 1px solid rgba(201, 168, 76, 0.22);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tower-stat-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.tower-floor-item {
-  display: grid;
-  grid-template-columns: 60px 28px 1fr auto 90px;
   align-items: center;
-  gap: 10px;
-  padding: 9px 16px;
-  background: rgba(10, 7, 30, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
+  gap: 4px;
+  padding: 14px 24px;
+  min-width: 110px;
+}
+
+.tower-stat-divider {
+  width: 1px;
+  background: rgba(201, 168, 76, 0.18);
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.tower-stat-label {
   font-family: var(--font-ui);
-  font-size: var(--fs-sm);
-  color: var(--color-text-muted);
-  transition: background 0.15s ease;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
-.tower-floor-item.floor-cleared {
-  border-color: rgba(46, 204, 113, 0.25);
+.tower-stat-value {
+  font-family: var(--font-title);
+  font-size: var(--fs-lg);
+  color: var(--color-gold-light);
 }
-
-.tower-floor-item.floor-current {
-  border-color: rgba(201, 168, 76, 0.45);
-  background: rgba(20, 15, 8, 0.75);
-  color: var(--color-text);
-}
-
-.tower-floor-item.floor-locked {
-  opacity: 0.45;
-}
-
-.tower-floor-num {
-  font-weight: 600;
-  color: var(--color-text);
-  font-size: var(--fs-xs);
-}
-
-.tower-floor-element {
-  font-size: 18px;
-  text-align: center;
-}
-
-.tower-floor-name {
-  color: var(--color-text);
-}
-
-.tower-floor-reward {
-  color: var(--color-text-muted);
-  font-size: var(--fs-xs);
-  text-align: right;
-  white-space: nowrap;
-}
-
-.tower-floor-status {
-  text-align: right;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-}
-
-.tower-floor-status.floor-cleared { color: #2ecc71; }
-.tower-floor-status.floor-current { color: var(--color-gold); }
-.tower-floor-status.floor-locked  { color: #555; }
 
 /* --- Кнопки входа --- */
 .tower-entrance-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 12px;
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
 }
 
 .tower-enter-btn {
   font-family: var(--font-title);
   font-size: var(--fs-md);
-  letter-spacing: 1.5px;
-  color: #0a0820;
-  background: linear-gradient(135deg, #d4a84c 0%, #e8c46a 50%, #c9a84c 100%);
+  letter-spacing: 2px;
+  color: #0d0a1a;
+  background: linear-gradient(135deg, #d4a84c 0%, #f0d070 50%, #c9a84c 100%);
   border: none;
   border-radius: 4px;
-  padding: 14px 32px;
+  padding: 16px 36px;
   cursor: pointer;
   width: 100%;
-  box-shadow: 0 0 20px rgba(201, 168, 76, 0.5), 0 4px 12px rgba(0,0,0,0.4);
-  transition: box-shadow 0.2s, transform 0.1s;
+  box-shadow:
+    0 0 24px rgba(201, 168, 76, 0.55),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: box-shadow 0.2s, transform 0.12s;
 }
 
 .tower-enter-btn:hover:not(:disabled) {
-  box-shadow: 0 0 30px rgba(201, 168, 76, 0.7), 0 6px 16px rgba(0,0,0,0.5);
-  transform: translateY(-1px);
+  box-shadow:
+    0 0 36px rgba(201, 168, 76, 0.8),
+    0 6px 20px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
 }
 
 .tower-enter-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
+}
+
+/* Кнопка продолжения незавершённого рана */
+.tower-continue-run-btn {
+  font-family: var(--font-title);
+  font-size: var(--fs-sm);
+  letter-spacing: 1.5px;
+  color: var(--color-gold);
+  background: transparent;
+  border: 1px solid rgba(201, 168, 76, 0.55);
+  border-radius: 4px;
+  padding: 12px 28px;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tower-continue-run-btn:hover {
+  background: rgba(201, 168, 76, 0.1);
+  border-color: rgba(201, 168, 76, 0.8);
+  color: var(--color-gold-light);
 }
 
 .tower-back-btn {
   font-family: var(--font-ui);
   font-size: var(--fs-sm);
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.35);
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   padding: 8px 20px;
   cursor: pointer;
@@ -226,8 +376,8 @@
 }
 
 .tower-back-btn:hover {
-  border-color: rgba(201, 168, 76, 0.4);
-  color: var(--color-text);
+  border-color: rgba(201, 168, 76, 0.35);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ===== SCREEN-TOWER-FLOOR: Переход между этажами ===== */

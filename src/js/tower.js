@@ -349,7 +349,10 @@ function _applyTowerBackground() {
 }
 
 /**
- * Рендерит screen-tower: список этажей, счётчики, кнопку.
+ * Рендерит screen-tower: вертикальный прогресс этажей (10→1), счётчики, кнопки.
+ *
+ * Левая панель — лента этажей от 10 (вверху) до 1 (внизу).
+ * Правая панель — заголовок, статистика, кнопка входа.
  */
 function _renderTowerScreen() {
   _applyTowerBackground();
@@ -357,53 +360,89 @@ function _renderTowerScreen() {
   _checkDailyReset();
 
   const attemptsLeft = MAX_ATTEMPTS_PER_DAY - state.tower.attemptsToday;
-  const best = state.tower.bestFloorToday;
+  const bestToday    = state.tower.bestFloorToday;
+  const allTimeBest  = state.tower.allTimeBest || 0;
 
-  // Счётчики
+  // --- Счётчики правой панели ---
   const attemptsEl = document.getElementById('tower-attempts-display');
-  if (attemptsEl) attemptsEl.textContent = `Attempts: ${state.tower.attemptsToday} / ${MAX_ATTEMPTS_PER_DAY}`;
+  if (attemptsEl) attemptsEl.textContent = `${state.tower.attemptsToday} / ${MAX_ATTEMPTS_PER_DAY}`;
 
   const bestEl = document.getElementById('tower-best-display');
-  if (bestEl) bestEl.textContent = best > 0 ? `Best today: Floor ${best}` : 'Best today: —';
+  if (bestEl) bestEl.textContent = bestToday > 0 ? `Floor ${bestToday}` : '—';
 
-  // Кнопка входа
+  const allTimeEl = document.getElementById('tower-alltime-display');
+  if (allTimeEl) allTimeEl.textContent = allTimeBest > 0 ? `Floor ${allTimeBest}` : '—';
+
+  // --- Кнопка входа ---
   const enterBtn = document.getElementById('btn-tower-enter');
   if (enterBtn) {
     enterBtn.disabled = attemptsLeft <= 0;
-    enterBtn.textContent = attemptsLeft > 0
-      ? `Enter the Spire (${attemptsLeft} left)`
-      : 'No Attempts Left';
+    enterBtn.textContent = attemptsLeft > 0 ? 'ENTER THE SPIRE' : 'RETURN TOMORROW';
   }
 
-  // Список этажей
+  // --- Кнопка "продолжить ран" ---
+  const continueRunBtn = document.getElementById('btn-tower-continue-run');
+  if (continueRunBtn) {
+    const run = state.tower?.currentRun;
+    // Показываем только если есть активный ран с пройденными этажами
+    const hasActiveRun = run && typeof run.floorsCleared === 'number' && run.floorsCleared > 0;
+    if (hasActiveRun) {
+      const nextFloor = run.floorsCleared + 1;
+      continueRunBtn.style.display = '';
+      continueRunBtn.textContent   = `CONTINUE RUN (Floor ${nextFloor})`;
+      // Продолжение рана — запустить следующий этаж напрямую, без траты попытки
+      continueRunBtn.onclick = () => _startFloor(nextFloor);
+    } else {
+      continueRunBtn.style.display = 'none';
+    }
+  }
+
+  // --- Лента этажей (10 → 1, сверху вниз) ---
   const listEl = document.getElementById('tower-floor-list');
   if (!listEl) return;
   listEl.innerHTML = '';
 
-  TOWER_FLOORS.forEach(floorData => {
-    const li = document.createElement('div');
-    li.className = 'tower-floor-item';
+  // Рендерим в обратном порядке: этаж 10 первым (вверху)
+  const reversed = [...TOWER_FLOORS].reverse();
 
+  reversed.forEach((floorData, idx) => {
+    const row = document.createElement('div');
+    row.className = 'tower-strip-row';
+
+    // Определяем статус этажа относительно лучшего прохождения сегодня
     let statusClass = 'floor-locked';
-    let statusText  = 'Locked';
+    let statusIcon  = '🔒';
 
-    if (floorData.floor <= best) {
+    if (floorData.floor <= bestToday) {
       statusClass = 'floor-cleared';
-      statusText  = 'Cleared';
-    } else if (floorData.floor === best + 1) {
+      statusIcon  = '✓';
+    } else if (floorData.floor === bestToday + 1) {
       statusClass = 'floor-current';
-      statusText  = 'Current';
+      statusIcon  = '→';
     }
 
-    li.classList.add(statusClass);
-    li.innerHTML = `
-      <span class="tower-floor-num">Floor ${floorData.floor}</span>
-      <span class="tower-floor-element">${floorData.element}</span>
-      <span class="tower-floor-name">${_getEnemyName(floorData.enemyId)}</span>
-      <span class="tower-floor-reward">+${floorData.gold}g / +${floorData.xp}xp</span>
-      <span class="tower-floor-status ${statusClass}">${statusText}</span>
+    row.classList.add(statusClass);
+
+    // Иконка врага — спрайт если есть, иначе эмодзи элемента
+    const iconHTML = floorData.sprite
+      ? `<img class="strip-enemy-sprite" src="${floorData.sprite}" alt="${floorData.enemyId}">`
+      : `<span class="strip-enemy-emoji">${floorData.element}</span>`;
+
+    row.innerHTML = `
+      <span class="strip-floor-num">${floorData.floor}</span>
+      <span class="strip-enemy-icon">${iconHTML}</span>
+      <span class="strip-enemy-name">${_getEnemyName(floorData.enemyId)}</span>
+      <span class="strip-status-icon strip-status-${statusClass}">${statusIcon}</span>
     `;
-    listEl.appendChild(li);
+
+    listEl.appendChild(row);
+
+    // Тонкий разделитель между этажами (не после последнего)
+    if (idx < reversed.length - 1) {
+      const sep = document.createElement('div');
+      sep.className = 'strip-separator';
+      listEl.appendChild(sep);
+    }
   });
 }
 

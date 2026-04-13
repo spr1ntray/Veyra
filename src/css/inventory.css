@@ -91,7 +91,7 @@
   display: flex;
   flex-direction: column;
   padding: 21px 21px 21px 26px; /* +30%: 16→21, 20→26 */
-  overflow: hidden;
+  overflow-y: auto; /* прокрутка если контент не влезает по высоте */
   min-height: 0; /* предотвращает схлопывание flex-колонки */
 }
 
@@ -112,6 +112,8 @@
   align-items: flex-start;
   justify-content: center;
   overflow: hidden;
+  /* ограничиваем высоту чтобы вешалка не вылезала за пределы экрана */
+  max-height: 90vh;
 }
 
 /* Wrapper — sized to image, circles positioned inside via % */
@@ -119,13 +121,18 @@
   position: relative;
   display: block;
   width: 47%;
+  /* вешалка вписывается в доступное пространство */
+  max-height: 100%;
 }
 
 /* Крупное изображение вешалки */
 .hanger-main-img {
   display: block;
   width: 100%;
+  /* ограничиваем по высоте чтобы влезало на экранах от 768px */
+  max-height: 55vh;
   height: auto;
+  object-fit: contain;
   image-rendering: pixelated;
   opacity: 0.9;
   pointer-events: none;
@@ -590,4 +597,28 @@
   color: rgba(201, 168, 76, 0.8);
   text-transform: uppercase;
   margin-left: 6px;
+}
+
+/* ===== АДАПТИВНОСТЬ: маленькие экраны (высота < 800px) ===== */
+@media (max-height: 800px) {
+  /* Вешалка — уменьшаем изображение пропорционально */
+  .hanger-main-img {
+    max-height: 42vh;
+  }
+
+  /* Левая панель — уменьшаем паддинги чтобы высвободить место */
+  .inv-left {
+    padding: 12px 14px 12px 16px;
+  }
+
+  /* Шапка инвентаря — компактнее */
+  .inv-header {
+    padding: 10px 20px;
+  }
+
+  /* Блок персонажа — сжимаем отступы */
+  .inv-char-block {
+    padding-top: 8px;
+    margin-top: 4px;
+  }
 }

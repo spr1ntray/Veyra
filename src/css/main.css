@@ -1237,3 +1237,49 @@ body {
   gap: 8px;
   align-items: center;
 }
+
+/* ===== АДАПТИВНОСТЬ HUD: средние экраны ~1280px ===== */
+/* На экранах меньше 1400px HUD может перекрываться кнопкой инвентаря */
+@media (max-width: 1400px) {
+  /* Уменьшаем font-size HUD-элементов */
+  .loc-hud-name {
+    font-size: 15px;
+  }
+  .loc-hud-level {
+    font-size: 13px;
+  }
+  .loc-hud-gold {
+    font-size: 15px;
+  }
+
+  /* Уменьшаем внутренние отступы капсулы HUD */
+  .location-hud {
+    padding: 5px 12px;
+    gap: 7px;
+  }
+}
+
+/* На 1280px дополнительно сжимаем кнопку инвентаря */
+@media (max-width: 1280px) {
+  /* Кнопка инвентаря — уже по ширине и компактнее */
+  .inv-top-btn {
+    width: 44%;
+    font-size: 14px;
+    padding: 10px 0;
+  }
+
+  /* HUD — совсем компактный */
+  .location-hud {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+  .loc-hud-name {
+    font-size: 13px;
+  }
+  .loc-hud-level {
+    font-size: 12px;
+  }
+  .loc-hud-gold {
+    font-size: 13px;
+  }
+}

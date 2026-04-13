@@ -1,24 +1,24 @@
 /**
  * passives_ui.js — Ley Loom UI
- * Renders the passive skill tree screen and handles unlock/respec actions.
+ * Manages the left panel (threads, respec) and delegates the node visualisation
+ * to PassiveTreeCanvas (Canvas 2D constellation renderer).
  */
 
-import { getState, saveState, getStats } from './state.js';
+import { getState, saveState } from './state.js';
 import {
-  PASSIVE_NODES,
   PASSIVE_NODES_MAP,
-  getUniversalNodes,
-  getClassNodes,
-  canUnlockNode,
   calcRespecCost
 } from './passives.js';
 import { showNotification } from './ui.js';
+import { PassiveTreeCanvas } from './passives_canvas.js';
 
 // Expose node map on window so combat.js and state.js can access it without circular import
 window._passiveNodesMap = PASSIVE_NODES_MAP;
 
 // Navigation callback — set once from main.js
 let _onBack = null;
+// Track whether the canvas has been initialised
+let _canvasReady = false;
 
 /**
  * Initialises the passives screen navigation (call once from main.js).
@@ -32,6 +32,13 @@ export function initPassivesScreen({ onBack }) {
     backBtn.addEventListener('click', () => {
       if (_onBack) _onBack();
     });
+  }
+
+  // Initialise the canvas inside the right panel container
+  const canvasContainer = document.getElementById('passives-canvas-container');
+  if (canvasContainer && !_canvasReady) {
+    PassiveTreeCanvas.init(canvasContainer);
+    _canvasReady = true;
   }
 }
 
@@ -72,188 +79,13 @@ export function renderPassivesScreen() {
     headerCountEl.textContent = passives.leyThreads;
   }
 
-  // --- Right panel content ---
-  _renderUniversalSection(unlocked, passives.leyThreads);
-  _renderClassSection(unlocked, passives.leyThreads, state.classType);
-}
-
-// --- Section renderers ---
-
-function _renderUniversalSection(unlocked, leyThreads) {
-  const container = document.getElementById('passives-universal-nodes');
-  if (!container) return;
-
-  const nodes = getUniversalNodes();
-  container.innerHTML = '';
-  _renderNodeGroups(container, nodes, unlocked, leyThreads);
-}
-
-function _renderClassSection(unlocked, leyThreads, classType) {
-  const container  = document.getElementById('passives-class-nodes');
-  const titleEl    = document.getElementById('passives-class-title');
-  const noClassEl  = document.getElementById('passives-no-class');
-
-  if (!container) return;
-  container.innerHTML = '';
-
-  if (!classType) {
-    if (noClassEl) noClassEl.style.display = 'block';
-    if (titleEl)   titleEl.textContent = 'Class Skills';
-    return;
+  // --- Right panel content: delegate to canvas ---
+  if (_canvasReady) {
+    PassiveTreeCanvas.refresh();
   }
-
-  if (noClassEl) noClassEl.style.display = 'none';
-  if (titleEl) {
-    const classLabel = classType.charAt(0).toUpperCase() + classType.slice(1);
-    titleEl.textContent = `${classLabel} Skills`;
-  }
-
-  const nodes = getClassNodes(classType);
-  _renderNodeGroups(container, nodes, unlocked, leyThreads);
-}
-
-/**
- * Groups nodes by type (minor/major/keystone) and renders each group.
- */
-function _renderNodeGroups(container, nodes, unlocked, leyThreads) {
-  const groups = { minor: [], major: [], keystone: [] };
-
-  for (const node of nodes) {
-    if (groups[node.type]) groups[node.type].push(node);
-  }
-
-  for (const [type, groupNodes] of Object.entries(groups)) {
-    if (groupNodes.length === 0) continue;
-
-    const groupEl = document.createElement('div');
-    groupEl.className = 'passives-type-group';
-
-    const label = document.createElement('div');
-    label.className = 'passives-type-label';
-    label.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-    groupEl.appendChild(label);
-
-    const grid = document.createElement('div');
-    grid.className = 'passives-nodes-grid';
-
-    for (const node of groupNodes) {
-      grid.appendChild(_buildNodeCard(node, unlocked, leyThreads));
-    }
-
-    groupEl.appendChild(grid);
-    container.appendChild(groupEl);
-  }
-}
-
-/**
- * Builds a single node card element.
- */
-function _buildNodeCard(node, unlocked, leyThreads) {
-  const { canUnlock, reason } = canUnlockNode(node.id, unlocked, leyThreads);
-  const isUnlocked = unlocked.includes(node.id);
-
-  const card = document.createElement('div');
-  card.className = 'passive-node';
-  card.dataset.type = node.type;
-  card.dataset.id   = node.id;
-
-  if (isUnlocked) {
-    card.classList.add('node-unlocked');
-  } else if (canUnlock) {
-    card.classList.add('node-available');
-  } else {
-    card.classList.add('node-locked');
-  }
-
-  // Header row: name + cost
-  const header = document.createElement('div');
-  header.className = 'passive-node-header';
-
-  const nameEl = document.createElement('div');
-  nameEl.className = 'passive-node-name';
-  nameEl.textContent = node.name;
-
-  const costEl = document.createElement('div');
-  costEl.className = 'passive-node-cost';
-  costEl.textContent = `${node.cost} Thread${node.cost > 1 ? 's' : ''}`;
-
-  header.appendChild(nameEl);
-  header.appendChild(costEl);
-  card.appendChild(header);
-
-  // Description
-  const descEl = document.createElement('div');
-  descEl.className = 'passive-node-desc';
-  descEl.textContent = node.description;
-  card.appendChild(descEl);
-
-  // Prerequisites hint (only when locked due to prereq)
-  if (!isUnlocked && node.requires.length > 0) {
-    const metReqs = node.requires.filter(id => unlocked.includes(id));
-    if (metReqs.length < node.requires.length) {
-      const reqNames = node.requires
-        .filter(id => !unlocked.includes(id))
-        .map(id => PASSIVE_NODES_MAP[id]?.name || id)
-        .join(', ');
-      const reqEl = document.createElement('div');
-      reqEl.className = 'passive-node-req';
-      reqEl.textContent = `Requires: ${reqNames}`;
-      card.appendChild(reqEl);
-    }
-  }
-
-  // Unlock button or unlocked badge
-  if (isUnlocked) {
-    const badge = document.createElement('div');
-    badge.className = 'passive-unlocked-badge';
-    badge.textContent = 'Unlocked';
-    card.appendChild(badge);
-  } else {
-    const btn = document.createElement('button');
-    btn.className = 'passive-unlock-btn';
-    btn.textContent = 'Unlock';
-    btn.disabled = !canUnlock;
-
-    if (!canUnlock && reason) {
-      btn.title = reason;
-    }
-
-    btn.addEventListener('click', () => {
-      _handleUnlock(node.id);
-    });
-    card.appendChild(btn);
-  }
-
-  return card;
 }
 
 // --- Actions ---
-
-/**
- * Handles clicking "Unlock" on a node.
- */
-function _handleUnlock(nodeId) {
-  const state   = getState();
-  const passives = state.passives;
-  if (!passives) return;
-
-  const node = PASSIVE_NODES_MAP[nodeId];
-  if (!node) return;
-
-  const { canUnlock, reason } = canUnlockNode(nodeId, passives.unlocked, passives.leyThreads);
-  if (!canUnlock) {
-    showNotification(reason || 'Cannot unlock this node', 'warning');
-    return;
-  }
-
-  // Deduct threads and add to unlocked
-  passives.leyThreads -= node.cost;
-  passives.unlocked.push(nodeId);
-  saveState();
-
-  showNotification(`Unlocked: ${node.name}`, 'success');
-  renderPassivesScreen();
-}
 
 /**
  * Handles the "Respec All" button — shows inline confirm dialog.
