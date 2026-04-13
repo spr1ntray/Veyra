@@ -302,7 +302,7 @@ export const SPELLS_DATA = {
     id: 'scorch',
     name: 'Scorch',
     school: 'fire',
-    baseDmg: { min: 15, max: 22 },
+    baseDmg: { min: 20, max: 30 },
     castTime: 1.0,
     effect: { type: 'conditional_bonus', condition: 'target_has_ignite', bonusDmgPercent: 0.50 },
     unlockLevel: 10,
