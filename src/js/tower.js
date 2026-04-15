@@ -33,7 +33,7 @@ const TOWER_FLOORS = [
   { floor: 4,  enemyId: 'frost_warden',       gold: 20,  xp: 35,  sprite: 'assets/generated/pixel/Frost_Warden.png',      element: '🧊', elementLabel: 'Water' },
   { floor: 5,  enemyId: 'bone_colossus',      gold: 25,  xp: 45,  sprite: 'assets/generated/pixel/Bone_Colossus.png',     element: '🪨', elementLabel: 'Earth' },
   { floor: 6,  enemyId: 'phantom_duelist',    gold: 30,  xp: 55,  sprite: 'assets/generated/pixel/Phantom_Duelist.png',   element: '💨', elementLabel: 'Air'   },
-  { floor: 7,  enemyId: 'abyssal_tide',       gold: 40,  xp: 70,  sprite: null,                                                          element: '🌊', elementLabel: 'Water' },
+  { floor: 7,  enemyId: 'abyssal_tide',       gold: 40,  xp: 70,  sprite: 'assets/generated/pixel/Abyssal_Tide.png',                    element: '🌊', elementLabel: 'Water' },
   { floor: 8,  enemyId: 'infernal_knight',    gold: 50,  xp: 85,  sprite: 'assets/generated/pixel/Infernal_Knight.png',                   element: '🔥', elementLabel: 'Fire'  },
   { floor: 9,  enemyId: 'void_sentinel',      gold: 60,  xp: 100, sprite: 'assets/generated/pixel/Void_Sentinel.png',                    element: '🌑', elementLabel: 'Void'  },
   { floor: 10, enemyId: 'archon_of_colwick',  gold: 100, xp: 150, sprite: 'assets/generated/pixel/Archon_of_Colwick.png',                element: '👁️', elementLabel: 'Void'  }
@@ -397,53 +397,6 @@ function _renderTowerScreen() {
     }
   }
 
-  // --- Лента этажей (10 → 1, сверху вниз) ---
-  const listEl = document.getElementById('tower-floor-list');
-  if (!listEl) return;
-  listEl.innerHTML = '';
-
-  // Рендерим в обратном порядке: этаж 10 первым (вверху)
-  const reversed = [...TOWER_FLOORS].reverse();
-
-  reversed.forEach((floorData, idx) => {
-    const row = document.createElement('div');
-    row.className = 'tower-strip-row';
-
-    // Определяем статус этажа относительно лучшего прохождения сегодня
-    let statusClass = 'floor-locked';
-    let statusIcon  = '🔒';
-
-    if (floorData.floor <= bestToday) {
-      statusClass = 'floor-cleared';
-      statusIcon  = '✓';
-    } else if (floorData.floor === bestToday + 1) {
-      statusClass = 'floor-current';
-      statusIcon  = '→';
-    }
-
-    row.classList.add(statusClass);
-
-    // Иконка врага — спрайт если есть, иначе эмодзи элемента
-    const iconHTML = floorData.sprite
-      ? `<img class="strip-enemy-sprite" src="${floorData.sprite}" alt="${floorData.enemyId}">`
-      : `<span class="strip-enemy-emoji">${floorData.element}</span>`;
-
-    row.innerHTML = `
-      <span class="strip-floor-num">${floorData.floor}</span>
-      <span class="strip-enemy-icon">${iconHTML}</span>
-      <span class="strip-enemy-name">${_getEnemyName(floorData.enemyId)}</span>
-      <span class="strip-status-icon strip-status-${statusClass}">${statusIcon}</span>
-    `;
-
-    listEl.appendChild(row);
-
-    // Тонкий разделитель между этажами (не после последнего)
-    if (idx < reversed.length - 1) {
-      const sep = document.createElement('div');
-      sep.className = 'strip-separator';
-      listEl.appendChild(sep);
-    }
-  });
 }
 
 /**

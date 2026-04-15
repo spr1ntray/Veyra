@@ -162,7 +162,7 @@ export const ITEMS_DATA = {
     slot: 'quest', bonus: 0, rarity: 'quest',
     desc: "A worn iron ring. Someone's initials are scratched inside.",
     canUnequip: false,
-    img: 'assets/generated/pixel/ICON_020.png',
+    img: 'assets/generated/pixel/IRON_RING.png',
     price: 0
   },
 
@@ -600,7 +600,7 @@ export const SPELLS_DATA = {
     color: '#1abc9c',
     glowColor: 'rgba(26,188,156,0.7)',
     emoji: '🌊',
-    img: 'assets/generated/pixel/SPELL_022_FROZEN_TOMB.png'  /* reuse frozen_tomb icon until unique art arrives */
+    img: 'assets/generated/pixel/SPELL_032_TSUNAMI.png'
   },
   frozen_tomb: {
     id: 'frozen_tomb',
