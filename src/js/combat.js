@@ -1779,9 +1779,13 @@ function renderGrimoireTracker() {
 
     if (spell) {
       slot.style.setProperty('--spell-color', spell.color);
+      // Use PNG icon if available, otherwise fall back to emoji
+      const iconContent = spell.img
+        ? `<img src="${spell.img}" alt="${spell.name}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated">`
+        : `<span style="color:${spell.color}">${spell.emoji || getSpellEmoji(spell.school)}</span>`;
       slot.innerHTML = `
         <div class="tracker-slot-icon" style="border-color:${spell.color};box-shadow:0 0 8px ${spell.glowColor}">
-          <span style="color:${spell.color}">${getSpellEmoji(spell.school)}</span>
+          ${iconContent}
         </div>
         <div class="tracker-slot-name" style="color:${spell.color}">${spell.name}</div>
       `;

@@ -170,6 +170,7 @@
   overflow: hidden;
   padding: 0;
   position: relative; /* anchor for respec dialog and canvas overlays */
+  background: #050810; /* matches canvas cosmic background */
 }
 
 /* Canvas wrapper fills the entire right panel */
@@ -178,6 +179,7 @@
   height: 100%;
   position: relative;
   overflow: hidden;
+  background: #050810;
 }
 
 /* --- Section headers --- */

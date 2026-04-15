@@ -1,15 +1,14 @@
 /**
- * passives_canvas.js — Constellation / Bubble-map visualiser for the Ley Loom passive tree.
+ * passives_canvas.js — Skyrim-style constellation visualiser for the Ley Loom passive tree.
  *
- * Renders all passive nodes as glowing bubbles on a Canvas 2D context, connected
- * by luminescent constellation lines. Handles hover tooltips and click-to-unlock
- * interaction. Animates available nodes (pulsing) and emits particles along
- * active connections.
+ * Renders passive nodes as stars on a dark cosmic background, connected by
+ * glowing constellation lines. Nodes are arranged in concentric arcs by tier
+ * (minor → major → keystone), Universal nodes in a separate top-left cluster.
  *
  * Public API:
- *   PassiveTreeCanvas.init(containerEl)   — attach canvas to DOM, start render loop
- *   PassiveTreeCanvas.refresh()           — call after state changes (unlock / respec)
- *   PassiveTreeCanvas.destroy()           — stop loop, remove canvas
+ *   PassiveTreeCanvas.init(containerEl)  — attach canvas to DOM, start render loop
+ *   PassiveTreeCanvas.refresh()          — call after state changes (unlock / respec)
+ *   PassiveTreeCanvas.destroy()          — stop loop, remove canvas
  */
 
 import {
@@ -25,121 +24,144 @@ import { showNotification } from './ui.js';
 // Constants
 // ---------------------------------------------------------------------------
 
+/** Class accent colours */
 const CLASS_COLORS = {
   pyromancer:  '#ff6b35',
-  stormcaller: '#4fc3f7',
-  tidecaster:  '#40c4ff',
-  geomancer:   '#8d6e63',
-  universal:   '#c9a84c'
+  stormcaller: '#64b5f6',
+  tidecaster:  '#26c6da',
+  geomancer:   '#a5d6a7',
+  universal:   '#ffd54f'
 };
 
-const NODE_RADIUS = {
-  minor:    22,
-  major:    30,
-  keystone: 40
+/**
+ * Visual radius of the star shape (hit-radius is slightly larger for ease of clicking).
+ * Minor = small star, Keystone = bright pulsing star.
+ */
+const STAR_RADIUS = {
+  minor:    12,
+  major:    18,
+  keystone: 26
 };
 
-// Vertical layout bands (as fraction of canvas height for the class tree area)
-const BAND_Y_FRACTION = {
-  keystone: 0.22,  // top of class area
-  major:    0.50,
-  minor:    0.80
+/** Number of constellation particles per active (both-unlocked) edge */
+const PARTICLES_PER_EDGE = 4;
+
+/** Total background stars to scatter across the canvas */
+const BG_STAR_COUNT = 650;
+
+// Constellation arc layout parameters (radii from the class tree centre)
+const ARC_RADIUS = {
+  // Minor nodes that have no prerequisites → starter ring close to centre
+  innerMinor: 80,
+  // All other minor + major nodes
+  mid:        180,
+  // Keystones
+  outer:      290
 };
 
-// Particle count per active edge
-const PARTICLES_PER_EDGE = 2;
+// The class tree occupies the right ~80% of the canvas; Universal cluster is top-left
+const UNIV_CLUSTER_X_FRAC = 0.12; // fraction of canvas width
+const UNIV_CLUSTER_Y_FRAC = 0.18; // fraction of canvas height
+
+// Angular arc that class nodes spread over (radians).
+// ~220° so the arc doesn't wrap all the way around and leave gaps.
+const CLASS_ARC_SPAN = (220 / 180) * Math.PI;
 
 // ---------------------------------------------------------------------------
 // Module state
 // ---------------------------------------------------------------------------
 
-let _canvas      = null;
-let _ctx         = null;
-let _container   = null;
-let _rafId       = null;
-let _nodes       = [];        // computed layout: { node, x, y, color, radius }
-let _edges       = [];        // { from: layoutNode, to: layoutNode }
-let _particles   = [];        // { edge, t, speed }
-let _tooltip     = null;      // DOM element
-let _hoveredId   = null;
-let _tick        = 0;         // frame counter for animation
+let _canvas    = null;
+let _ctx       = null;
+let _container = null;
+let _rafId     = null;
+
+/** Computed layout nodes — { data, x, y, radius, color, state } */
+let _nodes     = [];
+/** Edges — { from: layoutNode, to: layoutNode } */
+let _edges     = [];
+/** Particles — { edge, t, speed } */
+let _particles = [];
+
+let _tooltip   = null;   // DOM overlay
+let _hoveredId = null;
+let _lastTs    = 0;      // timestamp from last RAF for delta-time
+let _roHandle  = null;   // ResizeObserver
+
+// Cached static star field — regenerated when canvas dimensions change
+let _starCache = null;
 
 // ---------------------------------------------------------------------------
-// Public API
+// Public API (object export keeps the same interface as the previous version)
 // ---------------------------------------------------------------------------
 
 export const PassiveTreeCanvas = {
 
   /**
-   * Attach the canvas to `containerEl`, compute layout, start render loop.
+   * Attach canvas to containerEl and start the render loop.
    * @param {HTMLElement} containerEl
    */
   init(containerEl) {
     _container = containerEl;
 
-    // Create canvas
     _canvas = document.createElement('canvas');
-    _canvas.style.display = 'block';
-    _canvas.style.width   = '100%';
-    _canvas.style.height  = '100%';
-    _canvas.style.cursor  = 'default';
+    _canvas.style.cssText = 'display:block;width:100%;height:100%;cursor:default;';
     containerEl.appendChild(_canvas);
 
     _ctx = _canvas.getContext('2d');
 
-    // Tooltip element (plain HTML, positioned absolutely over the canvas)
+    // Tooltip overlay (positioned absolutely inside the container)
     _tooltip = document.createElement('div');
     _tooltip.className = 'ptc-tooltip';
     _tooltip.style.display = 'none';
     containerEl.style.position = 'relative';
     containerEl.appendChild(_tooltip);
 
-    // Resize observer keeps canvas pixel dimensions in sync with CSS layout
-    const ro = new ResizeObserver(() => this._resize());
-    ro.observe(containerEl);
+    // Keep pixel dimensions in sync with CSS layout
+    _roHandle = new ResizeObserver(() => this._resize());
+    _roHandle.observe(containerEl);
     this._resize();
 
     // Input
     _canvas.addEventListener('mousemove', e => this._onMouseMove(e));
-    _canvas.addEventListener('mouseleave', () => this._hideTooltip());
-    _canvas.addEventListener('click', e => this._onClick(e));
+    _canvas.addEventListener('mouseleave', () => _hideTooltip());
+    _canvas.addEventListener('click',     e => this._onClick(e));
 
-    // Initial layout + loop
     this.refresh();
     this._startLoop();
   },
 
-  /** Recompute layout from current state and rebuild particle set. */
+  /** Recompute layout and particle set from current game state. */
   refresh() {
     _computeLayout();
     _rebuildParticles();
   },
 
-  /** Stop animation and remove DOM elements. */
+  /** Stop loop and remove DOM elements. */
   destroy() {
-    if (_rafId) cancelAnimationFrame(_rafId);
-    if (_canvas)  _canvas.remove();
-    if (_tooltip) _tooltip.remove();
-    _canvas = _ctx = _container = _tooltip = null;
+    if (_rafId)    cancelAnimationFrame(_rafId);
+    if (_roHandle) _roHandle.disconnect();
+    if (_canvas)   _canvas.remove();
+    if (_tooltip)  _tooltip.remove();
+    _canvas = _ctx = _container = _tooltip = _roHandle = null;
     _nodes = _edges = _particles = [];
   },
 
-  // ---- internal ----
+  // ---- internal helpers ----
 
   _resize() {
     if (!_canvas || !_container) return;
-    const rect = _container.getBoundingClientRect();
-    _canvas.width  = rect.width;
-    _canvas.height = rect.height;
-    // Layout must be recomputed whenever canvas size changes
+    const r = _container.getBoundingClientRect();
+    _canvas.width  = r.width;
+    _canvas.height = r.height;
+    _starCache = null;  // invalidate star field
     _computeLayout();
     _rebuildParticles();
   },
 
   _startLoop() {
-    const loop = () => {
-      _tick++;
-      _drawFrame();
+    const loop = ts => {
+      _drawFrame(ts);
       _rafId = requestAnimationFrame(loop);
     };
     _rafId = requestAnimationFrame(loop);
@@ -147,15 +169,13 @@ export const PassiveTreeCanvas = {
 
   _onMouseMove(e) {
     if (!_canvas) return;
-    const rect = _canvas.getBoundingClientRect();
-    const mx   = (e.clientX - rect.left) * (_canvas.width  / rect.width);
-    const my   = (e.clientY - rect.top)  * (_canvas.height / rect.height);
-
-    const hit = _hitTest(mx, my);
+    const { mx, my } = _canvasCoords(e);
+    const hit = _getNodeAt(mx, my);
     if (hit) {
       _canvas.style.cursor = 'pointer';
-      _hoveredId = hit.node.id;
-      _showTooltip(hit, e.clientX - rect.left, e.clientY - rect.top);
+      _hoveredId = hit.data.id;
+      _showTooltip(hit, e.clientX - _canvas.getBoundingClientRect().left,
+                        e.clientY - _canvas.getBoundingClientRect().top);
     } else {
       _canvas.style.cursor = 'default';
       _hoveredId = null;
@@ -163,32 +183,23 @@ export const PassiveTreeCanvas = {
     }
   },
 
-  _hideTooltip: () => _hideTooltip(),
-
   _onClick(e) {
     if (!_canvas) return;
-    const rect = _canvas.getBoundingClientRect();
-    const mx   = (e.clientX - rect.left) * (_canvas.width  / rect.width);
-    const my   = (e.clientY - rect.top)  * (_canvas.height / rect.height);
-
-    const hit = _hitTest(mx, my);
+    const { mx, my } = _canvasCoords(e);
+    const hit = _getNodeAt(mx, my);
     if (!hit) return;
 
     const state    = getState();
     const passives = state.passives || {};
     const unlocked = passives.unlocked || [];
 
-    if (unlocked.includes(hit.node.id)) {
-      // Already unlocked — tooltip is enough
-      return;
-    }
+    if (unlocked.includes(hit.data.id)) return; // already unlocked
 
-    const { canUnlock, reason } = canUnlockNode(hit.node.id, unlocked, passives.leyThreads || 0);
+    const { canUnlock, reason } = canUnlockNode(hit.data.id, unlocked, passives.leyThreads || 0);
     if (!canUnlock) {
       showNotification(reason || 'Cannot unlock', 'warning');
       return;
     }
-
     _confirmUnlock(hit);
   }
 };
@@ -197,84 +208,114 @@ export const PassiveTreeCanvas = {
 // Layout computation
 // ---------------------------------------------------------------------------
 
+/**
+ * Compute pixel positions for every node.
+ *
+ * Universal nodes: small cluster in the top-left corner, arranged in a
+ * tight grid / radial scatter.
+ *
+ * Class nodes: arranged on concentric circular arcs centred in the middle
+ * of the right portion of the canvas.
+ *   - Starter minors (requires:[])  → inner arc  (r = 80)
+ *   - Other minors + all majors     → mid arc     (r = 180)
+ *   - Keystones                     → outer arc   (r = 290)
+ */
 function _computeLayout() {
   if (!_canvas) return;
-
-  const state    = getState();
-  const classType = state.classType || null;
 
   const W = _canvas.width;
   const H = _canvas.height;
 
-  // Universal strip: top 18% of canvas
-  const UNIV_H = H * 0.18;
-  // Class tree: remaining height
-  const CLASS_TOP = UNIV_H + 20;
-  const CLASS_H   = H - CLASS_TOP - 20;
-
   _nodes = [];
   _edges = [];
 
-  // --- Universal nodes (horizontal strip) ---
-  const univNodes = getUniversalNodes();
-  const uCount    = univNodes.length;
-  const uStep     = W / (uCount + 1);
-  const uY        = UNIV_H * 0.55;
+  const univLMap  = {};   // id → layoutNode  (universal)
+  const classLMap = {};   // id → layoutNode  (class)
 
-  const univLayoutMap = {}; // id -> layoutNode
+  // ---- Universal cluster (top-left) ----
+  const univNodes = getUniversalNodes();
+  const uCX = W * UNIV_CLUSTER_X_FRAC;
+  const uCY = H * UNIV_CLUSTER_Y_FRAC;
+  const uCount = univNodes.length;
+
   univNodes.forEach((n, i) => {
+    // Arrange in a small radial fan, 2 rows
+    const cols   = Math.ceil(uCount / 2);
+    const col    = i % cols;
+    const row    = Math.floor(i / cols);
+    const xStep  = 52;
+    const yStep  = 48;
+    const xOff   = (col - (cols - 1) / 2) * xStep;
+    const yOff   = (row - 0.5) * yStep;
+
     const ln = {
-      node:   n,
-      x:      uStep * (i + 1),
-      y:      uY,
+      data:   n,
+      x:      uCX + xOff,
+      y:      uCY + yOff,
+      radius: STAR_RADIUS[n.type] || STAR_RADIUS.minor,
       color:  CLASS_COLORS.universal,
-      radius: NODE_RADIUS[n.type] || 22
+      state:  'locked'   // resolved each frame in _drawFrame
     };
     _nodes.push(ln);
-    univLayoutMap[n.id] = ln;
+    univLMap[n.id] = ln;
   });
 
-  // --- Class nodes ---
-  const classLayoutMap = {}; // id -> layoutNode
+  // ---- Class nodes (concentric arcs) ----
+  const state     = getState();
+  const classType = state.classType || null;
+
   if (classType) {
     const classNodes = getClassNodes(classType);
-    const color = CLASS_COLORS[classType] || '#c9a84c';
+    const color      = CLASS_COLORS[classType] || CLASS_COLORS.universal;
 
-    // Separate by tier
-    const minorNodes    = classNodes.filter(n => n.type === 'minor');
-    const majorNodes    = classNodes.filter(n => n.type === 'major');
-    const keystoneNodes = classNodes.filter(n => n.type === 'keystone');
+    // Arc centre — horizontally centred in the right 75% of the canvas
+    const cx = W * 0.55;
+    const cy = H * 0.52;
 
-    const placeRow = (arr, yFrac) => {
-      const y    = CLASS_TOP + CLASS_H * yFrac;
-      const step = W / (arr.length + 1);
+    // Split nodes into layout tiers
+    const starterMinors = classNodes.filter(n => n.type === 'minor' && n.requires.length === 0);
+    const otherMinors   = classNodes.filter(n => n.type === 'minor' && n.requires.length > 0);
+    const majors        = classNodes.filter(n => n.type === 'major');
+    const keystones     = classNodes.filter(n => n.type === 'keystone');
+
+    // Mid arc holds other minors + majors together, sorted so minors come first
+    const midNodes = [...otherMinors, ...majors];
+
+    const placeOnArc = (arr, arcR, startAngle) => {
+      const count = arr.length;
+      if (count === 0) return;
+      const span  = count === 1 ? 0 : CLASS_ARC_SPAN;
+      const step  = count === 1 ? 0 : span / (count - 1);
       arr.forEach((n, i) => {
+        const angle = startAngle + i * step;
         const ln = {
-          node:   n,
-          x:      step * (i + 1),
-          y,
+          data:   n,
+          x:      cx + arcR * Math.cos(angle),
+          y:      cy + arcR * Math.sin(angle),
+          radius: STAR_RADIUS[n.type] || STAR_RADIUS.minor,
           color,
-          radius: NODE_RADIUS[n.type] || 22
+          state:  'locked'
         };
         _nodes.push(ln);
-        classLayoutMap[n.id] = ln;
+        classLMap[n.id] = ln;
       });
     };
 
-    placeRow(keystoneNodes, BAND_Y_FRACTION.keystone);
-    placeRow(majorNodes,    BAND_Y_FRACTION.major);
-    placeRow(minorNodes,    BAND_Y_FRACTION.minor);
+    // Arc start angle: rotated so the arc fans downward-ish (top = −90° offset)
+    const BASE_ANGLE = -Math.PI / 2 - CLASS_ARC_SPAN / 2;
+
+    placeOnArc(starterMinors, ARC_RADIUS.innerMinor, BASE_ANGLE);
+    placeOnArc(midNodes,      ARC_RADIUS.mid,        BASE_ANGLE);
+    placeOnArc(keystones,     ARC_RADIUS.outer,      BASE_ANGLE);
 
     // Build edges from requires[] relationships
-    const allLayoutMap = { ...univLayoutMap, ...classLayoutMap };
+    const allLMap = { ...univLMap, ...classLMap };
     for (const n of classNodes) {
-      const toLn = classLayoutMap[n.id];
+      const toLn = classLMap[n.id];
       if (!toLn) continue;
       for (const reqId of n.requires) {
-        const fromLn = allLayoutMap[reqId];
-        if (fromLn) {
-          _edges.push({ from: fromLn, to: toLn });
-        }
+        const fromLn = allLMap[reqId];
+        if (fromLn) _edges.push({ from: fromLn, to: toLn });
       }
     }
   }
@@ -286,259 +327,324 @@ function _computeLayout() {
 
 function _rebuildParticles() {
   _particles = [];
-
-  const state    = getState();
-  const unlocked = (state.passives?.unlocked) || [];
+  const unlocked = (getState().passives?.unlocked) || [];
 
   for (const edge of _edges) {
-    if (unlocked.includes(edge.from.node.id) && unlocked.includes(edge.to.node.id)) {
-      // Spawn particles staggered along the edge
-      for (let i = 0; i < PARTICLES_PER_EDGE; i++) {
-        _particles.push({
-          edge,
-          t:     i / PARTICLES_PER_EDGE,  // 0..1 position along edge
-          speed: 0.003 + Math.random() * 0.002
-        });
-      }
+    const bothUnlocked =
+      unlocked.includes(edge.from.data.id) &&
+      unlocked.includes(edge.to.data.id);
+    if (!bothUnlocked) continue;
+
+    for (let i = 0; i < PARTICLES_PER_EDGE; i++) {
+      _particles.push({
+        edge,
+        t:     i / PARTICLES_PER_EDGE,
+        speed: 0.0025 + Math.random() * 0.0015
+      });
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// Rendering
+// Main render loop
 // ---------------------------------------------------------------------------
 
-function _drawFrame() {
+function _drawFrame(ts) {
   if (!_ctx || !_canvas) return;
 
-  const W = _canvas.width;
-  const H = _canvas.height;
-  const state    = getState();
+  const dt = Math.min((ts - _lastTs) / 1000, 0.05); // seconds, capped at 50ms
+  _lastTs  = ts;
+
+  const W       = _canvas.width;
+  const H       = _canvas.height;
+  const state   = getState();
   const unlocked = (state.passives?.unlocked) || [];
   const threads  = state.passives?.leyThreads || 0;
 
-  // Clear
+  // Resolve node states (unlocked / available / locked)
+  for (const ln of _nodes) {
+    if (unlocked.includes(ln.data.id)) {
+      ln.state = 'unlocked';
+    } else {
+      const { canUnlock } = canUnlockNode(ln.data.id, unlocked, threads);
+      ln.state = canUnlock ? 'available' : 'locked';
+    }
+  }
+
+  // ---- Clear ----
   _ctx.clearRect(0, 0, W, H);
 
-  // Background
-  _ctx.fillStyle = '#07080f';
+  // ---- Cosmic background ----
+  _ctx.fillStyle = '#050810';
   _ctx.fillRect(0, 0, W, H);
 
-  // Faint star-field
-  _drawStars(W, H);
+  _drawStars(W, H, ts);
 
-  // Universal strip separator line
-  const univH = H * 0.18;
-  _ctx.strokeStyle = 'rgba(201, 168, 76, 0.15)';
-  _ctx.lineWidth   = 1;
-  _ctx.setLineDash([6, 8]);
-  _ctx.beginPath();
-  _ctx.moveTo(20, univH + 10);
-  _ctx.lineTo(W - 20, univH + 10);
-  _ctx.stroke();
-  _ctx.setLineDash([]);
+  // ---- Universal cluster label ----
+  _ctx.font      = '10px "Cinzel", serif';
+  _ctx.fillStyle = 'rgba(255, 213, 79, 0.4)';
+  _ctx.textAlign = 'center';
+  const uLabelX = W * UNIV_CLUSTER_X_FRAC;
+  const uLabelY = H * UNIV_CLUSTER_Y_FRAC - 58;
+  _ctx.fillText('UNIVERSAL', uLabelX, uLabelY);
 
-  // Section labels
-  _ctx.font      = '11px "Cinzel", serif';
-  _ctx.fillStyle = 'rgba(201, 168, 76, 0.45)';
-  _ctx.textAlign = 'left';
-  _ctx.fillText('UNIVERSAL CORE', 16, 14);
-
+  // ---- Class label ----
   if (state.classType) {
-    const label = state.classType.toUpperCase();
-    _ctx.fillText(`${label} SKILLS`, 16, univH + 28);
+    _ctx.font      = '11px "Cinzel", serif';
+    _ctx.fillStyle = `${_colorWithAlpha(CLASS_COLORS[state.classType] || '#ffffff', 0.35)}`;
+    _ctx.textAlign = 'center';
+    _ctx.fillText(state.classType.toUpperCase(), W * 0.55, H * 0.52 - ARC_RADIUS.outer - 22);
   }
 
-  // Edges
+  // ---- Edges ----
   for (const edge of _edges) {
-    _drawEdge(edge, unlocked);
+    const fromU = unlocked.includes(edge.from.data.id);
+    const toU   = unlocked.includes(edge.to.data.id);
+    _drawEdge(edge.from, edge.to, fromU && toU);
   }
 
-  // Particles
+  // ---- Particles (advance + draw) ----
   for (const p of _particles) {
-    _advanceParticle(p);
-    _drawParticle(p);
+    p.t += p.speed;
+    if (p.t > 1) p.t -= 1;
+    _drawParticle(p, ts);
   }
 
-  // Nodes
+  // ---- Nodes ----
   for (const ln of _nodes) {
-    _drawNode(ln, unlocked, threads);
+    _drawNode(ln, ts);
   }
 }
 
-// Deterministic star field — same positions every frame
-let _starCache = null;
-function _drawStars(W, H) {
+// ---------------------------------------------------------------------------
+// Drawing: background stars
+// ---------------------------------------------------------------------------
+
+function _drawStars(W, H, ts) {
+  // Rebuild cache when canvas size changes (already invalidated in _resize)
   if (!_starCache || _starCache.w !== W || _starCache.h !== H) {
-    // Regenerate star positions when canvas size changes
     const stars = [];
-    const seed  = 42;
-    let rng = seed;
+    let rng = 12345;
     const rand = () => {
-      rng = (rng * 16807 + 0) % 2147483647;
+      rng = (rng * 16807) % 2147483647;
       return (rng - 1) / 2147483646;
     };
-    for (let i = 0; i < 120; i++) {
-      stars.push({ x: rand() * W, y: rand() * H, r: rand() * 1.2 + 0.2, a: rand() * 0.4 + 0.05 });
+    for (let i = 0; i < BG_STAR_COUNT; i++) {
+      stars.push({
+        x:       rand() * W,
+        y:       rand() * H,
+        r:       rand() * 1.5 + 0.4,
+        baseA:   rand() * 0.35 + 0.05,
+        // Some stars twinkle: give them a random phase + speed
+        twinkle: rand() > 0.7,
+        phase:   rand() * Math.PI * 2,
+        freq:    rand() * 1.5 + 0.5
+      });
     }
     _starCache = { w: W, h: H, stars };
   }
+
+  const tsS = ts / 1000;
   for (const s of _starCache.stars) {
+    const alpha = s.twinkle
+      ? s.baseA * (0.6 + 0.4 * Math.sin(tsS * s.freq + s.phase))
+      : s.baseA;
     _ctx.beginPath();
     _ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    _ctx.fillStyle = `rgba(200,220,255,${s.a})`;
+    _ctx.fillStyle = `rgba(210,225,255,${alpha.toFixed(3)})`;
     _ctx.fill();
   }
 }
 
-function _drawEdge(edge, unlocked) {
-  const fromUnlocked = unlocked.includes(edge.from.node.id);
-  const toUnlocked   = unlocked.includes(edge.to.node.id);
-  const bothUnlocked = fromUnlocked && toUnlocked;
-  const color = edge.from.color;
+// ---------------------------------------------------------------------------
+// Drawing: edges
+// ---------------------------------------------------------------------------
 
+function _drawEdge(n1, n2, bothUnlocked) {
+  _ctx.save();
   if (bothUnlocked) {
-    // Glowing line
-    _ctx.save();
+    // Bright glowing constellation line
+    const color = n1.color;
     _ctx.strokeStyle = color;
-    _ctx.lineWidth   = 2.5;
+    _ctx.lineWidth   = 2;
     _ctx.shadowColor = color;
-    _ctx.shadowBlur  = 10;
+    _ctx.shadowBlur  = 12;
     _ctx.setLineDash([]);
-    _ctx.beginPath();
-    _ctx.moveTo(edge.from.x, edge.from.y);
-    _ctx.lineTo(edge.to.x,   edge.to.y);
-    _ctx.stroke();
-    _ctx.restore();
+    _ctx.globalAlpha = 0.85;
   } else {
-    // Thin dashed grey line
-    _ctx.save();
-    _ctx.strokeStyle = 'rgba(120,130,150,0.30)';
+    // Dim dashed line
+    _ctx.strokeStyle = 'rgba(100,120,160,0.25)';
     _ctx.lineWidth   = 1;
-    _ctx.setLineDash([4, 6]);
-    _ctx.beginPath();
-    _ctx.moveTo(edge.from.x, edge.from.y);
-    _ctx.lineTo(edge.to.x,   edge.to.y);
-    _ctx.stroke();
-    _ctx.setLineDash([]);
-    _ctx.restore();
+    _ctx.setLineDash([4, 7]);
+    _ctx.globalAlpha = 1;
   }
+  _ctx.beginPath();
+  _ctx.moveTo(n1.x, n1.y);
+  _ctx.lineTo(n2.x, n2.y);
+  _ctx.stroke();
+  _ctx.setLineDash([]);
+  _ctx.restore();
 }
 
-function _advanceParticle(p) {
-  p.t += p.speed;
-  if (p.t > 1) p.t -= 1;
-}
+// ---------------------------------------------------------------------------
+// Drawing: particles along active edges
+// ---------------------------------------------------------------------------
 
-function _drawParticle(p) {
+function _drawParticle(p, ts) {
   const { from, to } = p.edge;
-  const x = from.x + (to.x - from.x) * p.t;
-  const y = from.y + (to.y - from.y) * p.t;
-  const color = from.color;
+  const x     = from.x + (to.x - from.x) * p.t;
+  const y     = from.y + (to.y - from.y) * p.t;
+  const alpha = 0.6 + 0.4 * Math.sin(ts / 300 + p.t * Math.PI * 4);
 
   _ctx.save();
-  _ctx.shadowColor = color;
-  _ctx.shadowBlur  = 8;
+  _ctx.globalAlpha = alpha;
+  _ctx.shadowColor = from.color;
+  _ctx.shadowBlur  = 10;
   _ctx.beginPath();
-  _ctx.arc(x, y, 3, 0, Math.PI * 2);
+  _ctx.arc(x, y, 2.5, 0, Math.PI * 2);
   _ctx.fillStyle = '#ffffff';
   _ctx.fill();
   _ctx.restore();
 }
 
-function _drawNode(ln, unlocked, threads) {
-  const { node, x, y, color, radius } = ln;
-  const isUnlocked = unlocked.includes(node.id);
-  const { canUnlock } = canUnlockNode(node.id, unlocked, threads);
-  const isHovered  = _hoveredId === node.id;
+// ---------------------------------------------------------------------------
+// Drawing: nodes (stars)
+// ---------------------------------------------------------------------------
 
-  // Pulse for available nodes
-  const pulse  = isUnlocked ? 0 : (canUnlock ? Math.sin(_tick * 0.05) * 0.5 + 0.5 : 0);
-  const r      = isUnlocked ? radius : (canUnlock ? radius + pulse * 3 : radius);
-  const alpha  = isUnlocked ? 1.0    : (canUnlock ? 0.6 + pulse * 0.3 : 0.25);
+function _drawNode(ln, ts) {
+  const { data, x, y, radius, color, state } = ln;
+  const isUnlocked  = state === 'unlocked';
+  const isAvailable = state === 'available';
+  const isHovered   = _hoveredId === data.id;
+  const tsS         = ts / 1000;
+
+  // Pulse factor (0..1) for available nodes
+  const pulse = isAvailable ? (Math.sin(tsS * 2.0) * 0.5 + 0.5) : 0;
+
+  // Effective alpha
+  let alpha;
+  if (isUnlocked)       alpha = 1.0;
+  else if (isAvailable) alpha = 0.55 + pulse * 0.35;
+  else                  alpha = 0.22;
 
   _ctx.save();
   _ctx.globalAlpha = alpha;
 
-  // Outer glow
-  if (isUnlocked || canUnlock) {
-    const glowR = isUnlocked ? (node.type === 'keystone' ? 60 : 40) : 28 + pulse * 10;
-    const glowA = isUnlocked ? (node.type === 'keystone' ? 0.55 : 0.40) : 0.20 + pulse * 0.15;
-    const grad  = _ctx.createRadialGradient(x, y, r * 0.3, x, y, glowR);
-    grad.addColorStop(0, _colorWithAlpha(color, glowA));
+  // --- Outer aura / glow gradient ---
+  if (isUnlocked || isAvailable) {
+    const auraR = radius * (isUnlocked ? 3.2 : 2.4 + pulse * 0.8);
+    const auraA = isUnlocked ? 0.35 : (0.12 + pulse * 0.15);
+    const grad  = _ctx.createRadialGradient(x, y, radius * 0.5, x, y, auraR);
+    grad.addColorStop(0, _colorWithAlpha(color, auraA));
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     _ctx.beginPath();
-    _ctx.arc(x, y, glowR, 0, Math.PI * 2);
+    _ctx.arc(x, y, auraR, 0, Math.PI * 2);
     _ctx.fillStyle = grad;
     _ctx.fill();
   }
 
-  // Keystone pulsing halo (gold ring)
-  if (node.type === 'keystone' && isUnlocked) {
-    const haloScale = 1 + Math.sin(_tick * 0.04) * 0.08;
+  // --- Keystone pulsing ring ---
+  if (data.type === 'keystone' && isUnlocked) {
+    const ringAlpha  = 0.25 + 0.2 * Math.sin(tsS * 1.5);
+    const ringRadius = radius + 10 + 4 * Math.sin(tsS * 1.5);
     _ctx.beginPath();
-    _ctx.arc(x, y, r * haloScale + 8, 0, Math.PI * 2);
-    _ctx.strokeStyle = `rgba(201,168,76,${0.3 + Math.sin(_tick * 0.04) * 0.2})`;
-    _ctx.lineWidth   = 2;
+    _ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+    _ctx.strokeStyle = _colorWithAlpha(color, ringAlpha);
+    _ctx.lineWidth   = 1.5;
     _ctx.stroke();
   }
 
-  // Node fill
-  const fillGrad = _ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-  if (isUnlocked) {
-    fillGrad.addColorStop(0, _lighten(color, 0.4));
-    fillGrad.addColorStop(1, _darken(color, 0.5));
-  } else if (canUnlock) {
-    fillGrad.addColorStop(0, _darken(color, 0.2));
-    fillGrad.addColorStop(1, _darken(color, 0.7));
-  } else {
-    fillGrad.addColorStop(0, '#2a2e3a');
-    fillGrad.addColorStop(1, '#141820');
+  // --- Star shape ---
+  const drawRadius = isAvailable ? radius + pulse * 2 : radius;
+  const shadowStr  = isUnlocked  ? (data.type === 'keystone' ? 28 : 18)
+                   : isAvailable ? (8 + pulse * 8)
+                   : 0;
+
+  _ctx.shadowColor = color;
+  _ctx.shadowBlur  = isHovered ? shadowStr + 12 : shadowStr;
+
+  _drawStar(x, y, drawRadius, color, isUnlocked, isAvailable);
+
+  // --- Hover ring ---
+  if (isHovered) {
+    _ctx.beginPath();
+    _ctx.arc(x, y, drawRadius + 5, 0, Math.PI * 2);
+    _ctx.strokeStyle = _colorWithAlpha(color, 0.7);
+    _ctx.lineWidth   = 1.5;
+    _ctx.stroke();
   }
 
-  _ctx.beginPath();
-  _ctx.arc(x, y, r, 0, Math.PI * 2);
-  _ctx.fillStyle = fillGrad;
-  _ctx.fill();
+  _ctx.shadowBlur  = 0;
+  _ctx.shadowColor = 'transparent';
 
-  // Node border
-  _ctx.beginPath();
-  _ctx.arc(x, y, r, 0, Math.PI * 2);
-  if (isUnlocked) {
-    _ctx.strokeStyle = color;
-    _ctx.lineWidth   = isHovered ? 3 : 2;
-    _ctx.shadowColor = color;
-    _ctx.shadowBlur  = isHovered ? 20 : 12;
-  } else if (canUnlock) {
-    _ctx.strokeStyle = _lighten(color, -0.2);
-    _ctx.lineWidth   = isHovered ? 2.5 : 1.5;
-    _ctx.shadowBlur  = 0;
-  } else {
-    _ctx.strokeStyle = 'rgba(100,110,130,0.4)';
-    _ctx.lineWidth   = 1;
-    _ctx.shadowBlur  = 0;
-  }
-  _ctx.stroke();
-  _ctx.shadowBlur = 0;
-
-  // Label inside bubble
-  _ctx.globalAlpha = isUnlocked ? 1.0 : (canUnlock ? 0.75 + pulse * 0.25 : 0.4);
+  // --- Label below star ---
+  _ctx.globalAlpha = isUnlocked ? 0.9 : (isAvailable ? 0.65 + pulse * 0.25 : 0.3);
   _ctx.textAlign   = 'center';
-  _ctx.textBaseline= 'middle';
+  _ctx.textBaseline = 'top';
 
-  const shortName  = _abbreviate(node.name, r);
-  const fontSize   = node.type === 'keystone' ? 9 : (node.type === 'major' ? 8 : 7);
-  _ctx.font        = `600 ${fontSize}px "Crimson Text", Georgia, serif`;
-  _ctx.fillStyle   = isUnlocked ? '#ffffff' : (canUnlock ? '#ddd8c4' : '#6a7080');
-  _ctx.fillText(shortName, x, y);
+  const labelLines = _wrapLabel(data.name, drawRadius);
+  const fontSize   = 9;
+  _ctx.font        = `${fontSize}px "Cinzel", serif`;
+  _ctx.fillStyle   = '#ffffff';
 
-  // Cost label below bubble
-  const costY = y + r + 10;
-  _ctx.font      = `${fontSize - 1}px "Crimson Text", Georgia, serif`;
-  _ctx.fillStyle = isUnlocked ? 'rgba(201,168,76,0.7)' : (canUnlock ? 'rgba(201,168,76,0.5)' : 'rgba(100,110,130,0.4)');
-  _ctx.fillText(`${node.cost}T`, x, costY);
+  // Subtle text shadow for legibility on the star field
+  _ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  _ctx.shadowBlur  = 4;
+
+  const labelY = y + drawRadius + 5;
+  labelLines.forEach((line, i) => {
+    _ctx.fillText(line, x, labelY + i * (fontSize + 2));
+  });
 
   _ctx.restore();
+}
+
+/**
+ * Draw a 5-pointed star centred at (cx, cy) with outer radius `r`.
+ * Colours and fill differ by node state.
+ *
+ * @param {number}  cx, cy   Centre
+ * @param {number}  r        Outer radius
+ * @param {string}  color    Accent colour (hex)
+ * @param {boolean} unlocked
+ * @param {boolean} available
+ */
+function _drawStar(cx, cy, r, color, unlocked, available) {
+  const points = 5;
+  const inner  = r * 0.42;   // inner radius of the star notch
+  const rot    = -Math.PI / 2; // point upward
+
+  _ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const angle = rot + (i * Math.PI) / points;
+    const radius = i % 2 === 0 ? r : inner;
+    const px = cx + radius * Math.cos(angle);
+    const py = cy + radius * Math.sin(angle);
+    if (i === 0) _ctx.moveTo(px, py);
+    else         _ctx.lineTo(px, py);
+  }
+  _ctx.closePath();
+
+  // Fill
+  if (unlocked) {
+    // Bright core with lighter tint
+    const grad = _ctx.createRadialGradient(cx, cy - r * 0.3, r * 0.1, cx, cy, r);
+    grad.addColorStop(0, _lighten(color, 0.55));
+    grad.addColorStop(1, color);
+    _ctx.fillStyle = grad;
+  } else if (available) {
+    _ctx.fillStyle = _darken(color, 0.55);
+  } else {
+    _ctx.fillStyle = '#1a1e2a';
+  }
+  _ctx.fill();
+
+  // Stroke / rim
+  _ctx.strokeStyle = unlocked ? color
+                   : available ? _darken(color, 0.2)
+                   : 'rgba(80,90,110,0.5)';
+  _ctx.lineWidth   = unlocked ? 1.5 : 1;
+  _ctx.stroke();
 }
 
 // ---------------------------------------------------------------------------
@@ -551,7 +657,7 @@ function _showTooltip(ln, canvasX, canvasY) {
   const state    = getState();
   const unlocked = (state.passives?.unlocked) || [];
   const threads  = state.passives?.leyThreads || 0;
-  const node     = ln.node;
+  const node     = ln.data;
 
   const isUnlocked = unlocked.includes(node.id);
   const { canUnlock, reason } = canUnlockNode(node.id, unlocked, threads);
@@ -577,16 +683,16 @@ function _showTooltip(ln, canvasX, canvasY) {
     ${statusHtml}
   `;
 
-  // Position tooltip so it stays inside the container
   const TT_W = 220;
-  const TT_H = 120; // estimate
-  const containerRect = _container.getBoundingClientRect();
-  let tx = canvasX + 16;
-  let ty = canvasY - TT_H / 2;
+  const TT_H = 130;
+  const cW   = _container.getBoundingClientRect().width;
+  const cH   = _container.getBoundingClientRect().height;
 
-  if (tx + TT_W > containerRect.width - 8) tx = canvasX - TT_W - 16;
-  if (ty < 4) ty = 4;
-  if (ty + TT_H > containerRect.height - 4) ty = containerRect.height - TT_H - 4;
+  let tx = canvasX + 18;
+  let ty = canvasY - TT_H / 2;
+  if (tx + TT_W > cW - 8)  tx = canvasX - TT_W - 18;
+  if (ty < 4)               ty = 4;
+  if (ty + TT_H > cH - 4)  ty = cH - TT_H - 4;
 
   _tooltip.style.display = 'block';
   _tooltip.style.left    = `${tx}px`;
@@ -594,24 +700,23 @@ function _showTooltip(ln, canvasX, canvasY) {
 }
 
 function _hideTooltip() {
-  if (_tooltip) _tooltip.style.display = 'none';
+  if (_tooltip)  _tooltip.style.display = 'none';
   _hoveredId = null;
   if (_canvas) _canvas.style.cursor = 'default';
 }
 
 // ---------------------------------------------------------------------------
-// Unlock confirm (inline overlay)
+// Unlock confirm overlay
 // ---------------------------------------------------------------------------
 
 function _confirmUnlock(ln) {
-  const node = ln.node;
+  const node = ln.data;
 
-  // Remove any existing confirm
   const existing = document.getElementById('ptc-confirm-overlay');
   if (existing) existing.remove();
 
   const overlay = document.createElement('div');
-  overlay.id = 'ptc-confirm-overlay';
+  overlay.id        = 'ptc-confirm-overlay';
   overlay.className = 'ptc-confirm-overlay';
   overlay.innerHTML = `
     <div class="ptc-confirm-box">
@@ -632,11 +737,7 @@ function _confirmUnlock(ln) {
     _doUnlock(node.id);
   });
   overlay.querySelector('.ptc-btn-no').addEventListener('click', () => overlay.remove());
-
-  // Click outside to close
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.remove();
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
 function _doUnlock(nodeId) {
@@ -645,7 +746,7 @@ function _doUnlock(nodeId) {
   if (!passives) return;
 
   const node = PASSIVE_NODES_MAP[nodeId];
-  if (!node) return;
+  if (!node)  return;
 
   const { canUnlock, reason } = canUnlockNode(nodeId, passives.unlocked, passives.leyThreads);
   if (!canUnlock) {
@@ -658,75 +759,80 @@ function _doUnlock(nodeId) {
   saveState();
 
   showNotification(`Unlocked: ${node.name}`, 'success');
-
-  // Refresh canvas
   PassiveTreeCanvas.refresh();
-
-  // Update left-panel thread counters directly (avoids circular import)
   _refreshLeftPanel(passives);
 }
 
-/** Update the left panel thread counts without importing passives_ui. */
 function _refreshLeftPanel(passives) {
-  const threadsEl = document.getElementById('passives-threads-value');
-  const headerEl  = document.getElementById('passives-header-threads');
-  if (threadsEl) threadsEl.textContent = passives.leyThreads;
-  if (headerEl)  headerEl.textContent  = passives.leyThreads;
+  const el1 = document.getElementById('passives-threads-value');
+  const el2 = document.getElementById('passives-header-threads');
+  if (el1) el1.textContent = passives.leyThreads;
+  if (el2) el2.textContent = passives.leyThreads;
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Hit-test
 // ---------------------------------------------------------------------------
 
-function _hitTest(mx, my) {
-  // Reverse iteration so topmost (last drawn) node gets priority
+/**
+ * Return the layout node under canvas coordinates (mx, my), or null.
+ * Stars use a circular hit zone slightly larger than the visual radius.
+ */
+function _getNodeAt(mx, my) {
   for (let i = _nodes.length - 1; i >= 0; i--) {
     const ln = _nodes[i];
     const dx = mx - ln.x;
     const dy = my - ln.y;
-    if (dx * dx + dy * dy <= (ln.radius + 4) * (ln.radius + 4)) {
-      return ln;
-    }
+    const hitR = ln.radius + 6;
+    if (dx * dx + dy * dy <= hitR * hitR) return ln;
   }
   return null;
 }
 
-/** Shorten node name to fit inside a bubble. */
-function _abbreviate(name, radius) {
-  // For small nodes, show first word only or up to ~10 chars
-  const maxChars = radius < 24 ? 8 : (radius < 32 ? 12 : 18);
-  if (name.length <= maxChars) return name;
-
-  // Try to fit two words
-  const words = name.split(' ');
-  if (words.length >= 2) {
-    const two = `${words[0]} ${words[1]}`;
-    if (two.length <= maxChars) return two;
-    return words[0].slice(0, maxChars - 1) + '…';
-  }
-  return name.slice(0, maxChars - 1) + '…';
+/** Convert a MouseEvent to pixel coordinates on the canvas. */
+function _canvasCoords(e) {
+  const rect  = _canvas.getBoundingClientRect();
+  const scaleX = _canvas.width  / rect.width;
+  const scaleY = _canvas.height / rect.height;
+  return {
+    mx: (e.clientX - rect.left) * scaleX,
+    my: (e.clientY - rect.top)  * scaleY
+  };
 }
 
-function _capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+// ---------------------------------------------------------------------------
+// Label wrapping
+// ---------------------------------------------------------------------------
 
 /**
- * Lighten or darken a hex color by a factor (-1..1).
- * Positive factor brightens, negative darkens.
+ * Split a node name into at most 2 lines that fit beneath the star.
+ * Tries to break on whitespace; always returns 1–2 strings.
  */
-function _lighten(hex, factor) {
-  const [r, g, b] = _hexToRgb(hex);
-  if (factor >= 0) {
-    return `rgb(${Math.min(255, r + (255 - r) * factor) | 0},${Math.min(255, g + (255 - g) * factor) | 0},${Math.min(255, b + (255 - b) * factor) | 0})`;
+function _wrapLabel(name, radius) {
+  // Rough char limit based on star size
+  const maxChars = Math.max(8, Math.floor(radius * 1.4));
+  if (name.length <= maxChars) return [name];
+
+  const words = name.split(' ');
+  if (words.length === 1) return [name.slice(0, maxChars - 1) + '…'];
+
+  // Try to fit into two lines
+  let line1 = '';
+  let line2 = '';
+  let splitIdx = words.length; // index of first word that goes to line2
+  for (let wi = 0; wi < words.length; wi++) {
+    const w = words[wi];
+    if (line1.length === 0)                       line1 = w;
+    else if ((line1 + ' ' + w).length <= maxChars) line1 += ' ' + w;
+    else { splitIdx = wi; line2 = words.slice(wi).join(' '); break; }
   }
-  const f = 1 + factor;
-  return `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
+  if (line2.length > maxChars) line2 = line2.slice(0, maxChars - 1) + '…';
+  return line2 ? [line1, line2] : [line1];
 }
 
-function _darken(hex, factor) {
-  return _lighten(hex, -factor);
-}
+// ---------------------------------------------------------------------------
+// Colour helpers
+// ---------------------------------------------------------------------------
 
 function _hexToRgb(hex) {
   const h = hex.replace('#', '');
@@ -737,12 +843,28 @@ function _hexToRgb(hex) {
   ];
 }
 
-/**
- * Convert a hex color string to an rgba() CSS string with the given alpha.
- * @param {string} hex  e.g. '#ff6b35'
- * @param {number} alpha 0..1
- */
 function _colorWithAlpha(hex, alpha) {
   const [r, g, b] = _hexToRgb(hex);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Lighten (factor > 0) or darken (factor < 0) a hex colour.
+ * Factor range: -1..1
+ */
+function _lighten(hex, factor) {
+  const [r, g, b] = _hexToRgb(hex);
+  if (factor >= 0) {
+    return `rgb(${Math.min(255, (r + (255 - r) * factor) | 0)},${Math.min(255, (g + (255 - g) * factor) | 0)},${Math.min(255, (b + (255 - b) * factor) | 0)})`;
+  }
+  const f = 1 + factor;
+  return `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
+}
+
+function _darken(hex, factor) {
+  return _lighten(hex, -factor);
+}
+
+function _capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

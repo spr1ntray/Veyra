@@ -49,7 +49,7 @@
   overflow: hidden;
 }
 
-/* --- Двухколоночный layout --- */
+/* --- Single-column layout: right panel fills full screen --- */
 .tower-entrance-layout {
   position: relative;
   z-index: 2;
@@ -57,160 +57,11 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-}
-
-/* ===== ЛЕВАЯ ПАНЕЛЬ: лента этажей (40% ширины) ===== */
-
-.tower-left-panel {
-  width: 40%;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  background: rgba(8, 5, 22, 0.82);
-  border-right: 1px solid rgba(201, 168, 76, 0.2);
-  overflow: hidden;
-}
-
-.tower-left-heading {
-  font-family: var(--font-title);
-  font-size: var(--fs-xs);
-  color: var(--color-gold);
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  text-align: center;
-  padding: 14px 0 10px;
-  border-bottom: 1px solid rgba(201, 168, 76, 0.15);
-  flex-shrink: 0;
-}
-
-/* Прокручиваемая лента этажей */
-.tower-floor-strip {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 0;
-  /* Скрываем скроллбар визуально, оставляем функциональность */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(201,168,76,0.3) transparent;
-}
-
-.tower-floor-strip::-webkit-scrollbar {
-  width: 4px;
-}
-.tower-floor-strip::-webkit-scrollbar-track {
-  background: transparent;
-}
-.tower-floor-strip::-webkit-scrollbar-thumb {
-  background: rgba(201, 168, 76, 0.3);
-  border-radius: 2px;
-}
-
-/* Одна строка этажа */
-.tower-strip-row {
-  display: grid;
-  grid-template-columns: 28px 34px 1fr 24px;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  font-family: var(--font-ui);
-  font-size: var(--fs-xs);
-  transition: background 0.15s;
-}
-
-/* Состояние: пройдено */
-.tower-strip-row.floor-cleared {
-  color: var(--color-gold);
-}
-
-.tower-strip-row.floor-cleared .strip-floor-num {
-  color: var(--color-gold);
-  opacity: 0.9;
-}
-
-/* Состояние: текущий/следующий */
-.tower-strip-row.floor-current {
-  color: #fff;
-  background: rgba(201, 168, 76, 0.08);
-  animation: strip-row-pulse 2.2s ease-in-out infinite;
-}
-
-@keyframes strip-row-pulse {
-  0%, 100% { box-shadow: inset 2px 0 0 rgba(201, 168, 76, 0.5); }
-  50%       { box-shadow: inset 2px 0 0 rgba(201, 168, 76, 1);   }
-}
-
-/* Состояние: заблокировано */
-.tower-strip-row.floor-locked {
-  color: rgba(255, 255, 255, 0.25);
-}
-
-.tower-strip-row.floor-locked .strip-floor-num {
-  color: rgba(255, 255, 255, 0.2);
-}
-
-/* Элементы строки */
-.strip-floor-num {
-  font-weight: 700;
-  font-size: var(--fs-xs);
-  text-align: right;
-  color: rgba(255, 255, 255, 0.55);
-  line-height: 1;
-}
-
-.strip-enemy-icon {
-  display: flex;
-  align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  align-items: stretch;
 }
 
-.strip-enemy-sprite {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  /* Блокированные этажи — серый фильтр через родителя */
-}
-
-.tower-strip-row.floor-locked .strip-enemy-sprite {
-  filter: grayscale(1) brightness(0.35);
-}
-
-.tower-strip-row.floor-cleared .strip-enemy-sprite {
-  filter: sepia(0.4) saturate(0.7) brightness(0.9);
-}
-
-.strip-enemy-emoji {
-  font-size: 20px;
-  line-height: 1;
-}
-
-.strip-enemy-name {
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.strip-status-icon {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  text-align: center;
-}
-
-.strip-status-floor-cleared { color: var(--color-gold); }
-.strip-status-floor-current { color: #fff; }
-.strip-status-floor-locked  { color: rgba(255,255,255,0.2); }
-
-/* Разделитель между этажами */
-.strip-separator {
-  height: 1px;
-  margin: 0 16px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* ===== ПРАВАЯ ПАНЕЛЬ: заголовок, статы, кнопки (60% ширины) ===== */
+/* ===== ПРАВАЯ ПАНЕЛЬ: заголовок, статы, кнопки (полный экран) ===== */
 
 .tower-right-panel {
   flex: 1;
