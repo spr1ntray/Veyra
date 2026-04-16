@@ -67,11 +67,37 @@
   width: 220px;
   flex-shrink: 0;
   border-right: 1px solid #2a2e4a;
-  background: #0d1130;
+  border-left: 2px solid rgba(201, 168, 76, 0.4);
+  background: linear-gradient(180deg, #0d0a1a 0%, #080510 100%);
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Ley Loom panel title */
+.passives-panel-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  color: #c9a84c;
+  letter-spacing: 0.15em;
+  text-align: center;
+  text-shadow:
+    0 0 8px rgba(201, 168, 76, 0.5),
+    0 0 20px rgba(201, 168, 76, 0.2);
+}
+
+/* Decorative gold section divider */
+.passives-panel-divider {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(201, 168, 76, 0.3) 30%,
+    rgba(201, 168, 76, 0.3) 70%,
+    transparent 100%
+  );
+  margin: 2px 0;
+  flex-shrink: 0;
 }
 
 .passives-char-name {
@@ -94,23 +120,27 @@
 }
 
 .passives-threads-label {
-  font-size: 12px;
-  color: #7788aa;
+  font-size: 11px;
+  color: #9aabcc;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  font-family: 'Cinzel', serif;
 }
 
 .passives-threads-value {
-  font-size: 20px;
+  font-size: 28px;
   color: #c9a84c;
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 2px;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(201, 168, 76, 0.5);
 }
 
 .passives-threads-total {
   font-size: 12px;
-  color: #556677;
-  margin-top: 2px;
+  color: #6677aa;
+  margin-top: 4px;
+  letter-spacing: 0.03em;
 }
 
 .passives-legend {
@@ -143,24 +173,39 @@
 .legend-dot-major    { background: #8050c0; }
 .legend-dot-keystone { background: #c9a84c; }
 
+/* Star icons in legend */
+.legend-star {
+  flex-shrink: 0;
+  display: inline-block;
+  line-height: 1;
+}
+.legend-star-minor    { color: #5a9ad0; font-size: 11px; text-shadow: 0 0 4px rgba(90,154,208,0.6); }
+.legend-star-major    { color: #a070e0; font-size: 14px; text-shadow: 0 0 5px rgba(160,112,224,0.6); }
+.legend-star-keystone { color: #c9a84c; font-size: 17px; text-shadow: 0 0 6px rgba(201,168,76,0.7); }
+
 .passives-respec-btn {
   margin-top: auto;
-  background: #1a0a0a;
-  border: 1px solid #5a2020;
-  color: #cc6666;
-  padding: 8px 12px;
-  border-radius: 4px;
+  background: #150808;
+  border: 1px solid rgba(180, 60, 60, 0.5);
+  color: #c07070;
+  padding: 10px 14px;
+  border-radius: 5px;
   cursor: pointer;
-  font-family: 'Crimson Text', serif;
-  font-size: 14px;
-  transition: background 0.2s, border-color 0.2s;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  text-align: center;
 }
-.passives-respec-btn:hover {
-  background: #2a1010;
-  border-color: #cc4444;
+.passives-respec-btn:hover:not(:disabled) {
+  background: #2a0e0e;
+  border-color: rgba(220, 80, 80, 0.8);
+  color: #e08888;
+  box-shadow: 0 0 12px rgba(200, 60, 60, 0.25), inset 0 0 8px rgba(200, 50, 50, 0.08);
 }
 .passives-respec-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 

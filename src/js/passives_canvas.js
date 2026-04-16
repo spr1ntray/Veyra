@@ -91,6 +91,16 @@ let _roHandle  = null;   // ResizeObserver
 // Cached static star field — regenerated when canvas dimensions change
 let _starCache = null;
 
+// Parallax mouse state: smoothed normalised position in range -0.5..0.5
+let _mx = 0;   // current smoothed X
+let _my = 0;   // current smoothed Y
+let _targetMX = 0;  // raw normalised from last mousemove
+let _targetMY = 0;
+
+// Last known raw canvas mouse coords (used for cursor-beam feature)
+let _rawMouseX = 0;
+let _rawMouseY = 0;
+
 // ---------------------------------------------------------------------------
 // Public API (object export keeps the same interface as the previous version)
 // ---------------------------------------------------------------------------
@@ -170,6 +180,15 @@ export const PassiveTreeCanvas = {
   _onMouseMove(e) {
     if (!_canvas) return;
     const { mx, my } = _canvasCoords(e);
+
+    // Update raw mouse for cursor-beam effect
+    _rawMouseX = mx;
+    _rawMouseY = my;
+
+    // Update parallax target (normalised -0.5..0.5)
+    _targetMX = mx / _canvas.width  - 0.5;
+    _targetMY = my / _canvas.height - 0.5;
+
     const hit = _getNodeAt(mx, my);
     if (hit) {
       _canvas.style.cursor = 'pointer';
@@ -355,6 +374,10 @@ function _drawFrame(ts) {
   const dt = Math.min((ts - _lastTs) / 1000, 0.05); // seconds, capped at 50ms
   _lastTs  = ts;
 
+  // Smooth parallax follow — lerp factor 0.08 per frame (independent of dt for feel)
+  _mx += (_targetMX - _mx) * 0.08;
+  _my += (_targetMY - _my) * 0.08;
+
   const W       = _canvas.width;
   const H       = _canvas.height;
   const state   = getState();
@@ -378,14 +401,20 @@ function _drawFrame(ts) {
   _ctx.fillStyle = '#050810';
   _ctx.fillRect(0, 0, W, H);
 
+  // Nebula cloud layer drawn first, under stars
+  _drawNebula(W, H);
   _drawStars(W, H, ts);
+
+  // Graph parallax offset — slightly less than near stars for depth illusion
+  const gOX = _mx * 12;
+  const gOY = _my * 12;
 
   // ---- Universal cluster label ----
   _ctx.font      = '10px "Cinzel", serif';
   _ctx.fillStyle = 'rgba(255, 213, 79, 0.4)';
   _ctx.textAlign = 'center';
-  const uLabelX = W * UNIV_CLUSTER_X_FRAC;
-  const uLabelY = H * UNIV_CLUSTER_Y_FRAC - 58;
+  const uLabelX = W * UNIV_CLUSTER_X_FRAC + gOX;
+  const uLabelY = H * UNIV_CLUSTER_Y_FRAC - 58 + gOY;
   _ctx.fillText('UNIVERSAL', uLabelX, uLabelY);
 
   // ---- Class label ----
@@ -393,32 +422,66 @@ function _drawFrame(ts) {
     _ctx.font      = '11px "Cinzel", serif';
     _ctx.fillStyle = `${_colorWithAlpha(CLASS_COLORS[state.classType] || '#ffffff', 0.35)}`;
     _ctx.textAlign = 'center';
-    _ctx.fillText(state.classType.toUpperCase(), W * 0.55, H * 0.52 - ARC_RADIUS.outer - 22);
+    _ctx.fillText(state.classType.toUpperCase(), W * 0.55 + gOX, H * 0.52 - ARC_RADIUS.outer - 22 + gOY);
   }
 
-  // ---- Edges ----
+  // ---- Edges (offset by graph parallax) ----
   for (const edge of _edges) {
     const fromU = unlocked.includes(edge.from.data.id);
     const toU   = unlocked.includes(edge.to.data.id);
-    _drawEdge(edge.from, edge.to, fromU && toU);
+    _drawEdge(edge.from, edge.to, fromU && toU, gOX, gOY);
   }
 
   // ---- Particles (advance + draw) ----
   for (const p of _particles) {
     p.t += p.speed;
     if (p.t > 1) p.t -= 1;
-    _drawParticle(p, ts);
+    _drawParticle(p, ts, gOX, gOY);
   }
+
+  // ---- Cursor beams (drawn beneath nodes so nodes render on top) ----
+  _drawCursorBeams(unlocked, gOX, gOY);
 
   // ---- Nodes ----
   for (const ln of _nodes) {
-    _drawNode(ln, ts);
+    _drawNode(ln, ts, gOX, gOY);
   }
 }
 
 // ---------------------------------------------------------------------------
 // Drawing: background stars
 // ---------------------------------------------------------------------------
+
+/**
+ * Draw blurred nebula patches behind the star field.
+ * Uses radial gradients with very low opacity so they read as subtle colour
+ * variation rather than bright blobs. Positions are static (do not parallax).
+ */
+function _drawNebula(W, H) {
+  const patches = [
+    // [cx_frac, cy_frac, radius, r, g, b, opacity]
+    [ 0.62, 0.45, 320, 61, 26, 110, 0.10 ],   // purple centre
+    [ 0.25, 0.65, 260, 10, 26,  61, 0.09 ],   // deep blue lower-left
+    [ 0.78, 0.72, 220, 61, 15,  15, 0.07 ],   // faint red lower-right
+    [ 0.42, 0.22, 200, 20, 40,  90, 0.08 ],   // cold blue upper
+  ];
+
+  for (const [cxF, cyF, radius, r, g, b, alpha] of patches) {
+    const cx = W * cxF;
+    const cy = H * cyF;
+    const grad = _ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grad.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    _ctx.save();
+    _ctx.globalAlpha = 1;
+    _ctx.beginPath();
+    _ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    _ctx.fillStyle = grad;
+    _ctx.fill();
+    _ctx.restore();
+  }
+}
 
 function _drawStars(W, H, ts) {
   // Rebuild cache when canvas size changes (already invalidated in _resize)
@@ -430,15 +493,18 @@ function _drawStars(W, H, ts) {
       return (rng - 1) / 2147483646;
     };
     for (let i = 0; i < BG_STAR_COUNT; i++) {
+      // Classify as near (large, bright) or far (small, dim) for parallax
+      const isFar = i < BG_STAR_COUNT * 0.7;
       stars.push({
         x:       rand() * W,
         y:       rand() * H,
-        r:       rand() * 1.5 + 0.4,
-        baseA:   rand() * 0.35 + 0.05,
+        r:       isFar ? rand() * 0.9 + 0.3 : rand() * 1.2 + 0.8,
+        baseA:   isFar ? rand() * 0.25 + 0.04 : rand() * 0.35 + 0.15,
         // Some stars twinkle: give them a random phase + speed
         twinkle: rand() > 0.7,
         phase:   rand() * Math.PI * 2,
-        freq:    rand() * 1.5 + 0.5
+        freq:    rand() * 1.5 + 0.5,
+        far:     isFar
       });
     }
     _starCache = { w: W, h: H, stars };
@@ -449,8 +515,13 @@ function _drawStars(W, H, ts) {
     const alpha = s.twinkle
       ? s.baseA * (0.6 + 0.4 * Math.sin(tsS * s.freq + s.phase))
       : s.baseA;
+
+    // Parallax offset: far stars move less, near stars more
+    const offX = s.far ? _mx * 8 : _mx * 20;
+    const offY = s.far ? _my * 8 : _my * 20;
+
     _ctx.beginPath();
-    _ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    _ctx.arc(s.x + offX, s.y + offY, s.r, 0, Math.PI * 2);
     _ctx.fillStyle = `rgba(210,225,255,${alpha.toFixed(3)})`;
     _ctx.fill();
   }
@@ -460,7 +531,7 @@ function _drawStars(W, H, ts) {
 // Drawing: edges
 // ---------------------------------------------------------------------------
 
-function _drawEdge(n1, n2, bothUnlocked) {
+function _drawEdge(n1, n2, bothUnlocked, oX = 0, oY = 0) {
   _ctx.save();
   if (bothUnlocked) {
     // Bright glowing constellation line
@@ -479,8 +550,8 @@ function _drawEdge(n1, n2, bothUnlocked) {
     _ctx.globalAlpha = 1;
   }
   _ctx.beginPath();
-  _ctx.moveTo(n1.x, n1.y);
-  _ctx.lineTo(n2.x, n2.y);
+  _ctx.moveTo(n1.x + oX, n1.y + oY);
+  _ctx.lineTo(n2.x + oX, n2.y + oY);
   _ctx.stroke();
   _ctx.setLineDash([]);
   _ctx.restore();
@@ -490,10 +561,10 @@ function _drawEdge(n1, n2, bothUnlocked) {
 // Drawing: particles along active edges
 // ---------------------------------------------------------------------------
 
-function _drawParticle(p, ts) {
+function _drawParticle(p, ts, oX = 0, oY = 0) {
   const { from, to } = p.edge;
-  const x     = from.x + (to.x - from.x) * p.t;
-  const y     = from.y + (to.y - from.y) * p.t;
+  const x     = from.x + (to.x - from.x) * p.t + oX;
+  const y     = from.y + (to.y - from.y) * p.t + oY;
   const alpha = 0.6 + 0.4 * Math.sin(ts / 300 + p.t * Math.PI * 4);
 
   _ctx.save();
@@ -508,11 +579,55 @@ function _drawParticle(p, ts) {
 }
 
 // ---------------------------------------------------------------------------
+// Drawing: cursor proximity beams
+// ---------------------------------------------------------------------------
+
+/**
+ * For each node within 60px of the cursor, draw a thin glowing line from the
+ * node centre toward the cursor. Opacity falls off with distance so the beam
+ * fades as the cursor moves away.
+ *
+ * @param {string[]} unlocked  Array of unlocked node IDs
+ * @param {number}   oX        Graph parallax X offset
+ * @param {number}   oY        Graph parallax Y offset
+ */
+function _drawCursorBeams(unlocked, oX, oY) {
+  const BEAM_RADIUS = 60; // pixels — activation distance
+
+  for (const ln of _nodes) {
+    const nx = ln.x + oX;
+    const ny = ln.y + oY;
+    const dx = _rawMouseX - nx;
+    const dy = _rawMouseY - ny;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > BEAM_RADIUS || dist < 1) continue;
+
+    // Closer = more opaque; linear falloff from 1.0 at dist=0 to 0 at BEAM_RADIUS
+    const opacity = (1 - dist / BEAM_RADIUS) * 0.7;
+
+    _ctx.save();
+    _ctx.globalAlpha  = opacity;
+    _ctx.strokeStyle  = ln.color;
+    _ctx.lineWidth    = 1;
+    _ctx.shadowColor  = ln.color;
+    _ctx.shadowBlur   = 8;
+    _ctx.beginPath();
+    _ctx.moveTo(nx, ny);
+    _ctx.lineTo(_rawMouseX, _rawMouseY);
+    _ctx.stroke();
+    _ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Drawing: nodes (stars)
 // ---------------------------------------------------------------------------
 
-function _drawNode(ln, ts) {
-  const { data, x, y, radius, color, state } = ln;
+function _drawNode(ln, ts, oX = 0, oY = 0) {
+  const { data, radius, color, state } = ln;
+  const x = ln.x + oX;
+  const y = ln.y + oY;
   const isUnlocked  = state === 'unlocked';
   const isAvailable = state === 'available';
   const isHovered   = _hoveredId === data.id;
@@ -779,10 +894,13 @@ function _refreshLeftPanel(passives) {
  * Stars use a circular hit zone slightly larger than the visual radius.
  */
 function _getNodeAt(mx, my) {
+  // Account for graph parallax offset so click hits where the node is visually
+  const oX = _mx * 12;
+  const oY = _my * 12;
   for (let i = _nodes.length - 1; i >= 0; i--) {
     const ln = _nodes[i];
-    const dx = mx - ln.x;
-    const dy = my - ln.y;
+    const dx = mx - (ln.x + oX);
+    const dy = my - (ln.y + oY);
     const hitR = ln.radius + 6;
     if (dx * dx + dy * dy <= hitR * hitR) return ln;
   }

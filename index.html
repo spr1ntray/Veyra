@@ -475,8 +475,13 @@
 
       <!-- Left panel: character info + threads + respec -->
       <div class="passives-left">
+        <div class="passives-panel-title">Ley Loom</div>
+        <div class="passives-panel-divider"></div>
+
         <div class="passives-char-name" id="passives-char-name">Mage</div>
         <div class="passives-char-class" id="passives-char-class">No Class</div>
+
+        <div class="passives-panel-divider"></div>
 
         <div class="passives-threads-box">
           <div class="passives-threads-label">Ley Threads Available</div>
@@ -484,14 +489,22 @@
           <div class="passives-threads-total" id="passives-threads-total">0 total earned</div>
         </div>
 
+        <div class="passives-panel-divider"></div>
+
         <div class="passives-legend">
           <div class="passives-legend-title">Node Types</div>
-          <div class="passives-legend-item"><div class="legend-dot legend-dot-minor"></div> Minor (1 Thread)</div>
-          <div class="passives-legend-item"><div class="legend-dot legend-dot-major"></div> Major (2 Threads)</div>
-          <div class="passives-legend-item"><div class="legend-dot legend-dot-keystone"></div> Keystone (3 Threads)</div>
+          <div class="passives-legend-item">
+            <span class="legend-star legend-star-minor">&#9733;</span> Minor (1 Thread)
+          </div>
+          <div class="passives-legend-item">
+            <span class="legend-star legend-star-major">&#9733;</span> Major (2 Threads)
+          </div>
+          <div class="passives-legend-item">
+            <span class="legend-star legend-star-keystone">&#10022;</span> Keystone (3 Threads)
+          </div>
         </div>
 
-        <button class="passives-respec-btn" id="btn-passives-respec" disabled>Respec All (0g)</button>
+        <button class="passives-respec-btn" id="btn-passives-respec" disabled>&#8635; Respec All (0g)</button>
       </div>
 
       <!-- Right panel: constellation canvas -->
