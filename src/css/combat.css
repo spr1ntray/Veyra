@@ -889,12 +889,13 @@
 }
 
 /* === ИЗОБРАЖЕНИЕ МАГА === */
-/* Спрайты мага — idle img + attack/defend videos */
+/* Спрайты мага — idle/attack/hurt/death webp-анимации */
 .mage-sprite {
   width: 200px;
   height: 200px;
   object-fit: contain;
   display: block;
+  image-rendering: pixelated;
   filter: drop-shadow(0 0 20px rgba(201,168,76,0.6));
 }
 

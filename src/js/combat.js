@@ -232,6 +232,16 @@ export function initBattle(enemyId, options = {}) {
     _phoenixUsed: false      // P-K2: resets each fight
   };
 
+  // Сброс спрайтов мага: показываем idle, скрываем остальные
+  {
+    const ids = ['mage-anim-idle', 'mage-anim-attack', 'mage-anim-hurt', 'mage-anim-death'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('mage-sprite-hidden', id !== 'mage-anim-idle');
+    });
+  }
+
   renderBattleUI(enemy);
   startBattleLoop(enemy);
   return true;
@@ -1260,6 +1270,17 @@ function performEnemyAttack(enemy) {
     mageEl.classList.add('mage-hit');
     setTimeout(() => mageEl.classList.remove('mage-hit'), 400);
   }
+  // Спрайт: показываем hurt-анимацию, через 600ms возвращаем idle
+  {
+    const idleAnim = document.getElementById('mage-anim-idle');
+    const hurtAnim = document.getElementById('mage-anim-hurt');
+    if (idleAnim) idleAnim.classList.add('mage-sprite-hidden');
+    if (hurtAnim) hurtAnim.classList.remove('mage-sprite-hidden');
+    setTimeout(() => {
+      if (hurtAnim) hurtAnim.classList.add('mage-sprite-hidden');
+      if (idleAnim) idleAnim.classList.remove('mage-sprite-hidden');
+    }, 600);
+  }
 
   updateMageHP();
 
@@ -1325,6 +1346,16 @@ function endBattle(result) {
   clearTimeout(battleState.enemyAttackTimeout);
   clearInterval(battleState.timerInterval);
   clearInterval(battleState.dotInterval);
+
+  // Спрайт смерти — показываем при поражении, не возвращаем idle
+  if (result === 'loss') {
+    const idleAnim  = document.getElementById('mage-anim-idle');
+    const hurtAnim  = document.getElementById('mage-anim-hurt');
+    const deathAnim = document.getElementById('mage-anim-death');
+    if (idleAnim)  idleAnim.classList.add('mage-sprite-hidden');
+    if (hurtAnim)  hurtAnim.classList.add('mage-sprite-hidden');
+    if (deathAnim) deathAnim.classList.remove('mage-sprite-hidden');
+  }
 
   const state = getState();
   const enemy = ENEMIES_DATA[battleState.enemyId];
@@ -1464,10 +1495,10 @@ async function playFocusAnimation() {
   if (!mageEl) return;
 
   mageEl.classList.add('mage-focusing');
-  const idleImg = document.getElementById('mage-img-idle');
-  const defendVid = document.getElementById('mage-video-defend');
-  if (idleImg) idleImg.classList.add('mage-sprite-hidden');
-  if (defendVid) { defendVid.classList.remove('mage-sprite-hidden'); defendVid.currentTime = 0; defendVid.play(); }
+  const idleAnim  = document.getElementById('mage-anim-idle');
+  const hurtAnim  = document.getElementById('mage-anim-hurt');
+  if (idleAnim) idleAnim.classList.add('mage-sprite-hidden');
+  if (hurtAnim) hurtAnim.classList.remove('mage-sprite-hidden');
 
   // Индикатор над магом
   let indicator = document.getElementById('focus-indicator');
@@ -1481,8 +1512,8 @@ async function playFocusAnimation() {
 
   await delay(900);
   mageEl.classList.remove('mage-focusing');
-  if (defendVid) defendVid.classList.add('mage-sprite-hidden');
-  if (idleImg) idleImg.classList.remove('mage-sprite-hidden');
+  if (hurtAnim) hurtAnim.classList.add('mage-sprite-hidden');
+  if (idleAnim) idleAnim.classList.remove('mage-sprite-hidden');
 }
 
 /**
@@ -1518,10 +1549,10 @@ async function playSpellAnimation(spell, damage) {
 
   // Маг начинает каст
   mageEl.classList.add('mage-casting');
-  const idleImg = document.getElementById('mage-img-idle');
-  const attackVid = document.getElementById('mage-video-attack');
-  if (idleImg) idleImg.classList.add('mage-sprite-hidden');
-  if (attackVid) { attackVid.classList.remove('mage-sprite-hidden'); attackVid.currentTime = 0; attackVid.play(); }
+  const idleAnim   = document.getElementById('mage-anim-idle');
+  const attackAnim = document.getElementById('mage-anim-attack');
+  if (idleAnim)   idleAnim.classList.add('mage-sprite-hidden');
+  if (attackAnim) attackAnim.classList.remove('mage-sprite-hidden');
 
   // Убираем Focus индикатор
   const indicator = document.getElementById('focus-indicator');
@@ -1551,8 +1582,8 @@ async function playSpellAnimation(spell, damage) {
   enemyEl.classList.remove('dummy-hit');
   mageEl.classList.remove('mage-casting');
 
-  if (attackVid) attackVid.classList.add('mage-sprite-hidden');
-  if (idleImg) idleImg.classList.remove('mage-sprite-hidden');
+  if (attackAnim) attackAnim.classList.add('mage-sprite-hidden');
+  if (idleAnim)   idleAnim.classList.remove('mage-sprite-hidden');
 }
 
 /**
