@@ -75,16 +75,28 @@
   gap: 12px;
 }
 
-/* Ley Loom panel title */
+/* Ley Loom panel title — glow pulse animation */
+@keyframes leyLoomGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 8px  rgba(201, 168, 76, 0.4),
+      0 0 16px rgba(201, 168, 76, 0.2);
+  }
+  50% {
+    text-shadow:
+      0 0 14px rgba(201, 168, 76, 0.7),
+      0 0 28px rgba(201, 168, 76, 0.4),
+      0 0 40px rgba(201, 168, 76, 0.2);
+  }
+}
+
 .passives-panel-title {
   font-family: 'Cinzel', serif;
   font-size: 1.4rem;
   color: #c9a84c;
   letter-spacing: 0.15em;
   text-align: center;
-  text-shadow:
-    0 0 8px rgba(201, 168, 76, 0.5),
-    0 0 20px rgba(201, 168, 76, 0.2);
+  animation: leyLoomGlow 3s ease-in-out infinite;
 }
 
 /* Decorative gold section divider */
@@ -107,10 +119,19 @@
 }
 
 .passives-char-class {
-  font-size: 13px;
+  font-size: 15px;
+  font-family: 'Cinzel', serif;
   color: #8899aa;
-  margin-top: -6px;
+  margin-top: -4px;
+  letter-spacing: 0.08em;
+  transition: color 0.3s, text-shadow 0.3s;
 }
+
+/* Per-class accent colour applied via data-player-class on .passives-left */
+[data-player-class="pyromancer"]  #passives-char-class { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,0.45); }
+[data-player-class="stormcaller"] #passives-char-class { color: #64b5f6; text-shadow: 0 0 8px rgba(100,181,246,0.45); }
+[data-player-class="tidecaster"]  #passives-char-class { color: #26c6da; text-shadow: 0 0 8px rgba(38,198,218,0.45); }
+[data-player-class="geomancer"]   #passives-char-class { color: #a5d6a7; text-shadow: 0 0 8px rgba(165,214,167,0.45); }
 
 .passives-threads-box {
   background: #151830;
@@ -218,13 +239,47 @@
   background: #050810; /* matches canvas cosmic background */
 }
 
-/* Canvas wrapper fills the entire right panel */
+/* Canvas wrapper fills the entire right panel — arcane gold frame + corner ornaments */
 .passives-canvas-wrap {
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
   background: #050810;
+  border: 1px solid rgba(201, 168, 76, 0.35);
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(201, 168, 76, 0.1);
+}
+
+/* Corner ornaments — L-shaped gold strokes via absolutely positioned divs */
+.passives-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  z-index: 10;
+  pointer-events: none;
+}
+.passives-corner-tl {
+  top: 6px; left: 6px;
+  border-top:  2px solid #c9a84c;
+  border-left: 2px solid #c9a84c;
+}
+.passives-corner-tr {
+  top: 6px; right: 6px;
+  border-top:   2px solid #c9a84c;
+  border-right: 2px solid #c9a84c;
+}
+.passives-corner-bl {
+  bottom: 6px; left: 6px;
+  border-bottom: 2px solid #c9a84c;
+  border-left:   2px solid #c9a84c;
+}
+.passives-corner-br {
+  bottom: 6px; right: 6px;
+  border-bottom: 2px solid #c9a84c;
+  border-right:  2px solid #c9a84c;
 }
 
 /* --- Section headers --- */

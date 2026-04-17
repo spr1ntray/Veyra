@@ -407,9 +407,10 @@
       <!-- Маг -->
       <div id="combat-mage">
         <div class="mage-figure">
-          <img id="mage-img-idle" class="mage-sprite" src="assets/generated/pixel/маг стоит.png" alt="Mage">
-          <video id="mage-video-attack" class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/маг-атака.webm" muted playsinline></video>
-          <video id="mage-video-defend" class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/маг-защита.webm" muted playsinline></video>
+          <img id="mage-anim-idle"   class="mage-sprite"                  src="assets/generated/pixel/character_idle.webp"   alt="">
+          <img id="mage-anim-attack" class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/character_attack.webp" alt="">
+          <img id="mage-anim-hurt"   class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/character_hurt.webp"   alt="">
+          <img id="mage-anim-death"  class="mage-sprite mage-sprite-hidden" src="assets/generated/pixel/character_death.webp"  alt="">
         </div>
         <!-- HP бар мага -->
         <div class="combat-hp-bar-wrap">
@@ -510,7 +511,13 @@
       <!-- Right panel: constellation canvas -->
       <div class="passives-right" id="passives-right-panel">
         <!-- Canvas container — PassiveTreeCanvas.init() attaches <canvas> here -->
-        <div id="passives-canvas-container" class="passives-canvas-wrap"></div>
+        <div id="passives-canvas-container" class="passives-canvas-wrap">
+          <!-- Decorative L-shaped corner ornaments -->
+          <div class="passives-corner passives-corner-tl"></div>
+          <div class="passives-corner passives-corner-tr"></div>
+          <div class="passives-corner passives-corner-bl"></div>
+          <div class="passives-corner passives-corner-br"></div>
+        </div>
       </div>
     </div>
 

@@ -405,6 +405,9 @@ function _drawFrame(ts) {
   _drawNebula(W, H);
   _drawStars(W, H, ts);
 
+  // Decorative magic circle — very faint arcane substrate beneath the node graph
+  _drawMagicCircle(W, H, state.classType);
+
   // Graph parallax offset — slightly less than near stars for depth illusion
   const gOX = _mx * 12;
   const gOY = _my * 12;
@@ -525,6 +528,64 @@ function _drawStars(W, H, ts) {
     _ctx.fillStyle = `rgba(210,225,255,${alpha.toFixed(3)})`;
     _ctx.fill();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Drawing: magic circle (decorative arcane substrate under the node graph)
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders 3 faint concentric rings and 6 hexagram spokes centred on the class
+ * tree origin (W*0.55, H*0.52).  Everything is drawn at very low opacity so
+ * the design reads as an atmospheric suggestion rather than a solid UI element.
+ *
+ * @param {number} W          canvas pixel width
+ * @param {number} H          canvas pixel height
+ * @param {string|null} classType  used to tint the rings with the class colour
+ */
+function _drawMagicCircle(W, H, classType) {
+  const cx = W * 0.55;
+  const cy = H * 0.52;
+
+  // Resolve tint from class colour, falling back to gold
+  const baseColor = CLASS_COLORS[classType] || CLASS_COLORS.universal;
+  // Parse hex to rgb for rgba() strings
+  const r = parseInt(baseColor.slice(1, 3), 16);
+  const g = parseInt(baseColor.slice(3, 5), 16);
+  const b = parseInt(baseColor.slice(5, 7), 16);
+
+  _ctx.save();
+
+  // --- Concentric rings ---
+  const rings = [
+    { radius: 90,  alpha: 0.07 },
+    { radius: 185, alpha: 0.05 },
+    { radius: 295, alpha: 0.04 },
+  ];
+
+  for (const { radius, alpha } of rings) {
+    _ctx.beginPath();
+    _ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    _ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+    _ctx.lineWidth   = 1;
+    _ctx.stroke();
+  }
+
+  // --- Hexagram spokes (6 lines from centre, every 60°) ---
+  const SPOKE_REACH = 310; // px from centre to tip
+  const SPOKE_ALPHA = 0.05;
+  _ctx.strokeStyle = `rgba(${r},${g},${b},${SPOKE_ALPHA})`;
+  _ctx.lineWidth   = 0.75;
+
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    _ctx.beginPath();
+    _ctx.moveTo(cx, cy);
+    _ctx.lineTo(cx + SPOKE_REACH * Math.cos(angle), cy + SPOKE_REACH * Math.sin(angle));
+    _ctx.stroke();
+  }
+
+  _ctx.restore();
 }
 
 // ---------------------------------------------------------------------------

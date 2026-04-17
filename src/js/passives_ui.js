@@ -58,6 +58,12 @@ export function renderPassivesScreen() {
   const totalEl   = document.getElementById('passives-threads-total');
   const respecBtn = document.getElementById('btn-passives-respec');
 
+  // Stamp player class onto the left panel so CSS can apply per-class colours
+  const leftPanel = document.querySelector('.passives-left');
+  if (leftPanel) {
+    leftPanel.dataset.playerClass = state.classType || '';
+  }
+
   if (nameEl) nameEl.textContent = state.name;
   if (classEl) {
     classEl.textContent = state.classType
