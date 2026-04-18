@@ -1,5 +1,5 @@
 /**
- * passives.js — Passive Skill Tree (Ley Loom)
+ * passives.js — Passive Skill Tree (Sigil Tree)
  * 80 nodes: 8 Universal + 18 per class (4 classes × 10 minor + 6 major + 2 keystone)
  * Each node has: id, name, type, cost, classRestriction, requires[], effect{}, description
  */
@@ -579,11 +579,11 @@ export function getClassNodes(classType) {
 
 /**
  * Checks whether a given node can be unlocked given the current unlocked set.
- * Requirements: player has enough Ley Threads AND all prerequisite nodes are unlocked.
+ * Requirements: player has enough Sigils (stored as leyThreads in state for save compat) AND all prerequisite nodes are unlocked.
  *
  * @param {string} nodeId
  * @param {string[]} unlockedIds - currently unlocked node ids
- * @param {number} leyThreads - available threads
+ * @param {number} leyThreads - available sigils (leyThreads field kept for save compat; displayed as "Sigils")
  * @returns {{ canUnlock: boolean, reason: string|null }}
  */
 export function canUnlockNode(nodeId, unlockedIds, leyThreads) {
@@ -592,7 +592,7 @@ export function canUnlockNode(nodeId, unlockedIds, leyThreads) {
   if (unlockedIds.includes(nodeId)) return { canUnlock: false, reason: 'Already unlocked' };
 
   if (leyThreads < node.cost) {
-    return { canUnlock: false, reason: `Need ${node.cost} Ley Thread${node.cost > 1 ? 's' : ''}` };
+    return { canUnlock: false, reason: `Need ${node.cost} Sigil${node.cost > 1 ? 's' : ''}` };
   }
 
   for (const reqId of node.requires) {

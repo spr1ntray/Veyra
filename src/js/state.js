@@ -1138,9 +1138,9 @@ function getDefaultState() {
       currentRun: null          // данные текущего рана или null если не в башне
     },
 
-    // Пассивное дерево навыков — Ley Loom
+    // Пассивное дерево навыков — Sigil Tree (formerly Ley Loom)
     passives: {
-      leyThreads: 0,       // доступные потоки для трат
+      leyThreads: 0,       // leyThreads field kept for save compat; displayed as "Sigils"
       leyThreadsTotal: 0,  // всего заработано (не уменьшается при трате)
       unlocked: [],        // массив id разблокированных нод
       respecCount: 0       // количество выполненных респеков
@@ -1293,14 +1293,26 @@ export function loadState() {
         _state.inventory.staff_of_archon = 0;
       }
 
-      // === Migration v3: passive skill tree (Ley Loom) ===
+      // === Migration v3: passive skill tree (Sigil Tree, formerly Ley Loom) ===
+      // Ретроактивные сигилы выдаём если объект passives полностью отсутствует
+      // ИЛИ если leyThreadsTotal не инициализирован (частичный объект от старого сейва)
       if (!_state.passives) {
         const defaultPassives = getDefaultState().passives;
-        // Grant retroactive Ley Threads for levels already earned (1 per level after 1)
+        // Grant retroactive Sigils for levels already earned (1 per level after 1)
         const retroThreads = Math.max(0, (_state.level || 1) - 1);
         _state.passives = {
           ...defaultPassives,
           leyThreads: retroThreads,
+          leyThreadsTotal: retroThreads
+        };
+      } else if (_state.passives.leyThreadsTotal === undefined || _state.passives.leyThreadsTotal === 0 && (_state.level || 1) > 1) {
+        // Частичный объект passives — leyThreadsTotal не был проставлен (сейв до введения треды)
+        const defaultPassives = getDefaultState().passives;
+        const retroThreads = Math.max(0, (_state.level || 1) - 1);
+        _state.passives = {
+          ...defaultPassives,
+          ..._state.passives,
+          leyThreads: Math.max(_state.passives.leyThreads || 0, retroThreads),
           leyThreadsTotal: retroThreads
         };
       } else {
@@ -1461,7 +1473,7 @@ export function addXP(amount) {
       // +1 attribute point per level up
       state.attributePoints = (state.attributePoints || 0) + 1;
 
-      // +1 Ley Thread per level up (passive skill tree resource)
+      // +1 Sigil per level up (passive skill tree resource; stored as leyThreads for save compat)
       if (!state.passives) {
         state.passives = { leyThreads: 0, leyThreadsTotal: 0, unlocked: [], respecCount: 0 };
       }
@@ -1781,10 +1793,10 @@ export function useConsumable(itemId) {
   const buffId = item.buffId;
   if (!buffId || !state.buffs[buffId]) return null;
 
-  // Decrement inventory, удаляем предмет если кончился
+  // Decrement inventory — ключ сохраняем при нуле, иначе повторное добавление ломается
   state.inventory[itemId]--;
-  if (state.inventory[itemId] <= 0) {
-    delete state.inventory[itemId];
+  if (state.inventory[itemId] < 0) {
+    state.inventory[itemId] = 0;
   }
 
   // Activate / refresh buff

@@ -1,5 +1,5 @@
 /**
- * passives_canvas.js — Skyrim-style constellation visualiser for the Ley Loom passive tree.
+ * passives_canvas.js — Skyrim-style constellation visualiser for the Sigil Tree passive tree.
  *
  * Renders passive nodes as stars on a dark cosmic background, connected by
  * glowing constellation lines. Nodes are arranged in concentric arcs by tier
@@ -76,6 +76,9 @@ let _ctx       = null;
 let _container = null;
 let _rafId     = null;
 
+/** Accumulated rotation (radians) for the central runic sigil */
+let _sigilRot  = 0;
+
 /** Computed layout nodes — { data, x, y, radius, color, state } */
 let _nodes     = [];
 /** Edges — { from: layoutNode, to: layoutNode } */
@@ -100,6 +103,14 @@ let _targetMY = 0;
 // Last known raw canvas mouse coords (used for cursor-beam feature)
 let _rawMouseX = 0;
 let _rawMouseY = 0;
+
+/**
+ * Falling gold sparks — SHOULD 6
+ * Each spark: { x, y, vx, vy, alpha, r }
+ * Initialised once; wraps around when spark falls off the bottom.
+ */
+const SPARK_COUNT = 25;
+let _sparks = [];
 
 // ---------------------------------------------------------------------------
 // Public API (object export keeps the same interface as the previous version)
@@ -131,6 +142,9 @@ export const PassiveTreeCanvas = {
     _roHandle = new ResizeObserver(() => this._resize());
     _roHandle.observe(containerEl);
     this._resize();
+
+    // Seed falling sparks (SHOULD 6)
+    _initSparks();
 
     // Input
     _canvas.addEventListener('mousemove', e => this._onMouseMove(e));
@@ -382,6 +396,7 @@ function _drawFrame(ts) {
   const H       = _canvas.height;
   const state   = getState();
   const unlocked = (state.passives?.unlocked) || [];
+  // leyThreads field kept for save compat; displayed as "Sigils"
   const threads  = state.passives?.leyThreads || 0;
 
   // Resolve node states (unlocked / available / locked)
@@ -432,7 +447,7 @@ function _drawFrame(ts) {
   for (const edge of _edges) {
     const fromU = unlocked.includes(edge.from.data.id);
     const toU   = unlocked.includes(edge.to.data.id);
-    _drawEdge(edge.from, edge.to, fromU && toU, gOX, gOY);
+    _drawEdge(edge.from, edge.to, fromU && toU, gOX, gOY, ts);
   }
 
   // ---- Particles (advance + draw) ----
@@ -445,10 +460,80 @@ function _drawFrame(ts) {
   // ---- Cursor beams (drawn beneath nodes so nodes render on top) ----
   _drawCursorBeams(unlocked, gOX, gOY);
 
+  // ---- Falling gold sparks (SHOULD 6) ----
+  _updateAndDrawSparks(dt, W, H, ts);
+
   // ---- Nodes ----
   for (const ln of _nodes) {
     _drawNode(ln, ts, gOX, gOY);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Falling gold sparks (SHOULD 6)
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed the _sparks array with randomised starting positions spread across
+ * the full canvas height so sparks don't all spawn at once on init.
+ */
+function _initSparks() {
+  _sparks = [];
+  const W = _canvas ? _canvas.width  : 800;
+  const H = _canvas ? _canvas.height : 600;
+  for (let i = 0; i < SPARK_COUNT; i++) {
+    _sparks.push(_makeSpark(W, H, /* randomY */ true));
+  }
+}
+
+/**
+ * Create a single spark with randomised properties.
+ * @param {number} W - canvas width
+ * @param {number} H - canvas height
+ * @param {boolean} randomY - if true, start at random Y (for init); else spawn at top
+ */
+function _makeSpark(W, H, randomY = false) {
+  return {
+    x:     Math.random() * W,
+    y:     randomY ? Math.random() * H : -4,
+    vy:    8 + Math.random() * 12,          // fall speed px/sec (8–20)
+    vxAmp: 10 + Math.random() * 20,         // sinusoidal X drift amplitude
+    phase: Math.random() * Math.PI * 2,     // random phase offset
+    freq:  0.4 + Math.random() * 0.8,       // oscillation frequency
+    alpha: 0.3 + Math.random() * 0.3,       // base alpha 0.3–0.6
+    r:     1,                               // radius 1px per spec
+  };
+}
+
+/**
+ * Advance each spark by dt seconds and draw. Wraps sparks that fall off the bottom.
+ */
+function _updateAndDrawSparks(dt, W, H, ts) {
+  const t = ts / 1000;
+  _ctx.save();
+  _ctx.fillStyle = 'rgba(201,168,76,1)';  // gold
+
+  for (const sp of _sparks) {
+    // Advance position
+    sp.y += sp.vy * dt;
+    // Sinusoidal X drift
+    const driftX = Math.sin(t * sp.freq + sp.phase) * sp.vxAmp;
+    const drawX  = sp.x + driftX;
+
+    // Wrap when off the bottom
+    if (sp.y > H + 4) {
+      sp.y = -4;
+      sp.x = Math.random() * W;
+    }
+
+    // Draw
+    _ctx.globalAlpha = sp.alpha;
+    _ctx.beginPath();
+    _ctx.arc(drawX, sp.y, sp.r, 0, Math.PI * 2);
+    _ctx.fill();
+  }
+
+  _ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
@@ -585,6 +670,27 @@ function _drawMagicCircle(W, H, classType) {
     _ctx.stroke();
   }
 
+  // --- Central rotating runic sigil ---
+  // Advances _sigilRot by 0.002 rad per call (~60fps ≈ 7°/sec, full rotation ≈ 50s)
+  _sigilRot += 0.002;
+
+  _ctx.save();
+  _ctx.translate(cx, cy);
+  _ctx.rotate(_sigilRot);
+
+  // Draw the sigil as text centred at origin; alpha 0.14
+  const sigilAlpha = 0.14 + 0.04 * Math.sin(_sigilRot * 3); // gentle alpha breathe
+  _ctx.globalAlpha = sigilAlpha;
+  _ctx.shadowColor = baseColor;
+  _ctx.shadowBlur  = 24;
+  _ctx.font        = '64px serif';
+  _ctx.fillStyle   = baseColor;
+  _ctx.textAlign   = 'center';
+  _ctx.textBaseline = 'middle';
+  _ctx.fillText('⛤', 0, 0);
+
+  _ctx.restore();
+
   _ctx.restore();
 }
 
@@ -592,29 +698,66 @@ function _drawMagicCircle(W, H, classType) {
 // Drawing: edges
 // ---------------------------------------------------------------------------
 
-function _drawEdge(n1, n2, bothUnlocked, oX = 0, oY = 0) {
+function _drawEdge(n1, n2, bothUnlocked, oX = 0, oY = 0, ts = 0) {
   _ctx.save();
   if (bothUnlocked) {
-    // Bright glowing constellation line
+    // SHOULD 4: living ley-line — 3 sinusoidal passes at different alphas
     const color = n1.color;
-    _ctx.strokeStyle = color;
-    _ctx.lineWidth   = 2;
-    _ctx.shadowColor = color;
-    _ctx.shadowBlur  = 12;
-    _ctx.setLineDash([]);
-    _ctx.globalAlpha = 0.85;
+    const x1 = n1.x + oX;
+    const y1 = n1.y + oY;
+    const x2 = n2.x + oX;
+    const y2 = n2.y + oY;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    // Perpendicular unit vector for wave displacement
+    const nx = -dy / len;
+    const ny =  dx / len;
+    const t = ts / 1000; // seconds
+
+    // Draw 3 passes: bright core, mid glow, outer haze
+    const passes = [
+      { alpha: 0.85, lineWidth: 2, shadowBlur: 12 },
+      { alpha: 0.4,  lineWidth: 3, shadowBlur: 8  },
+      { alpha: 0.2,  lineWidth: 4, shadowBlur: 4  },
+    ];
+
+    for (const pass of passes) {
+      _ctx.globalAlpha = pass.alpha;
+      _ctx.strokeStyle = color;
+      _ctx.lineWidth   = pass.lineWidth;
+      _ctx.shadowColor = color;
+      _ctx.shadowBlur  = pass.shadowBlur;
+      _ctx.setLineDash([]);
+      _ctx.beginPath();
+
+      // Build wavy path: sample 24 segments, sine wave perpendicular to edge
+      const STEPS = 24;
+      for (let i = 0; i <= STEPS; i++) {
+        const frac = i / STEPS;
+        const px = x1 + dx * frac;
+        const py = y1 + dy * frac;
+        // Wave: amplitude 2px, frequency driven by time + position
+        const wave = Math.sin(t * 2 + frac * Math.PI * 4) * 2;
+        const wx = px + nx * wave;
+        const wy = py + ny * wave;
+        if (i === 0) _ctx.moveTo(wx, wy);
+        else         _ctx.lineTo(wx, wy);
+      }
+      _ctx.stroke();
+    }
   } else {
-    // Dim dashed line
+    // Dim dashed line for inactive edges
     _ctx.strokeStyle = 'rgba(100,120,160,0.25)';
     _ctx.lineWidth   = 1;
     _ctx.setLineDash([4, 7]);
     _ctx.globalAlpha = 1;
+    _ctx.beginPath();
+    _ctx.moveTo(n1.x + oX, n1.y + oY);
+    _ctx.lineTo(n2.x + oX, n2.y + oY);
+    _ctx.stroke();
+    _ctx.setLineDash([]);
   }
-  _ctx.beginPath();
-  _ctx.moveTo(n1.x + oX, n1.y + oY);
-  _ctx.lineTo(n2.x + oX, n2.y + oY);
-  _ctx.stroke();
-  _ctx.setLineDash([]);
   _ctx.restore();
 }
 
@@ -694,22 +837,45 @@ function _drawNode(ln, ts, oX = 0, oY = 0) {
   const isHovered   = _hoveredId === data.id;
   const tsS         = ts / 1000;
 
-  // Pulse factor (0..1) for available nodes
+  // Pulse factor (0..1) for available nodes — time-based sin for smooth animation
   const pulse = isAvailable ? (Math.sin(tsS * 2.0) * 0.5 + 0.5) : 0;
+  // Scale for available nodes: oscillates 0.95↔1.05
+  const availableScale = isAvailable ? (0.95 + 0.10 * pulse) : 1.0;
 
   // Effective alpha
+  // locked: 0.14 (desaturated); available: mid-range with pulse; unlocked: full
   let alpha;
   if (isUnlocked)       alpha = 1.0;
   else if (isAvailable) alpha = 0.55 + pulse * 0.35;
-  else                  alpha = 0.22;
+  else                  alpha = 0.14;  // MUST 3: locked nodes very dim
 
   _ctx.save();
   _ctx.globalAlpha = alpha;
 
   // --- Outer aura / glow gradient ---
-  if (isUnlocked || isAvailable) {
-    const auraR = radius * (isUnlocked ? 3.2 : 2.4 + pulse * 0.8);
-    const auraA = isUnlocked ? 0.35 : (0.12 + pulse * 0.15);
+  if (isUnlocked) {
+    // MUST 3 unlocked: constant double radial halo  (inner color@0.8 → outer color@0 at 4×radius)
+    const innerR = radius * 1.5;
+    const outerR = radius * 4.0;
+    const grad1 = _ctx.createRadialGradient(x, y, 0, x, y, innerR);
+    grad1.addColorStop(0, _colorWithAlpha(color, 0.8));
+    grad1.addColorStop(1, _colorWithAlpha(color, 0.15));
+    _ctx.beginPath();
+    _ctx.arc(x, y, innerR, 0, Math.PI * 2);
+    _ctx.fillStyle = grad1;
+    _ctx.fill();
+
+    const grad2 = _ctx.createRadialGradient(x, y, innerR * 0.8, x, y, outerR);
+    grad2.addColorStop(0, _colorWithAlpha(color, 0.15));
+    grad2.addColorStop(1, 'rgba(0,0,0,0)');
+    _ctx.beginPath();
+    _ctx.arc(x, y, outerR, 0, Math.PI * 2);
+    _ctx.fillStyle = grad2;
+    _ctx.fill();
+  } else if (isAvailable) {
+    // Standard pulsing aura for available nodes
+    const auraR = radius * (2.4 + pulse * 0.8);
+    const auraA = 0.12 + pulse * 0.15;
     const grad  = _ctx.createRadialGradient(x, y, radius * 0.5, x, y, auraR);
     grad.addColorStop(0, _colorWithAlpha(color, auraA));
     grad.addColorStop(1, 'rgba(0,0,0,0)');
@@ -717,6 +883,23 @@ function _drawNode(ln, ts, oX = 0, oY = 0) {
     _ctx.arc(x, y, auraR, 0, Math.PI * 2);
     _ctx.fillStyle = grad;
     _ctx.fill();
+  }
+
+  // MUST 3 available: outer dashed pulsing ring at radius*2
+  if (isAvailable) {
+    const dashRingR = radius * 2 * availableScale;
+    _ctx.save();
+    _ctx.globalAlpha = 0.5 + pulse * 0.3;
+    _ctx.strokeStyle = _colorWithAlpha(color, 0.7);
+    _ctx.lineWidth   = 1;
+    _ctx.setLineDash([2, 4]);
+    _ctx.shadowColor = color;
+    _ctx.shadowBlur  = 4;
+    _ctx.beginPath();
+    _ctx.arc(x, y, dashRingR, 0, Math.PI * 2);
+    _ctx.stroke();
+    _ctx.setLineDash([]);
+    _ctx.restore();
   }
 
   // --- Keystone pulsing ring ---
@@ -811,14 +994,15 @@ function _drawStar(cx, cy, r, color, unlocked, available) {
   } else if (available) {
     _ctx.fillStyle = _darken(color, 0.55);
   } else {
-    _ctx.fillStyle = '#1a1e2a';
+    // MUST 3 locked: desaturated dark blue-grey, NO class colour
+    _ctx.fillStyle = '#2a3040';
   }
   _ctx.fill();
 
   // Stroke / rim
   _ctx.strokeStyle = unlocked ? color
                    : available ? _darken(color, 0.2)
-                   : 'rgba(80,90,110,0.5)';
+                   : 'rgba(50,60,80,0.5)';  // MUST 3 locked: no class colour on rim
   _ctx.lineWidth   = unlocked ? 1.5 : 1;
   _ctx.stroke();
 }
@@ -842,7 +1026,7 @@ function _showTooltip(ln, canvasX, canvasY) {
   if (isUnlocked) {
     statusHtml = '<span class="ptc-tt-status ptc-tt-unlocked">Unlocked</span>';
   } else if (canUnlock) {
-    statusHtml = `<span class="ptc-tt-status ptc-tt-available">Click to unlock (${node.cost} Thread${node.cost > 1 ? 's' : ''})</span>`;
+    statusHtml = `<span class="ptc-tt-status ptc-tt-available">Click to unlock (${node.cost} Sigil${node.cost > 1 ? 's' : ''})</span>`;
   } else {
     statusHtml = `<span class="ptc-tt-status ptc-tt-locked">${reason || 'Locked'}</span>`;
   }
@@ -898,7 +1082,7 @@ function _confirmUnlock(ln) {
     <div class="ptc-confirm-box">
       <div class="ptc-confirm-title">${node.name}</div>
       <div class="ptc-confirm-desc">${node.description}</div>
-      <div class="ptc-confirm-cost">Cost: ${node.cost} Ley Thread${node.cost > 1 ? 's' : ''}</div>
+      <div class="ptc-confirm-cost">Cost: ${node.cost} Sigil${node.cost > 1 ? 's' : ''}</div>
       <div class="ptc-confirm-btns">
         <button class="ptc-btn-yes">Unlock</button>
         <button class="ptc-btn-no">Cancel</button>

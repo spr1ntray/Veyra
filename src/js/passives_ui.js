@@ -1,6 +1,6 @@
 /**
- * passives_ui.js — Ley Loom UI
- * Manages the left panel (threads, respec) and delegates the node visualisation
+ * passives_ui.js — Sigil Tree UI
+ * Manages the left panel (sigils, respec) and delegates the node visualisation
  * to PassiveTreeCanvas (Canvas 2D constellation renderer).
  */
 
@@ -70,6 +70,7 @@ export function renderPassivesScreen() {
       ? state.classType.charAt(0).toUpperCase() + state.classType.slice(1)
       : 'No Class';
   }
+  // leyThreads field kept for save compat; displayed as "Sigils"
   if (threadsEl) threadsEl.textContent = passives.leyThreads;
   if (totalEl) totalEl.textContent = `${passives.leyThreadsTotal} total earned`;
 
