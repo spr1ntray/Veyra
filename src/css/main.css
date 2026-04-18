@@ -898,13 +898,17 @@ body {
   z-index: 1;
 }
 
-/* [HIGH 4.1] HUD — стеклянная капсула с чёткой отделкой */
+/* [HIGH 4.1] HUD — стеклянная капсула с чёткой отделкой.
+   flex-wrap: wrap позволяет .hud-buffs перенестись на вторую строку
+   (через width:100%), исключая горизонтальный рост капсулы в сторону
+   кнопки инвентаря. */
 .location-hud {
   position: absolute;
   top: 16px;
   left: 20px;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;      /* баффы переносятся на строку ниже */
   gap: 10px;
   align-items: center;
   font-family: var(--font-title);
@@ -914,6 +918,7 @@ body {
   border-radius: 24px;
   padding: 6px 16px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+  max-width: calc(50% - 240px);
 }
 
 .loc-hud-name {
@@ -950,12 +955,16 @@ body {
   opacity: 0.9;
 }
 
-/* HUD buff pills — small colored badges inline with HUD */
+/* HUD buff pills — отдельная строка под основными статами HUD.
+   width:100% вместе с flex-wrap на родителе переносит баффы вниз,
+   не давая капсуле расти горизонтально и перекрывать кнопку инвентаря. */
 .hud-buffs {
   display: flex;
   gap: 4px;
   align-items: center;
-  margin-left: 6px;
+  width: 100%;        /* занимает всю ширину строки → перенос на следующую */
+  margin-top: -4px;   /* визуально прижимаем к статам */
+  margin-left: 0;
 }
 .hud-buff-pill {
   display: flex;
@@ -1259,13 +1268,17 @@ body {
   }
 }
 
+@media (max-width: 1500px) {
+  .inv-top-btn { width: 34%; }
+}
+
 /* На 1280px дополнительно сжимаем кнопку инвентаря */
 @media (max-width: 1280px) {
   /* Кнопка инвентаря — уже по ширине и компактнее */
   .inv-top-btn {
-    width: 44%;
-    font-size: 14px;
-    padding: 10px 0;
+    width: 34%;
+    font-size: 13px;
+    padding: 8px 0;
   }
 
   /* HUD — совсем компактный */
