@@ -75,22 +75,27 @@
 
 ---
 
-## 3. Текущее состояние игры (на 2026-03-30)
+## 3. Текущее состояние игры (на 2026-04-18)
 
 ### Что работает:
 - Стартовый экран с вводом имени
-- Навигация: Loading -> Location -> Map -> Inventory / Grimoire -> Combat
-- Боевая система: autocast гримуара, DoT (Ignite), lifesteal (Shadow Bolt, Drain Life), slow (Frost), debuff (Void Eruption), Focus (x2), Mana Shield
-- 12 заклинаний (arcane/fire/shadow/frost/utility)
+- Навигация: Loading -> Location -> Map -> Inventory / Grimoire -> Combat / Tower
+- Система классов: 4 класса (Pyromancer, Stormcaller, Tidecaster, Geomancer), выбор на Awakening (lv3)
+- Боевая система: autocast гримуара, DoT (Ignite), lifesteal (Shadow Bolt, Drain Life), slow (Frost), debuff (Void Eruption), Focus (x2), Mana Shield, **Skip Fight** (симуляция боя в памяти)
+- 32 заклинания (31 иконка SPELL_001-031, tsunami без иконки)
 - 7 врагов (Training Dummy -> Void Horror)
-- Инвентарь: 12 предметов экипировки + 4 расходника
-- Магазин торговца (4 расходника)
+- Башня магов: 10 этажей, HP carryover, 3 попытки/день, anti-farm система
+- Пассивное дерево **The Sigil Tree**: 80 нод (8 universal + 18*4 class), ресурс Sigils
+- Инвентарь: 12 предметов экипировки + 4 расходника, адаптивная пагинация, XP-бар
+- Магазин торговца (4 расходника с lore-tooltip)
 - Daily Login (7-дневный цикл)
 - Система баффов (расходники дают баффы на N боёв)
-- Визуальный стиль: dark fantasy, gold/brown палитра, pixel art ассеты
+- Визуальный стиль: dark fantasy, gold/brown палитра, pixel art ассеты, готическая рамка дерева
 
 ### Что НЕ работает / известные баги:
-- **БАГ: Инвентарь не перелистывается** -- кнопки пагинации не видны или обрезаны overflow:hidden. Анализ: при стандартном инвентаре (12 предметов) сетка 4x4=16 ячеек -- пагинация скрывается (totalPages=1). Баг воспроизводится когда предметов >16 и кнопки Prev/Next обрезаются контейнером `.inv-layout { overflow: hidden }`. ТАКЖЕ: даже если пагинация видна, `.inv-right` может не вмещать и сетку и пагинацию одновременно.
+- Иконка tsunami (SPELL_032) — нужна генерация
+- Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption) — используют старые ассеты
+- Skip Fight: UI-полировка в работе (Coder #3)
 
 ### Что в документации / планах (design/progression-system.md):
 - Max level расширение до 50 (новая XP формула)
@@ -383,6 +388,65 @@
 
 ---
 
+## Сессия 2026-04-18
+
+### [DONE] Баг боя в башне — персонажи не кастуют
+
+**Диагностика (Tester)**:
+Root cause найден в `src/js/combat.js::scheduleNextCast()`. При попытке фиксить BUG-007 (infinite recursion) введена ошибка: если `skipCount >= totalSlots` (несовместимые слоты) вызывалось `endBattle('win')` мгновенно. При `state.classType === null` (игроки до Awakening) все классовые спеллы считались несовместимыми → первый бой мгновенно "побеждался" без каста.
+
+**Фикс (Coder #1)**:
+- `src/js/combat.js::initBattle()`: добавлен фильтр совместимости слотов (универсальные + текущий класс; при classType=null все валидны; если пусто → notification + return false)
+- `src/js/combat.js::scheduleNextCast()`: оба ложных `endBattle('win')` заменены на `endBattle('loss')` с notification. Ветка пропуска класса при classType=null не срабатывает.
+- Статус: VERIFIED ✓
+
+### [DONE] Кнопка Skip Fight (автопросчёт боя)
+
+**ТЗ (Game Designer)**: Гибрид Option C — прогон боевой логики в памяти через флаг `_fastForward=true`, wrapper `_schedule()` вместо setTimeout. UI: кнопка `#skipFightBtn` в правом нижнем углу, overlay "Resolving…" 400ms, доступна везде (тренировка/карта/башня). Hard cap 60000 ticks.
+
+**Имплементация (Coder #3)**: 
+- В `src/js/combat.js` добавлены флаг `_fastForward` и wrapper `_schedule()` для условного setTimeout
+- Функция `skipFight()` запускает симуляцию боя в памяти до `endBattle()`
+- UI: кнопка в HTML (`screen-combat`), стилизована под боевой интерфейс, disabled пока идёт бой
+- Overlay появляется на 400ms (blur фон + "Resolving…" текст)
+- Статус: IN PROGRESS (логика готова, UI-полировка в работе)
+
+### [DONE] Инвентарь перекрывает HUD статусов
+
+**Проблема**: Кнопка инвентаря на площади занимала всю верхнюю часть экрана, обрезала HUD статусов (особенно с баффами).
+
+**Фикс (Coder #1)** — `src/css/inventory.css`:
+- `.inv-top-btn`: width 54% → 38%, max-width 520px, min-width 280px
+- Padding 13px → 10px, font-size 17px → 15px, letter-spacing 3px → 2.5px
+- `src/css/main.css`: `.location-hud` max-width `calc(50% - 240px)`; новый @media breakpoint (max-width:1500px) для `.inv-top-btn`
+- Статус: VERIFIED ✓
+
+### [DONE] Переименование Ley Loom → The Sigil Tree + рестайл
+
+**Выбор имени (Creative)**:
+Утверждён вариант **The Sigil Tree** (ресурс: **Sigils**) вместо "Ley Threads". Отклонены: Awakening Veins, Covenant, Ember Weave, Inner Pyre.
+
+**UI-переименование (Coder #2)**:
+- Заменены 10+ текстов в `index.html`, `passives_canvas.js`, `passives.js` (Ley Loom → Sigil Tree, Ley Threads → Sigils)
+- Поле `state.passives.leyThreads` оставлено в коде для совместимости сейвов (помечено комментарием)
+- Без breaking changes в localStorage
+
+**Визуальный рестайл (Design Director + Coder #2)** — 7 правок:
+1. Витражная готическая рамка (border-image, clip-path углы)
+2. Центральный вращающийся sigil (rotate animation)
+3. Состояния нод: locked=десатурация, available=пунктирное кольцо-пульсация, unlocked=двойной halo
+4. Живые ley-нити на рёбрах (SVG path animation)
+5. Типографика: UPPERCASE, letter-spacing, ❖ символ
+6. Падающие искры (particle effect на фоне)
+7. Свиток-tooltip с clip-path углами
+
+- Файлы: `src/css/passives.css`, `src/js/passives_canvas.js`, `index.html`
+- Статус: VERIFIED ✓
+
+### Next: Завершить UI-полировку Skip Fight → спрайты башни этажей 7-10 → интеграция Sigils в квесты и башню
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -409,6 +473,10 @@
 | 2026-04-10 | Пассивные навыки: Ley Threads, 8 universal + 20 class | Отдельно от гримуара, ~68 threads к max level |
 | 2026-04-10 | SPELL_020=drain_life, SPELL_021=blizzard (оба файла TSUNAMI) | Временное решение, tsunami нужна своя иконка |
 | 2026-04-10 | Верификация иконок: 31/31 SPELL файлов на диске, привязки ОК | tsunami без иконки, 6 universal спеллов на старых ассетах |
+| 2026-04-18 | Ley Loom → The Sigil Tree (ресурс: Ley Threads → Sigils) | Понятное dark-fantasy имя вместо academic; resonates с игроком |
+| 2026-04-18 | leyThreads field сохранён для compat, UI показывает Sigils | Без breaking changes в сейвах, graceful migration |
+| 2026-04-18 | Skip Fight = гибрид-симуляция (Option C) | Сохраняет все боевые механики, мгновенный исход без чит-ощущения |
+| 2026-04-18 | classType=null → все спеллы валидны в combat | Игроки до Awakening (до lv3) не блокируются от боя |
 
 ---
 
