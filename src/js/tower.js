@@ -101,7 +101,9 @@ export function restoreTowerSummary() {
 }
 
 /**
- * Начинает новую попытку — тратит одну попытку и стартует этаж 1.
+ * Начинает новую попытку — инициализирует ран и открывает гримуар этажа 1.
+ * Попытка (attemptsToday) засчитывается только когда игрок реально начинает
+ * первый бой — в _startFloor(1), — а не при нажатии "Enter the Spire".
  */
 export function startTowerRun() {
   const state = getState();
@@ -112,18 +114,15 @@ export function startTowerRun() {
     return;
   }
 
-  // Тратим попытку
-  state.tower.attemptsToday++;
-  state.tower.lastAttemptDate = new Date().toDateString();
-
-  // Инициализируем текущий ран
+  // Инициализируем ран без траты попытки — попытка будет засчитана в _startFloor(1)
   state.tower.currentRun = {
     currentFloor: 1,   // следующий этаж для боя
     floorsCleared: 0,  // сколько уже пройдено в этом ране
     goldEarned: 0,
     xpEarned: 0,
     mageHP: null,      // null = начать с полного HP
-    shieldHP: 0
+    shieldHP: 0,
+    attemptCounted: false  // флаг: попытка ещё не засчитана
   };
   saveState();
 
@@ -283,8 +282,16 @@ function _startFloor(floorNum) {
   // Открываем гримуар с врагом башни
   initGrimoire(
     floorData.enemyId,
-    // Колбек "Begin Battle"
+    // Колбек "Begin Battle" — реальный старт боя
     (enemyId) => {
+      // Засчитываем попытку только при старте первого этажа (один раз за ран)
+      if (floorNum === 1 && run && !run.attemptCounted) {
+        run.attemptCounted = true;
+        state.tower.attemptsToday++;
+        state.tower.lastAttemptDate = new Date().toDateString();
+        saveState();
+      }
+
       showScreen('screen-combat');
       const started = initBattle(enemyId, {
         isTowerCombat: true,
@@ -296,10 +303,19 @@ function _startFloor(floorNum) {
         showScreen('screen-grimoire');
       }
     },
-    // Колбек "Back" — возврат из гримуара без старта
+    // Колбек "Back" — игрок вышел из гримуара до начала боя
     () => {
-      // Возвращаемся на экран входа в башню
-      // Попытка уже потрачена, показываем summary с нулями
+      // Если ни одного этажа не пройдено — просто возвращаемся на экран башни,
+      // не тратим попытку и не показываем summary с нулями.
+      const currentRun = getState().tower?.currentRun;
+      if (!currentRun || currentRun.floorsCleared === 0) {
+        getState().tower.currentRun = null;
+        saveState();
+        _renderTowerScreen();
+        showScreen('screen-tower');
+        return;
+      }
+      // Если уже были пройдены этажи — стандартное завершение рана
       _finishRun();
     }
   );
@@ -320,6 +336,7 @@ function _handleFullClear() {
 
 /**
  * Завершает ран (поражение или добровольный выход) и показывает summary.
+ * Если ни одного этажа не пройдено — возвращаемся на экран башни без summary.
  */
 function _finishRun() {
   const state = getState();
@@ -328,6 +345,16 @@ function _finishRun() {
     if (_onExitToMap) _onExitToMap();
     return;
   }
+
+  // Не показываем summary с нулями — игрок просто не начал бой
+  if (run.floorsCleared === 0) {
+    state.tower.currentRun = null;
+    saveState();
+    _renderTowerScreen();
+    showScreen('screen-tower');
+    return;
+  }
+
   _renderSummaryScreen(run.floorsCleared, run.goldEarned, run.xpEarned, false);
   showScreen('screen-tower-summary');
 }

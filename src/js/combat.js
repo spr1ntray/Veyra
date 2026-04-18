@@ -12,6 +12,8 @@ import {
   SPELLS_DATA, ENEMIES_DATA
 } from './state.js';
 
+import { showNotification } from './ui.js';
+
 // BUG-005: import aggregatePassiveBonuses directly to avoid window._passiveNodesMap race condition
 import { aggregatePassiveBonuses } from './passives.js';
 
@@ -19,10 +21,38 @@ import { aggregatePassiveBonuses } from './passives.js';
 export { SPELLS_DATA as SPELLS };
 
 // Константы
-const BATTLE_TIMEOUT = 60;    // секунд до ничьей
 const FIGHTS_LIMIT   = 5;
-const CAST_GAP       = 300;   // мс пауза между кастами
+const CAST_GAP       = 400;   // мс пауза между кастами (увеличено для читаемости анимаций)
 const INTRO_DELAY    = 800;   // мс задержка перед первым кастом
+const FAST_FORWARD_TICK_CAP = 60000; // предотвращает бесконечный цикл при simulateBattle
+
+// Модульный таймер анимации мага — единая переменная предотвращает гонку таймеров
+let _animTimer = null;
+
+/**
+ * Wrapper вокруг setTimeout для поддержки режима _fastForward.
+ * В обычном бою ведёт себя как setTimeout.
+ * При _fastForward — вызывает fn() синхронно немедленно и возвращает null.
+ * Каждый вызов в _fastForward-режиме инкрементирует _simTicks;
+ * при достижении FAST_FORWARD_TICK_CAP принудительно завершает бой, чтобы защититься
+ * от бесконечной рекурсии (например, если обе стороны бессмертны из-за данных).
+ */
+function _schedule(fn, delay) {
+  if (battleState._fastForward) {
+    battleState._simTicks = (battleState._simTicks || 0) + 1;
+    if (battleState._simTicks > FAST_FORWARD_TICK_CAP) {
+      // Аварийный выход: слишком долго — принудительно завершаем победой/поражением
+      if (battleState.active) {
+        const forcedResult = battleState.enemyHP <= battleState.mageHP ? 'win' : 'loss';
+        endBattle(forcedResult);
+      }
+      return null;
+    }
+    fn();
+    return null;
+  }
+  return setTimeout(fn, delay);
+}
 
 // Состояние текущего боя
 let battleState = {
@@ -72,7 +102,11 @@ let battleState = {
   reflectActive: false,          // Geomancer Tectonic Shift reflect
   reflectPercent: 0,
   reflectExpireAt: 0,
-  livingBombs: []                // Pyromancer: [{detonateAt, damage, intMult, elementalMod}]
+  livingBombs: [],               // Pyromancer: [{detonateAt, damage, intMult, elementalMod}]
+
+  // === Fast-forward (Skip Fight) ===
+  _fastForward: false,           // true → _schedule() вызывает fn() синхронно
+  _simTicks: 0                   // счётчик тиков fast-forward (hard cap: FAST_FORWARD_TICK_CAP)
 };
 
 // Колбек окончания боя
@@ -88,6 +122,63 @@ let _towerCarryShield = 0;    // Щит мага при переносе меж�
  */
 export function setOnBattleEnd(callback) {
   _onBattleEnd = callback;
+}
+
+/**
+ * Перезапускает webp-анимацию: сброс src форсирует перемотку к первому кадру.
+ * Необходимо вызывать каждый раз при показе attack/hurt/death.
+ */
+function restartWebpAnim(imgEl) {
+  if (!imgEl) return;
+  const src = imgEl.src;
+  imgEl.src = '';
+  imgEl.src = src;
+}
+
+/**
+ * Показывает нужную анимацию мага, скрывая остальные.
+ * Очищает предыдущий _animTimer перед установкой нового,
+ * чтобы исключить гонку таймеров возврата в idle.
+ *
+ * @param {'idle'|'attack'|'hurt'|'death'} anim
+ * @param {number} [returnToIdleMs] — если задано, через этот промежуток вернуть idle
+ */
+function showMageAnim(anim, returnToIdleMs) {
+  // В режиме fast-forward анимации не нужны
+  if (battleState._fastForward) return;
+
+  // Очищаем любой ожидающий таймер возврата в idle
+  if (_animTimer !== null) {
+    clearTimeout(_animTimer);
+    _animTimer = null;
+  }
+
+  const map = {
+    idle:   'mage-anim-idle',
+    attack: 'mage-anim-attack',
+    hurt:   'mage-anim-hurt',
+    death:  'mage-anim-death',
+  };
+
+  // Скрываем все, показываем нужный
+  Object.entries(map).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === anim) {
+      el.classList.remove('mage-sprite-hidden');
+      restartWebpAnim(el); // перезапускаем анимацию с первого кадра
+    } else {
+      el.classList.add('mage-sprite-hidden');
+    }
+  });
+
+  // Запланировать возврат в idle если нужно
+  if (returnToIdleMs && anim !== 'idle' && anim !== 'death') {
+    _animTimer = setTimeout(() => {
+      _animTimer = null;
+      showMageAnim('idle');
+    }, returnToIdleMs);
+  }
 }
 
 /**
@@ -156,9 +247,23 @@ export function initBattle(enemyId, options = {}) {
   const enemy = ENEMIES_DATA[enemyId];
   if (!enemy) return false;
 
-  // Фильтруем null из гримуара
-  const activeSlots = state.grimoire.filter(id => id !== null);
-  if (activeSlots.length < 3) return false;
+  // Фильтруем null из гримуара, затем — слоты несовместимые с классом.
+  // Если classType === null (игрок < уровня Awakening), считаем все спеллы валидными,
+  // чтобы не блокировать бои до первого выбора класса.
+  const rawSlots = state.grimoire.filter(id => id !== null);
+  if (rawSlots.length < 3) return false;
+
+  const activeSlots = rawSlots.filter(id => {
+    const sp = SPELLS_DATA[id];
+    if (!sp) return false;
+    if (state.classType === null) return true;
+    return sp.classRestriction === null || sp.classRestriction === undefined || sp.classRestriction === state.classType;
+  });
+
+  if (activeSlots.length === 0) {
+    showNotification('Your grimoire has no castable spells. Check class restrictions.', 'warning');
+    return false;
+  }
 
   // Сохраняем контекст башни
   _isTowerCombat   = options.isTowerCombat === true;
@@ -173,6 +278,25 @@ export function initBattle(enemyId, options = {}) {
   // Скрываем / показываем кнопку flee в зависимости от контекста
   const backBtn = document.getElementById('btn-combat-back');
   if (backBtn) backBtn.style.display = _isTowerCombat ? 'none' : '';
+
+  // Skip Fight: доступен везде — в обычном бою, в башне, в тренировке
+  const skipBtn = document.getElementById('btn-skip-fight');
+  if (skipBtn) {
+    skipBtn.style.display = '';
+    skipBtn.disabled = false;
+    const newSkip = skipBtn.cloneNode(true);
+    skipBtn.replaceWith(newSkip);
+    newSkip.addEventListener('click', () => {
+      if (!battleState.active || battleState._fastForward) return;
+      newSkip.disabled = true;
+      const ov = document.getElementById('resolving-overlay');
+      if (ov) ov.classList.remove('hidden');
+      setTimeout(() => {
+        simulateBattle();
+        if (ov) ov.classList.add('hidden');
+      }, 400);
+    });
+  }
 
   // Сброс состояния боя
   battleState = {
@@ -229,18 +353,15 @@ export function initBattle(enemyId, options = {}) {
 
     // === Passive skill tree procs ===
     _secondWindUsed: false,  // U7: resets each fight
-    _phoenixUsed: false      // P-K2: resets each fight
+    _phoenixUsed: false,     // P-K2: resets each fight
+
+    // === Fast-forward (Skip Fight) ===
+    _fastForward: false,
+    _simTicks: 0
   };
 
-  // Сброс спрайтов мага: показываем idle, скрываем остальные
-  {
-    const ids = ['mage-anim-idle', 'mage-anim-attack', 'mage-anim-hurt', 'mage-anim-death'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.toggle('mage-sprite-hidden', id !== 'mage-anim-idle');
-    });
-  }
+  // Сброс спрайтов мага: показываем idle, скрываем остальные, сбрасываем таймер
+  showMageAnim('idle');
 
   renderBattleUI(enemy);
   startBattleLoop(enemy);
@@ -308,12 +429,7 @@ function startBattleLoop(enemy) {
     }
 
     updateEnemyStatusRow();
-    updateTimerDisplay();
-
-    // Timeout — ничья
-    if (battleState.elapsedTime >= BATTLE_TIMEOUT) {
-      endBattle('timeout');
-    }
+    // Таймер обратного отсчёта удалён — бой длится до смерти одного из участников
   }, 1000);
 
   // DoT тики (каждые 500мс проверяем стаки)
@@ -335,38 +451,61 @@ function startBattleLoop(enemy) {
 
 /**
  * Планирует следующий каст из гримуара
+ * @param {number} skipCount — сколько слотов подряд пропущено (защита от бесконечной рекурсии)
  */
-function scheduleNextCast() {
+function scheduleNextCast(skipCount = 0) {
   if (!battleState.active) return;
+
+  const totalSlots = battleState.grimoire.length;
 
   const spellId = battleState.grimoire[battleState.currentSlotIndex];
   const spell = SPELLS_DATA[spellId];
   if (!spell) {
     // Пустой слот — пропускаем
     advanceGrimoire();
-    scheduleNextCast();
+    // Если все слоты пусты — не зацикливаемся
+    if (skipCount + 1 >= totalSlots) {
+      addCombatLog('No spells in loadout!', '#888');
+      showNotification('Grimoire had no compatible spells — battle forfeited.', 'warning');
+      endBattle('loss');
+      return;
+    }
+    scheduleNextCast(skipCount + 1);
     return;
   }
 
-  // Проверка ограничения класса: если заклинание недоступно — показываем сообщение и пропускаем
+  // Проверка ограничения класса: если заклинание недоступно — показываем сообщение и пропускаем.
+  // При classType === null все спеллы уже отфильтрованы как валидные в initBattle,
+  // эта ветка — страховка на edge cases.
   const state = getState();
-  if (spell.classRestriction !== null && spell.classRestriction !== undefined && spell.classRestriction !== state.classType) {
+  if (spell.classRestriction !== null && spell.classRestriction !== undefined && state.classType !== null && spell.classRestriction !== state.classType) {
     // Капитализируем название класса для сообщения
     const className = spell.classRestriction.charAt(0).toUpperCase() + spell.classRestriction.slice(1);
-    addCombatLog(`${spell.name}: Requires ${className}`, '#888');
     advanceGrimoire();
-    // Небольшая пауза чтобы лог не спамил при нескольких нессовместимых слотах подряд
-    battleState.castTimeout = setTimeout(() => {
-      if (battleState.active) scheduleNextCast();
+
+    // Если все слоты несовместимы — честное поражение, не ложная победа
+    if (skipCount + 1 >= totalSlots) {
+      addCombatLog('No compatible spells in loadout!', '#888');
+      showNotification('Grimoire had no compatible spells — battle forfeited.', 'warning');
+      endBattle('loss');
+      return;
+    }
+
+    addCombatLog(`${spell.name}: Requires ${className}`, '#888');
+    // Небольшая пауза чтобы лог не спамил при нескольких несовместимых слотах подряд
+    battleState.castTimeout = _schedule(() => {
+      if (battleState.active) scheduleNextCast(skipCount + 1);
     }, CAST_GAP);
     return;
   }
 
-  // Обновляем трекер — подсвечиваем текущий слот
-  updateGrimoireTracker();
+  // Обновляем трекер — подсвечиваем текущий слот (пропускаем DOM при fast-forward)
+  if (!battleState._fastForward) updateGrimoireTracker();
 
   // Calculate effective cast time (haste, scorch window)
-  let effectiveCastTime = spell.castTime;
+  // Глобальный множитель +35% даёт анимации время воспроизвестись до следующего каста
+  const CAST_TIME_SCALE = 1.35;
+  let effectiveCastTime = spell.castTime * CAST_TIME_SCALE;
 
   // Scorch free-cast window (Flame Wave effect)
   if (spell.id === 'scorch' && Date.now() < battleState.scorchWindowExpireAt) {
@@ -384,13 +523,15 @@ function scheduleNextCast() {
   }
 
   // Выполняем каст через castTime заклинания
-  battleState.castTimeout = setTimeout(async () => {
+  battleState.castTimeout = _schedule(async () => {
     if (!battleState.active) return;
+    // Guard: если успел стартовать Skip Fight пока таймер был в полёте — отдаём управление simulateBattle
+    if (battleState._fastForward) return;
     await performCast(spell);
     if (battleState.active) {
       advanceGrimoire();
       // Пауза между кастами перед следующим
-      battleState.castTimeout = setTimeout(() => {
+      battleState.castTimeout = _schedule(() => {
         if (battleState.active) scheduleNextCast();
       }, CAST_GAP);
     }
@@ -633,6 +774,8 @@ async function performCast(spell) {
   if (spell.id === 'arcane_barrage') {
     let totalDmg = 0;
     for (let i = 0; i < 3; i++) {
+      // Не бьём мёртвого врага — останавливаем серию если HP уже <= 0
+      if (battleState.enemyHP <= 0) break;
       const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
       const dmg = calcDmg(base, true, i === 0);
       totalDmg += dmg;
@@ -1153,11 +1296,13 @@ function scheduleEnemyAttack(enemy) {
   } else if (battleState.enemySlowPercent > 0) {
     effectiveInterval = enemy.attackInterval / (1 - battleState.enemySlowPercent);
   }
+  // Минимум 0.8с — гарантирует паузу между событиями для корректного воспроизведения анимаций
+  effectiveInterval = Math.max(effectiveInterval, 0.8);
 
-  battleState.enemyAttackTimeout = setTimeout(() => {
+  battleState.enemyAttackTimeout = _schedule(() => {
     if (!battleState.active) return;
     performEnemyAttack(enemy);
-    scheduleEnemyAttack(enemy);
+    if (battleState.active) scheduleEnemyAttack(enemy);
   }, effectiveInterval * 1000);
 }
 
@@ -1264,22 +1409,15 @@ function performEnemyAttack(enemy) {
 
   battleState.mageHP -= dmg;
 
-  // Визуальный удар по магу
-  const mageEl = document.getElementById('combat-mage');
-  if (mageEl) {
-    mageEl.classList.add('mage-hit');
-    setTimeout(() => mageEl.classList.remove('mage-hit'), 400);
-  }
-  // Спрайт: показываем hurt-анимацию, через 600ms возвращаем idle
-  {
-    const idleAnim = document.getElementById('mage-anim-idle');
-    const hurtAnim = document.getElementById('mage-anim-hurt');
-    if (idleAnim) idleAnim.classList.add('mage-sprite-hidden');
-    if (hurtAnim) hurtAnim.classList.remove('mage-sprite-hidden');
-    setTimeout(() => {
-      if (hurtAnim) hurtAnim.classList.add('mage-sprite-hidden');
-      if (idleAnim) idleAnim.classList.remove('mage-sprite-hidden');
-    }, 600);
+  // Визуальный удар по магу — только в обычном режиме
+  if (!battleState._fastForward) {
+    const mageEl = document.getElementById('combat-mage');
+    if (mageEl) {
+      mageEl.classList.add('mage-hit');
+      setTimeout(() => mageEl.classList.remove('mage-hit'), 400);
+    }
+    // Спрайт: hurt-анимация, через 700ms возврат в idle (через showMageAnim чтобы избежать гонки)
+    showMageAnim('hurt', 700);
   }
 
   updateMageHP();
@@ -1322,16 +1460,447 @@ function performEnemyAttack(enemy) {
       battleState._phoenixUsed = true;
       addCombatLog('Phoenix Protocol activated! Revived with 30% HP!', '#e67e22');
       updateMageHP();
-      // Flash the mage element to signal the resurrection
-      const mageEl = document.getElementById('combat-mage');
-      if (mageEl) {
-        mageEl.classList.add('mage-hit');
-        setTimeout(() => mageEl.classList.remove('mage-hit'), 600);
+      // Flash the mage element to signal the resurrection (только в обычном режиме)
+      if (!battleState._fastForward) {
+        const mageEl = document.getElementById('combat-mage');
+        if (mageEl) {
+          mageEl.classList.add('mage-hit');
+          setTimeout(() => mageEl.classList.remove('mage-hit'), 600);
+        }
       }
     } else {
       endBattle('loss');
     }
   }
+}
+
+/**
+ * Мгновенный просчёт исхода боя без UI-анимаций (Skip Fight).
+ *
+ * Стратегия: симулируем бой через "виртуальное время" — чередуем каст мага
+ * и атаки врага в порядке их временных меток (priority queue по nextAt).
+ * Все механики применяются (DoT, shield, passives, cooldowns).
+ * Анимационные функции уже защищены флагом _fastForward → no-op.
+ */
+function simulateBattle() {
+  if (!battleState.active) return;
+
+  battleState._fastForward = true;
+  battleState._simTicks = 0;
+
+  // Отменяем все pending-таймеры
+  if (battleState.castTimeout)        { clearTimeout(battleState.castTimeout);        battleState.castTimeout = null; }
+  if (battleState.enemyAttackTimeout) { clearTimeout(battleState.enemyAttackTimeout); battleState.enemyAttackTimeout = null; }
+  if (battleState.timerInterval)      { clearInterval(battleState.timerInterval);      battleState.timerInterval = null; }
+  if (battleState.dotInterval)        { clearInterval(battleState.dotInterval);        battleState.dotInterval = null; }
+
+  const enemy = ENEMIES_DATA[battleState.enemyId];
+  if (!enemy) { endBattle('loss'); return; }
+
+  // Применяем все оставшиеся DoT-тики (весь урон за оставшиеся тики)
+  for (const stack of battleState.dotStacks) {
+    if (!battleState.active) break;
+    while (stack.ticksLeft > 0) {
+      const tickDmg = Math.floor(stack.dmgPerTick * stack.intMult * stack.schoolMod * (stack.elementalMod || 1.0));
+      battleState.enemyHP -= tickDmg;
+      stack.ticksLeft--;
+      if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    }
+  }
+  battleState.dotStacks = [];
+
+  // Принудительно детонируем Living Bombs
+  for (const bomb of battleState.livingBombs) {
+    if (!battleState.active) break;
+    const detonationDmg = Math.floor(bomb.damage * bomb.intMult * bomb.elementalMod);
+    battleState.enemyHP -= detonationDmg;
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+  }
+  battleState.livingBombs = [];
+  if (!battleState.active) return;
+
+  // Виртуальная временна́я шкала (в мс): чередуем каст мага и атаки врага
+  // Первый каст — сейчас (INTRO_DELAY уже прошёл); первая атака — через attackInterval
+  let mageNextAt   = 0;
+  let enemyNextAt  = enemy.attack > 0 ? Math.round(enemy.attackInterval * 1000) : Infinity;
+
+  // Симуляция через простой цикл по виртуальному времени
+  while (battleState.active && battleState._simTicks < FAST_FORWARD_TICK_CAP) {
+    battleState._simTicks++;
+
+    // Определяем следующее событие: кто ходит раньше
+    if (mageNextAt <= enemyNextAt) {
+      // Ход мага: выполняем один полный каст (без await — performCastSync)
+      const spellId = battleState.grimoire[battleState.currentSlotIndex];
+      const spell   = SPELLS_DATA[spellId];
+
+      if (!spell) {
+        // Пустой/несовместимый слот — пропускаем
+        advanceGrimoire();
+        // castTime минимальный
+        mageNextAt += CAST_GAP;
+        continue;
+      }
+
+      // Эффективное время каста (haste, scorch)
+      let castMs = Math.round(spell.castTime * 1.35 * 1000);
+      if (spell.id === 'scorch') castMs = 100;
+      if (battleState.hasteRemaining > 0) {
+        castMs = Math.round(castMs * (1 - battleState.hastePercent));
+        battleState.hasteRemaining--;
+        if (battleState.hasteRemaining <= 0) battleState.hastePercent = 0;
+      }
+
+      // Синхронный каст — performCast() async но delay() → Promise.resolve() → no-await needed
+      // Используем прямой вызов (результат Promise игнорируем — все побочные эффекты
+      // происходят синхронно до первого реального await в нормальном режиме;
+      // в fast-forward delay() = Promise.resolve() поэтому body выполняется как microtask.
+      // Вместо этого дублируем минимальную логику урона синхронно.
+      _applySpellSync(spell);
+
+      advanceGrimoire();
+      mageNextAt += castMs + CAST_GAP;
+    } else {
+      // Ход врага
+      performEnemyAttack(enemy);
+      // Следующая атака через effectiveInterval с учётом slow/chill
+      let atkInterval = enemy.attackInterval;
+      if (battleState.chillActive)           atkInterval = enemy.attackInterval / (1 - 0.70);
+      else if (battleState.enemySlowPercent) atkInterval = enemy.attackInterval / (1 - battleState.enemySlowPercent);
+      atkInterval = Math.max(atkInterval, 0.8);
+      enemyNextAt += Math.round(atkInterval * 1000);
+    }
+  }
+
+  // Если бой всё ещё активен (тик-кап) — определяем победителя по оставшемуся HP
+  if (battleState.active) {
+    const result = battleState.enemyHP <= 0 ? 'win'
+                 : battleState.mageHP  <= 0 ? 'loss'
+                 : battleState.enemyHP < battleState.mageHP ? 'win' : 'loss';
+    endBattle(result);
+  }
+}
+
+/**
+ * Синхронная версия логики каста для simulateBattle (fast-forward).
+ * Применяет тот же урон что и performCast(), без async/await и DOM-обновлений.
+ * Поддерживает все типы эффектов.
+ */
+function _applySpellSync(spell) {
+  if (!battleState.active) return;
+
+  const effect  = spell.effect;
+  const state   = getState();
+  const enemy   = ENEMIES_DATA[battleState.enemyId];
+  const int     = getIntelligence();
+  const intMult = 1 + (int - 5) / 100;
+  const schoolMod    = enemy.resistances[spell.school] || 1.0;
+  const elementalMod = getElementalModifier(state.classType, enemy.elementType);
+  const debuffMod    = battleState.voidDebuffActive ? 1.15 : 1.0;
+  const petrifyAmpMod = battleState.petrifyAmpActive ? 1.25 : 1.0;
+  const buffMod      = (state.buffs.mana_surge && state.buffs.mana_surge.active) ? 1.25 : 1.0;
+  const passiveUnlocked = (state.passives && state.passives.unlocked) || [];
+  const pBonuses = aggregatePassiveBonuses(passiveUnlocked);
+
+  let focusMod  = 1.0;
+  let wasFocused = false;
+  if (battleState.focusCharged) { focusMod = 2.0; battleState.focusCharged = false; wasFocused = true; }
+
+  // Executioner (+15% vs <25% HP)
+  let executionerMod = 1.0;
+  if (passiveUnlocked.includes('U8')) {
+    const nodeMap = (typeof window !== 'undefined' && window._passiveNodesMap) || null;
+    const u8Node = nodeMap && nodeMap['U8'];
+    const execBonus = u8Node ? (u8Node.effect.executioner || 0.15) : 0.15;
+    if (battleState.enemyHP < battleState.enemyMaxHP * 0.25) executionerMod = 1 + execBonus;
+  }
+
+  // Infernal Momentum
+  let infernalMod = 1.0;
+  if (pBonuses.infernalMomentum && state.classType === 'pyromancer') {
+    if (spell.school === 'fire') {
+      infernalMod = 1 + battleState.infernalMomentumStacks * 0.05;
+    } else {
+      battleState.infernalMomentumStacks = 0;
+    }
+  }
+
+  // Meltdown
+  let meltdownMod = 1.0;
+  if (pBonuses.meltdown > 0 && state.classType === 'pyromancer' && spell.school === 'fire') {
+    if (battleState.enemyHP < battleState.enemyMaxHP * 0.30) meltdownMod = 1 + pBonuses.meltdown;
+  }
+
+  const calcDmg = (base, useSchool = true, useFocus = true, useBuff = true) =>
+    Math.floor(base * intMult * (useSchool ? schoolMod : 1.0) * elementalMod * debuffMod * petrifyAmpMod * (useFocus ? focusMod : 1.0) * (useBuff ? buffMod : 1.0) * executionerMod * infernalMod * meltdownMod);
+
+  const applyEnemyDmg = (dmg) => {
+    battleState.enemyHP -= dmg;
+    if (battleState.enemyHP <= 0) { endBattle('win'); return true; }
+    return false;
+  };
+
+  const triggerPassivesSync = (damageDealt, sp) => {
+    if (sp.passiveTrigger === false) return;
+    if (state.classType === 'pyromancer') {
+      const extra = sp.effect?.extraEmberStacks || 1;
+      battleState.emberStacks += extra;
+      battleState.emberDamageAccumulated += damageDealt;
+      if (battleState.emberStacks >= 5) {
+        const bonusDmg = Math.floor(battleState.emberDamageAccumulated * 0.15);
+        battleState.emberStacks = 0;
+        battleState.emberDamageAccumulated = 0;
+        if (applyEnemyDmg(bonusDmg)) return;
+      }
+      if (pBonuses.infernalMomentum && sp.school === 'fire') {
+        battleState.infernalMomentumStacks = Math.min(battleState.infernalMomentumStacks + 1, 5);
+      }
+    }
+    if (state.classType === 'stormcaller') {
+      const extra = sp.effect?.extraCharges || 0;
+      battleState.staticCharges += 1 + extra;
+      if (battleState.staticCharges >= 10) {
+        const thunderDmg = 5 * state.level;
+        battleState.staticCharges = 0;
+        battleState.hasteRemaining = Math.max(battleState.hasteRemaining, 1);
+        battleState.hastePercent   = Math.max(battleState.hastePercent, 0.50);
+        if (applyEnemyDmg(thunderDmg)) return;
+      }
+    }
+  };
+
+  // === Utility spells ===
+  if (spell.id === 'focus') {
+    battleState.focusCharged = true;
+    if (wasFocused) battleState.focusCharged = true; // already set
+    return;
+  }
+  if (spell.id === 'mana_shield') {
+    const shieldVal = Math.floor(40 + int * 0.8);
+    battleState.shieldHP = Math.min(battleState.shieldHP + shieldVal, battleState.mageMaxHP);
+    if (wasFocused) battleState.focusCharged = true;
+    return;
+  }
+  if (effect && effect.type === 'haste') {
+    battleState.hasteRemaining = effect.hasteSpells;
+    battleState.hastePercent   = effect.hastePercent;
+    if (wasFocused) battleState.focusCharged = true;
+    return;
+  }
+  if (effect && effect.type === 'heal') {
+    let healAmt = effect.baseHeal + Math.floor(battleState.mageMaxHP * effect.maxHpPercent);
+    if (battleState.mageHP < battleState.mageMaxHP * effect.emergencyThreshold) healAmt = Math.floor(healAmt * effect.emergencyMultiplier);
+    battleState.mageHP = Math.min(battleState.mageHP + healAmt, battleState.mageMaxHP);
+    if (wasFocused) battleState.focusCharged = true;
+    triggerPassivesSync(0, spell);
+    return;
+  }
+  if (effect && effect.type === 'class_shield') {
+    const sv = effect.baseShield + Math.floor(battleState.mageMaxHP * effect.maxHpPercent);
+    battleState.shieldHP = Math.min(battleState.shieldHP + sv, battleState.mageMaxHP);
+    if (wasFocused) battleState.focusCharged = true;
+    triggerPassivesSync(0, spell);
+    return;
+  }
+  if (effect && effect.type === 'fortify') {
+    if (battleState.shieldHP > 0) battleState.shieldHP = Math.min(battleState.shieldHP * 2, battleState.mageMaxHP);
+    else battleState.shieldHP = Math.min(effect.fallbackShield, battleState.mageMaxHP);
+    if (wasFocused) battleState.focusCharged = true;
+    triggerPassivesSync(0, spell);
+    return;
+  }
+
+  // === Damage spells ===
+  if (effect && effect.type === 'evasion') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    battleState.evasionActive        = true;
+    battleState.evasionChance        = effect.dodgeChance;
+    battleState.evasionCounterPercent = effect.counterDmgPercent;
+    battleState.evasionExpireAt      = Date.now() + effect.duration * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (spell.id === 'arcane_barrage') {
+    let total = 0;
+    for (let i = 0; i < 3; i++) {
+      if (battleState.enemyHP <= 0) break;
+      const d = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max), true, i === 0);
+      total += d; battleState.enemyHP -= d;
+    }
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    triggerPassivesSync(total, spell);
+    return;
+  }
+  if (effect && effect.type === 'chain') {
+    const h1 = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    const h2 = Math.floor(h1 * effect.decayPercent);
+    const h3 = Math.floor(h1 * effect.decayPercent * effect.decayPercent);
+    if (applyEnemyDmg(h1 + h2 + h3)) return;
+    triggerPassivesSync(h1 + h2 + h3, spell);
+    return;
+  }
+  if (effect && effect.type === 'multi_hit_static') {
+    let total = 0;
+    const perMin = Math.floor(spell.baseDmg.min / effect.hits);
+    const perMax = Math.floor(spell.baseDmg.max / effect.hits);
+    for (let i = 0; i < effect.hits; i++) {
+      const d = calcDmg(randInt(perMin, perMax), true, i === 0);
+      total += d; battleState.enemyHP -= d;
+      if (state.classType === 'stormcaller') battleState.staticCharges += effect.extraStaticPerHit;
+    }
+    if (state.classType === 'stormcaller' && battleState.staticCharges >= 10) {
+      const td = 5 * state.level;
+      battleState.staticCharges = 0;
+      battleState.hasteRemaining = Math.max(battleState.hasteRemaining, 1);
+      battleState.hastePercent   = Math.max(battleState.hastePercent, 0.50);
+      battleState.enemyHP -= td;
+    }
+    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
+    return;
+  }
+  if (effect && effect.type === 'double_strike') {
+    let total = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (Math.random() < effect.procChance) total += calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max), true, false);
+    if (applyEnemyDmg(total)) return;
+    triggerPassivesSync(total, spell);
+    return;
+  }
+  if (effect && effect.type === 'dot') {
+    const directDmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (applyEnemyDmg(directDmg)) return;
+    let effectiveMaxStacks = effect.maxStacks;
+    if (spell.id === 'ignite' && state.classType === 'pyromancer' && pBonuses.igniteMaxStacks > 0) effectiveMaxStacks = pBonuses.igniteMaxStacks;
+    if (battleState.dotStacks.length < effectiveMaxStacks) {
+      // In fast-forward we apply all remaining dot damage immediately (flush each new stack)
+      const totalDotDmg = Math.floor(effect.ticks * Math.floor(effect.tickDmg * intMult * schoolMod * (elementalMod || 1.0)));
+      if (applyEnemyDmg(totalDotDmg)) return;
+    }
+    triggerPassivesSync(directDmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'persistent_dot') {
+    const directDmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (applyEnemyDmg(directDmg)) return;
+    const ticks = Math.floor(effect.duration / effect.tickInterval);
+    const totalDotDmg = Math.floor(ticks * Math.floor(effect.tickDmg * intMult * (elementalMod || 1.0)));
+    if (applyEnemyDmg(totalDotDmg)) return;
+    triggerPassivesSync(directDmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'slow') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    battleState.enemySlowPercent  = effect.slowPercent;
+    battleState.enemySlowExpireAt = Date.now() + effect.duration * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'debuff' && effect.debuffType === 'void') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    battleState.voidDebuffActive   = true;
+    battleState.voidDebuffExpireAt = Date.now() + effect.duration * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && (effect.type === 'lifesteal' || effect.type === 'maelstrom')) {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    const lsPct = effect.type === 'maelstrom' ? effect.lifestealPercent : effect.percent;
+    const heal  = Math.min(battleState.mageMaxHP - battleState.mageHP, Math.floor(dmg * lsPct));
+    if (heal > 0) battleState.mageHP += heal;
+    if (effect.type === 'maelstrom' && effect.slow) {
+      battleState.enemySlowPercent  = effect.slow.slowPercent;
+      battleState.enemySlowExpireAt = Date.now() + effect.slow.duration * 1000;
+    }
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'conditional_bonus') {
+    let dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (effect.condition === 'target_has_ignite' && battleState.dotStacks.some(d => d.spellId === 'ignite' || d.spellId === 'cataclysm')) dmg = Math.floor(dmg * (1 + effect.bonusDmgPercent));
+    if (effect.condition === 'target_is_slowed'  && battleState.enemySlowPercent > 0)  dmg = Math.floor(dmg * (1 + effect.bonusDmgPercent));
+    if (effect.condition === 'mage_has_shield'   && battleState.shieldHP > 0)           dmg = Math.floor(dmg * (1 + effect.bonusDmgPercent));
+    if (effect.slow) { battleState.enemySlowPercent = effect.slow.slowPercent; battleState.enemySlowExpireAt = Date.now() + effect.slow.duration * 1000; }
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'delayed_detonation') {
+    const directDmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (applyEnemyDmg(directDmg)) return;
+    // Детонируем немедленно (задержки нет в fast-forward)
+    const detonationDmg = Math.floor(effect.detonationDmg * intMult * elementalMod);
+    if (applyEnemyDmg(detonationDmg)) return;
+    triggerPassivesSync(directDmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'ignite_apply') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    // Применяем Ignite DoT сразу
+    const igniteDotDmg = Math.floor(3 * Math.floor(8 * intMult * schoolMod * (elementalMod || 1.0)));
+    battleState.scorchWindowExpireAt = Date.now() + effect.scorchWindow * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    if (applyEnemyDmg(igniteDotDmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'ember_bonus') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'extra_static') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'chill') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    battleState.chillActive        = true;
+    battleState.chillExpireAt      = Date.now() + effect.chillDuration * 1000;
+    battleState.enemySlowPercent   = effect.postChillSlow.slowPercent;
+    battleState.enemySlowExpireAt  = Date.now() + (effect.chillDuration + effect.postChillSlow.duration) * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'shield_scaling') {
+    const base    = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    const bonusDmg = Math.floor(battleState.shieldHP * effect.shieldDmgPercent);
+    if (applyEnemyDmg(base + bonusDmg)) return;
+    triggerPassivesSync(base + bonusDmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'petrify') {
+    const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    battleState.petrifyActive    = true;
+    battleState.petrifyExpireAt  = Date.now() + effect.stunDuration * 1000;
+    battleState.petrifyAmpActive = true;
+    battleState.petrifyAmpExpireAt = Date.now() + (effect.stunDuration + effect.damageAmpDuration) * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+  if (effect && effect.type === 'mega_shield') {
+    const dmg      = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+    const shieldVal = Math.min(effect.baseShield + Math.floor(battleState.mageMaxHP * effect.maxHpPercent), battleState.mageMaxHP);
+    battleState.shieldHP       = Math.min(battleState.shieldHP + shieldVal, battleState.mageMaxHP);
+    battleState.reflectActive  = true;
+    battleState.reflectPercent = effect.reflectPercent;
+    battleState.reflectExpireAt = Date.now() + effect.reflectDuration * 1000;
+    if (applyEnemyDmg(dmg)) return;
+    triggerPassivesSync(dmg, spell);
+    return;
+  }
+
+  // Default: basic damage
+  const dmg = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max));
+  if (applyEnemyDmg(dmg)) return;
+  triggerPassivesSync(dmg, spell);
 }
 
 /**
@@ -1347,14 +1916,9 @@ function endBattle(result) {
   clearInterval(battleState.timerInterval);
   clearInterval(battleState.dotInterval);
 
-  // Спрайт смерти — показываем при поражении, не возвращаем idle
+  // Спрайт смерти — показываем при поражении, idle не возвращаем
   if (result === 'loss') {
-    const idleAnim  = document.getElementById('mage-anim-idle');
-    const hurtAnim  = document.getElementById('mage-anim-hurt');
-    const deathAnim = document.getElementById('mage-anim-death');
-    if (idleAnim)  idleAnim.classList.add('mage-sprite-hidden');
-    if (hurtAnim)  hurtAnim.classList.add('mage-sprite-hidden');
-    if (deathAnim) deathAnim.classList.remove('mage-sprite-hidden');
+    showMageAnim('death'); // без returnToIdleMs — остаётся на смерти
   }
 
   const state = getState();
@@ -1364,6 +1928,8 @@ function endBattle(result) {
   // Счётчики, буффы и награды управляются через tower.js
   if (_isTowerCombat) {
     saveState();
+    // Тикаем баффы и в башенном бою — иначе длительность не уменьшается
+    const expiredBuffs = tickBuffs();
     const mageHPLeft    = Math.max(0, battleState.mageHP);
     const shieldHPLeft  = Math.max(0, battleState.shieldHP);
     setTimeout(() => {
@@ -1377,7 +1943,7 @@ function endBattle(result) {
           droppedItem: null,
           fightsLeft: FIGHTS_LIMIT - state.combat.fightsToday,
           levelUps: [],
-          expiredBuffs: [],
+          expiredBuffs,
           enemyName: enemy.name,
           enemyHPLeft: Math.max(0, battleState.enemyHP),
           mageHPLeft,
@@ -1481,24 +2047,24 @@ function endBattle(result) {
 // ===== АНИМАЦИИ =====
 
 /**
- * Задержка
+ * Задержка — в режиме _fastForward резолвится мгновенно
  */
 function delay(ms) {
+  if (battleState._fastForward) return Promise.resolve();
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
- * Анимация Focus (маг заряжается)
+ * Анимация Focus (маг заряжается) — no-op при fast-forward
  */
 async function playFocusAnimation() {
+  if (battleState._fastForward) return;
   const mageEl = document.getElementById('combat-mage');
   if (!mageEl) return;
 
   mageEl.classList.add('mage-focusing');
-  const idleAnim  = document.getElementById('mage-anim-idle');
-  const hurtAnim  = document.getElementById('mage-anim-hurt');
-  if (idleAnim) idleAnim.classList.add('mage-sprite-hidden');
-  if (hurtAnim) hurtAnim.classList.remove('mage-sprite-hidden');
+  // hurt-анимация используется как «заряжающийся» спрайт (reuse)
+  showMageAnim('hurt');
 
   // Индикатор над магом
   let indicator = document.getElementById('focus-indicator');
@@ -1512,14 +2078,14 @@ async function playFocusAnimation() {
 
   await delay(900);
   mageEl.classList.remove('mage-focusing');
-  if (hurtAnim) hurtAnim.classList.add('mage-sprite-hidden');
-  if (idleAnim) idleAnim.classList.remove('mage-sprite-hidden');
+  showMageAnim('idle');
 }
 
 /**
- * Анимация Mana Shield
+ * Анимация Mana Shield — no-op при fast-forward
  */
 async function playShieldAnimation(shieldVal) {
+  if (battleState._fastForward) return;
   const mageEl = document.getElementById('combat-mage');
   if (!mageEl) return;
 
@@ -1538,21 +2104,19 @@ async function playShieldAnimation(shieldVal) {
 }
 
 /**
- * Анимация полёта снаряда заклинания
+ * Анимация полёта снаряда заклинания — no-op при fast-forward
  */
 async function playSpellAnimation(spell, damage) {
+  if (battleState._fastForward) return;
   const mageEl = document.getElementById('combat-mage');
   const enemyEl = document.getElementById('combat-enemy');
   const projectileEl = document.getElementById('spell-projectile');
 
   if (!mageEl || !enemyEl || !projectileEl) return;
 
-  // Маг начинает каст
+  // Маг начинает каст — показываем attack-анимацию с перезапуском webp
   mageEl.classList.add('mage-casting');
-  const idleAnim   = document.getElementById('mage-anim-idle');
-  const attackAnim = document.getElementById('mage-anim-attack');
-  if (idleAnim)   idleAnim.classList.add('mage-sprite-hidden');
-  if (attackAnim) attackAnim.classList.remove('mage-sprite-hidden');
+  showMageAnim('attack');
 
   // Убираем Focus индикатор
   const indicator = document.getElementById('focus-indicator');
@@ -1582,8 +2146,8 @@ async function playSpellAnimation(spell, damage) {
   enemyEl.classList.remove('dummy-hit');
   mageEl.classList.remove('mage-casting');
 
-  if (attackAnim) attackAnim.classList.add('mage-sprite-hidden');
-  if (idleAnim)   idleAnim.classList.remove('mage-sprite-hidden');
+  // Возвращаем idle — showMageAnim сбросит любой pending _animTimer
+  showMageAnim('idle');
 }
 
 /**
@@ -1601,9 +2165,10 @@ function getSpellEmoji(school) {
 }
 
 /**
- * Всплывающая цифра урона
+ * Всплывающая цифра урона — пропускаем при fast-forward
  */
 function showDamageNumber(damage, color) {
+  if (battleState._fastForward) return;
   const enemyEl = document.getElementById('combat-enemy');
   if (!enemyEl) return;
 
@@ -1676,9 +2241,10 @@ function showCombatLoreHintIfFirst() {
 }
 
 /**
- * Обновляет HP бар и текст мага
+ * Обновляет HP бар и текст мага — пропускаем при fast-forward
  */
 function updateMageHP() {
+  if (battleState._fastForward) return;
   const hpBar = document.getElementById('mage-hp-bar');
   const hpText = document.getElementById('mage-hp-text');
   const hpDisplay = document.getElementById('combat-mage-hp-display');
@@ -1709,9 +2275,10 @@ function updateMageHP() {
 }
 
 /**
- * Обновляет HP бар и текст врага
+ * Обновляет HP бар и текст врага — пропускаем при fast-forward
  */
 function updateEnemyHP() {
+  if (battleState._fastForward) return;
   const hpBar = document.getElementById('enemy-hp-bar');
   const hpText = document.getElementById('enemy-hp-text');
 
@@ -1732,9 +2299,10 @@ function updateEnemyHP() {
 }
 
 /**
- * Обновляет строку статусов врага (slow, DoT, debuff)
+ * Обновляет строку статусов врага (slow, DoT, debuff) — пропускаем при fast-forward
  */
 function updateEnemyStatusRow() {
+  if (battleState._fastForward) return;
   const row = document.getElementById('enemy-status-row');
   if (!row) return;
   row.innerHTML = '';
@@ -1780,18 +2348,7 @@ function addCombatLog(text, color = '#c9a84c') {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-/**
- * Обновляет отображение таймера
- */
-function updateTimerDisplay() {
-  const el = document.getElementById('combat-timer');
-  if (!el) return;
-  const remaining = Math.max(0, BATTLE_TIMEOUT - battleState.elapsedTime);
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-  el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-  el.classList.toggle('timer-critical', remaining <= 10);
-}
+// updateTimerDisplay удалён — бой теперь без таймера обратного отсчёта
 
 /**
  * Рендерит Grimoire Tracker в боевом экране
