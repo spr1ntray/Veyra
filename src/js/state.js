@@ -195,20 +195,6 @@ export const SPELLS_DATA = {
     glowColor: 'rgba(74,144,217,0.6)',
     img: 'assets/generated/spell_arcane_bolt.png'
   },
-  arcane_barrage: {
-    id: 'arcane_barrage',
-    name: 'Arc Barrage',
-    school: 'arcane',
-    baseDmg: { min: 15, max: 20 },
-    castTime: 1.0,
-    effect: { type: 'multishot', hits: 3 },
-    unlockLevel: 4,
-    classRestriction: null, elementType: null, passiveTrigger: true,
-    description: 'Three arcane missiles. Fast but lower total damage.',
-    color: '#6aabf7',
-    glowColor: 'rgba(106,171,247,0.6)',
-    img: 'assets/generated/spell_arcane_bolt.png'
-  },
   mana_shield: {
     id: 'mana_shield',
     name: 'Mana Ward',
@@ -237,36 +223,6 @@ export const SPELLS_DATA = {
     glowColor: 'rgba(241,196,15,0.6)',
     img: 'assets/generated/spell_focus.png'
   },
-  // Universal shadow spells (no class restriction)
-  shadow_bolt: {
-    id: 'shadow_bolt',
-    name: 'Shade Bolt',
-    school: 'shadow',
-    baseDmg: { min: 20, max: 35 },
-    castTime: 1.8,
-    effect: { type: 'lifesteal', percent: 0.20 },
-    unlockLevel: 2,
-    classRestriction: null, elementType: null, passiveTrigger: true,
-    description: 'Damage + 20% lifesteal.',
-    color: '#8e44ad',
-    glowColor: 'rgba(142,68,173,0.6)',
-    img: 'assets/generated/spell_shadow_pulse.png'
-  },
-  void_eruption: {
-    id: 'void_eruption',
-    name: 'Void Burst',
-    school: 'shadow',
-    baseDmg: { min: 40, max: 60 },
-    castTime: 2.8,
-    effect: { type: 'debuff', debuffType: 'void', ampPercent: 0.15, duration: 5 },
-    unlockLevel: 9,
-    classRestriction: null, elementType: null, passiveTrigger: true,
-    description: 'Damage + debuff: enemy takes +15% damage for 5 sec.',
-    color: '#4a235a',
-    glowColor: 'rgba(74,35,90,0.7)',
-    img: 'assets/generated/spell_shadow_pulse.png'
-  },
-
   // ===== PYROMANCER SPELLS (fire element) =====
   fireball: {
     id: 'fireball',
@@ -1044,7 +1000,7 @@ export const ITEM_POOLS = {
 function getDefaultState() {
   const now = Date.now();
   return {
-    version: 3,
+    version: 4,
     name: 'Unnamed Wizard',
     level: 1,
     xp: 0,
@@ -1320,6 +1276,16 @@ export function loadState() {
       }
       if (!_state.version || _state.version < 3) {
         _state.version = 3;
+      }
+
+      // v3→v4 migration: removed universal spells (arcane_barrage, shadow_bolt, void_eruption).
+      // Clear these IDs from grimoire if old saves still reference them.
+      if (_state.version < 4) {
+        const REMOVED_SPELLS = new Set(['arcane_barrage', 'shadow_bolt', 'void_eruption']);
+        if (Array.isArray(_state.grimoire)) {
+          _state.grimoire = _state.grimoire.map(id => REMOVED_SPELLS.has(id) ? null : id);
+        }
+        _state.version = 4;
       }
 
       saveState();

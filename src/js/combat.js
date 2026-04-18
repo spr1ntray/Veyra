@@ -773,27 +773,6 @@ async function performCast(spell) {
     return;
   }
 
-  // === ARCANE BARRAGE (multishot) ===
-  if (spell.id === 'arcane_barrage') {
-    let totalDmg = 0;
-    for (let i = 0; i < 3; i++) {
-      // Не бьём мёртвого врага — останавливаем серию если HP уже <= 0
-      if (battleState.enemyHP <= 0) break;
-      const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
-      const dmg = calcDmg(base, true, i === 0);
-      totalDmg += dmg;
-      battleState.enemyHP -= dmg;
-    }
-    showDamageNumber(totalDmg, spell.color);
-    const focusLabel = wasFocused ? ' (x2 Focus on first hit!)' : '';
-    addCombatLog(`${spell.name} hits for ${totalDmg} (3 missiles)${focusLabel}`, spell.color);
-    await playSpellAnimation(spell, totalDmg);
-    updateEnemyHP();
-    triggerPassives(totalDmg, spell);
-    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
-    return;
-  }
-
   // === CHAIN LIGHTNING (Stormcaller) ===
   if (effect && effect.type === 'chain') {
     const base = randInt(spell.baseDmg.min, spell.baseDmg.max);
@@ -1722,17 +1701,6 @@ function _applySpellSync(spell) {
     battleState.evasionExpireAt      = Date.now() + effect.duration * 1000;
     if (applyEnemyDmg(dmg)) return;
     triggerPassivesSync(dmg, spell);
-    return;
-  }
-  if (spell.id === 'arcane_barrage') {
-    let total = 0;
-    for (let i = 0; i < 3; i++) {
-      if (battleState.enemyHP <= 0) break;
-      const d = calcDmg(randInt(spell.baseDmg.min, spell.baseDmg.max), true, i === 0);
-      total += d; battleState.enemyHP -= d;
-    }
-    if (battleState.enemyHP <= 0) { endBattle('win'); return; }
-    triggerPassivesSync(total, spell);
     return;
   }
   if (effect && effect.type === 'chain') {
