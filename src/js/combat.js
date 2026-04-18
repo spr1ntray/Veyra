@@ -253,16 +253,19 @@ export function initBattle(enemyId, options = {}) {
   const rawSlots = state.grimoire.filter(id => id !== null);
   if (rawSlots.length < 3) return false;
 
-  const activeSlots = rawSlots.filter(id => {
+  const compatibleSlots = rawSlots.filter(id => {
     const sp = SPELLS_DATA[id];
     if (!sp) return false;
     if (state.classType === null) return true;
     return sp.classRestriction === null || sp.classRestriction === undefined || sp.classRestriction === state.classType;
   });
 
-  if (activeSlots.length === 0) {
-    showNotification('Your grimoire has no castable spells. Check class restrictions.', 'warning');
-    return false;
+  // Если все слоты несовместимы — всё равно запускаем бой c rawSlots, чтобы игрок
+  // не оказался в состоянии "тыкнул бой, ничего не происходит". scheduleNextCast
+  // сам пропустит невалидные касты и честно завершит бой как loss с уведомлением.
+  const activeSlots = compatibleSlots.length > 0 ? compatibleSlots : rawSlots;
+  if (compatibleSlots.length === 0) {
+    showNotification('Grimoire has no spells matching your class. Open Grimoire and reassign.', 'warning');
   }
 
   // Сохраняем контекст башни

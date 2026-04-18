@@ -326,8 +326,10 @@ function renderSpellPool() {
     // Никогда не показываем спеллы чужих классов — игроку они не нужны
     if (spellState === 'locked-class') return;
 
-    // Универсальные спеллы (classRestriction === null) показываем всегда —
-    // и до выбора класса, и после Пробуждения (они не принадлежат ни одному классу).
+    // Фильтр "My Class": скрываем универсальные спеллы (classRestriction === null),
+    // оставляя только спеллы выбранного класса. Требуется playerClass — до Awakening
+    // фильтр не применяется, игрок видит все универсальные.
+    if (poolFilter === 'myclass' && playerClass && spell.classRestriction === null) return;
 
     if (spellState === 'available') {
       available.push({ spell, spellState });
