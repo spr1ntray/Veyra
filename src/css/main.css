@@ -917,21 +917,21 @@ body {
   z-index: 20;
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 12px;
   align-items: baseline;
   font-family: var(--font-title);
   background: rgba(5, 5, 20, 0.65);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(201, 168, 76, 0.2);
-  border-radius: 14px;
-  padding: 5px 12px;
+  border: 1px solid rgba(201, 168, 76, 0.28);
+  border-radius: 16px;
+  padding: 9px 18px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
   max-width: max-content;
 }
 
 .loc-hud-name {
   color: var(--color-gold);
-  font-size: 15px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-shadow: 0 0 6px rgba(201,168,76,0.3);
@@ -940,15 +940,15 @@ body {
 /* Разделитель между именем и уровнем */
 .loc-hud-name::after {
   content: '│';
-  margin: 0 6px;
+  margin: 0 9px;
   color: rgba(201,168,76,0.25);
   font-weight: 400;
-  font-size: 13px;
+  font-size: 18px;
 }
 
 .loc-hud-level {
   color: var(--color-arcane);
-  font-size: 13px;
+  font-size: 18px;
   letter-spacing: 1px;
   padding: 0;
   border: none;
@@ -966,7 +966,7 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-gold);
-  font-size: 15px;
+  font-size: 21px;
   opacity: 0.9;
 }
 
@@ -1265,20 +1265,21 @@ body {
 /* На экранах меньше 1400px HUD пропорционально уменьшается */
 @media (max-width: 1400px) {
   .loc-hud-name {
-    font-size: 12px;
+    font-size: 18px;
   }
   .loc-hud-name::after {
-    font-size: 11px;
+    font-size: 16px;
+    margin: 0 7px;
   }
   .loc-hud-level {
-    font-size: 11px;
+    font-size: 16px;
   }
   .loc-hud-gold {
-    font-size: 12px;
+    font-size: 18px;
   }
   .location-hud {
-    padding: 3px 8px;
-    gap: 6px;
+    padding: 7px 14px;
+    gap: 10px;
   }
 }
 
@@ -1295,39 +1296,42 @@ body {
     padding: 8px 0;
   }
 
-  /* HUD — совсем компактный (1280px уже покрыт правилом 1400px выше) */
+  /* HUD — компактный на 1280px, перекрывает правила 1400px */
   .location-hud {
-    padding: 3px 8px;
-    gap: 5px;
+    padding: 6px 12px;
+    gap: 8px;
   }
   .loc-hud-name {
-    font-size: 12px;
+    font-size: 16px;
   }
   .loc-hud-level {
-    font-size: 11px;
+    font-size: 14px;
   }
   .loc-hud-gold {
-    font-size: 12px;
+    font-size: 16px;
   }
+  .coin-inline { width: 18px; height: 18px; }
+  .hud-class-badge .hud-badge-img { width: 22px; height: 22px; }
 }
 
 /* ===== Inline coin icon (replaces 🪙 and ◈ across HUD/shop/inventory) ===== */
 .coin-inline {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   image-rendering: pixelated;
   vertical-align: middle;
-  margin-right: 4px;
+  margin-right: 6px;
   display: inline-block;
 }
 @media (max-width: 1400px) {
-  .coin-inline { width: 16px; height: 16px; }
+  .coin-inline { width: 20px; height: 20px; }
+  .hud-class-badge .hud-badge-img { width: 24px; height: 24px; }
 }
 
 /* Class-element badge in HUD — PNG replaces old emoji */
 .hud-class-badge .hud-badge-img {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   image-rendering: pixelated;
   vertical-align: middle;
   margin-right: 2px;

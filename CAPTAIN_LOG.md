@@ -515,6 +515,41 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 
 ---
 
+## Сессия 2026-04-19 (PM session: Abstract prep + PvP GDD + UI scale-up)
+
+### [RESEARCH] Abstract Network — миграционный ресёрч
+- **Агент**: Researcher
+- **Суть**: Abstract — ZK L2 на ZKsync EraVM, chainId 2741 (mainnet), 11124 (testnet). Нужен `zksolc` вместо `solc` для контрактов, Solidity-совместимо. AGW (Abstract Global Wallet) — native account abstraction: email/social/passkey логин, gasless transactions через paymaster, session keys (одна подпись на сессию). XP-поинты Abstract — **off-chain**, распределяет Abstract Portal за активность в whitelisted dApps, нужно попасть в Abstract Discover. SDK: `@abstract-foundation/agw-client` (vanilla-совместимо, viem-based), `agw-react` (react hooks) — для Veyra подойдёт только первый.
+- **Ключевой вывод**: тест-нет готов для PoC, анти-чит без бэкенда принципиально невозможен (любой клиент может отправить фейк-score).
+- **Файл**: `research/abstract-network-research.md`
+
+### [DESIGN] Leaderboard & Points — 8 метрик, рекомендация на MVP
+- **Агент**: Creative
+- **Суть**: 8 вариантов ladder-метрик (Spire Depth Score, Resonance Mastery %, PvP Arena Rating, Flawless Streak, Speed Spire, Sigil Tree Completion, Gold Velocity, Revenge Kills). Рекомендация MVP: **3 параллельных ladder — PvP Arena Rating (Elo, social hook), Spire Depth Score (PvE), Resonance Mastery % (signature skill)**. Единый слой Veyra Points (VP) поверх: 70% топам, 30% participation. Отклонено для MVP: Revenge Kills (требует зрелой PvP-базы), Gold Velocity и Sigil Tree Completion (это achievements, не ladder).
+- **Файл**: `design/leaderboard-points-ideation.md`
+
+### [GDD] Shadow Duels — async PvP режим
+- **Агент**: Game-designer
+- **Суть**: Async PvP с снапшотом персонажа реального игрока. Игрок B не участвует и не узнаёт о матче. Snapshot ≤4KB JSON (level, class, equipment, grimoire, passives, resonancePreset). AI оппонента = тот же autocast на его билде (ротация гримуара = его "стратегия"). Elo K=32, старт 1000, 6 тиров (Novice → Mythweaver), сезон 28 дней, soft reset до 1000. 10 боёв/день, после 5 — награда x0.5. Детерминистская пересимуляция через seeded PRNG (mulberry32) для 5% матчей сэмпла и 100% топ-100 (anti-cheat). MVP off-chain на Cloudflare Workers+KV; миграция на Abstract контракт прописана (playerId→wallet, rngSeed→blockhash).
+- **Файл**: `design/async-pvp-gdd.md`
+
+### [ADR] Миграция на Abstract — архитектура и стратегия локального тестирования
+- **Агент**: Architect
+- **Суть**: 3 слоя — UI (не меняется), Game logic (нужен рефакторинг: seeded RNG в combat.js, data+persistence split в state.js), Storage Provider (новая абстракция: `LocalStorageProvider` / `MockChainProvider` / `AbstractTestnetProvider` / `AbstractMainnetProvider` с одинаковым API). Data boundary: имя/level/gold/inventory → локально (а); grimoire snapshot → signed (б); PvP result / Elo / leaderboard → on-chain (в). **Тестирование без mainnet**: MockChainProvider + BroadcastChannel API между инкогнито-окнами = два локальных "игрока" в одной машине, покрывает ~80% логики. Roadmap: 7 этапов, каждый не ломает игру (storage abstraction → seeded RNG → MockChain → wallet stub → testnet → indexer → mainnet).
+- **Риск**: в combat.js 11 мест `Math.random()` — требуют замены на seeded PRNG для on-chain верификации PvP.
+- **Файл**: `design/adr-abstract-migration.md`
+
+### [DONE] UI scale-up — HUD и иконки локации
+- **Агент**: Design-director + Coder
+- **Суть**: HUD статуса увеличен на +40% по шрифту (name/gold 15→21, level 13→18), padding 5x12→9x18, border-radius 14→16, coin-inline 18→24, badge-img 22→28. Media queries 1400/1280px получили масштабированные значения. Inventory icon 56→76 (+35%), training icon 28→40 (+43%), `.inv-top-btn` font 15→20, padding 10→14.
+- **Файлы**: `src/css/main.css`, `src/css/inventory.css`, `index.html`, `src/js/main.js`
+
+### [DONE] Новая иконка Shop — SpriteCook
+- **Агент**: Design-director (концепт) + DevOps (генерация)
+- **Суть**: Концепт A — висящая вывеска лавки с монетой-медальоном на кованой петле. Сгенерировано 2 вариации (24 кредита, остаток 286). Выбрана тёмная вариация (asset_id `84ec0533-8f58-4524-9633-4ad6ffbb4829`), сохранена как `assets/generated/pixel/shop_icon_v3.png`. v2 сохранён для отката. В `main.js:115-120` эмодзи 🛒 заменено на `<img>` + `<span>Shop</span>` (паттерн как у training-кнопки). spritecook-assets.json обновлён.
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -552,11 +587,19 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 | 2026-04-19 | Порог rawSlots в initBattle: 3→1 | После миграции v3→v4 игроки с null-слотами не могут начать бой |
 | 2026-04-19 | Все silent `return false` в combat.js дают showNotification | Игрок должен понимать почему бой не стартует |
 | 2026-04-19 | Sigil Resonance — выбранная модель counterplay для PvP | Element triangle + sideboard-аналог, лучший trade-off cool×feasible |
+| 2026-04-19 | Target network: Abstract L2 (ZKsync EraVM) | Пользователь выбрал Abstract как сеть для деплоя — экосистема с активным фармом поинтов через dApps |
+| 2026-04-19 | Async PvP через снапшоты персонажей, B не участвует | Пользовательское требование: бой с "рандомным" персонажем реального игрока без участия его клиента |
+| 2026-04-19 | Локальное PvP-тестирование через MockChainProvider + BroadcastChannel | Нужно тестить без деплоя в mainnet; два инкогнито-окна на одной машине закрывают 80% сценариев |
 
 ---
 
 ## 8. Открытые задачи / TODO
 
+- [ ] **Abstract migration Phase 1**: Storage Provider абстракция в state.js (подготовка к on-chain миграции)
+- [ ] **Seeded RNG в combat.js**: заменить 11 мест `Math.random()` на seeded PRNG (mulberry32) — блокер PvP verify
+- [ ] **Async PvP MVP**: имплементация Shadow Duels после одобрения GDD пользователем
+- [ ] **Leaderboard MVP**: 3 ladder (PvP Arena, Spire Depth, Resonance Mastery) — после одобрения ideation
+- [ ] **Sigil Resonance MVP**: имплементация (GDD Variant A+ готов с 2026-04-19)
 - [ ] Sigil Resonance — имплементация MVP (после одобрения GDD)
 - [ ] Иконка для tsunami (SPELL_032_TSUNAMI.png) — нужна генерация
 - [ ] Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption)

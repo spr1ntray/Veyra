@@ -57,6 +57,16 @@
       "generated": "2026-04-18"
     },
     {
+      "asset_id": "84ec0533-8f58-4524-9633-4ad6ffbb4829",
+      "sha12": "c335cd17a518",
+      "label": "shop_icon_v3",
+      "local_path": "assets/generated/pixel/shop_icon_v3.png",
+      "width": 128,
+      "height": 128,
+      "generated": "2026-04-19",
+      "note": "shop_icon_v3 — replaces v2 per user request, hanging tavern sign with gold coin medallion, design-director concept A approved. variation_a of 2 generated."
+    },
+    {
       "asset_id": "f177a605-5fea-40e8-b1e0-80fbd3d03045",
       "sha12": "10b5a03b1bb1",
       "label": "coin_icon",

@@ -104,9 +104,9 @@ function updateLocationActions(locationId) {
     btn.className = 'location-action-btn';
     const trainingImg = document.createElement('img');
     trainingImg.src = 'assets/generated/pixel/training_icon_v2.png';
-    trainingImg.width = 28;
-    trainingImg.height = 28;
-    trainingImg.style.cssText = 'image-rendering:pixelated;vertical-align:middle;margin-right:6px';
+    trainingImg.width = 40;
+    trainingImg.height = 40;
+    trainingImg.style.cssText = 'image-rendering:pixelated;vertical-align:middle;margin-right:9px';
     btn.appendChild(trainingImg);
     btn.appendChild(document.createTextNode('Training'));
     btn.addEventListener('click', () => enterGrimoireScreen('training_dummy'));
@@ -115,7 +115,13 @@ function updateLocationActions(locationId) {
     // Кнопка Shop — открывает магазин торговца
     const shopBtn = document.createElement('button');
     shopBtn.className = 'location-action-btn';
-    shopBtn.textContent = '🛒 Shop';
+    const shopImg = document.createElement('img');
+    shopImg.src = 'assets/generated/pixel/shop_icon_v3.png';
+    shopImg.width = 40;
+    shopImg.height = 40;
+    shopImg.style.cssText = 'image-rendering:pixelated;vertical-align:middle;margin-right:9px';
+    shopBtn.appendChild(shopImg);
+    shopBtn.appendChild(document.createTextNode('Shop'));
     shopBtn.addEventListener('click', openShop);
     actionsEl.appendChild(shopBtn);
   }
