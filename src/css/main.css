@@ -195,8 +195,17 @@ body {
 }
 
 .hud-gold::before {
-  content: '🪙';
-  font-size: 12px;
+  content: '';
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  background-image: url('../../assets/generated/pixel/coin_icon.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  image-rendering: pixelated;
+  margin-right: 2px;
+  vertical-align: middle;
 }
 
 /* XP бар */
@@ -915,14 +924,14 @@ body {
   backdrop-filter: blur(8px);
   border: 1px solid rgba(201, 168, 76, 0.2);
   border-radius: 14px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
   max-width: max-content;
 }
 
 .loc-hud-name {
   color: var(--color-gold);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-shadow: 0 0 6px rgba(201,168,76,0.3);
@@ -934,12 +943,12 @@ body {
   margin: 0 6px;
   color: rgba(201,168,76,0.25);
   font-weight: 400;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .loc-hud-level {
   color: var(--color-arcane);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 1px;
   padding: 0;
   border: none;
@@ -957,7 +966,7 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-gold);
-  font-size: 14px;
+  font-size: 15px;
   opacity: 0.9;
 }
 
@@ -1256,13 +1265,16 @@ body {
 /* На экранах меньше 1400px HUD пропорционально уменьшается */
 @media (max-width: 1400px) {
   .loc-hud-name {
+    font-size: 12px;
+  }
+  .loc-hud-name::after {
     font-size: 11px;
   }
   .loc-hud-level {
-    font-size: 10px;
+    font-size: 11px;
   }
   .loc-hud-gold {
-    font-size: 11px;
+    font-size: 12px;
   }
   .location-hud {
     padding: 3px 8px;
@@ -1289,12 +1301,34 @@ body {
     gap: 5px;
   }
   .loc-hud-name {
-    font-size: 11px;
+    font-size: 12px;
   }
   .loc-hud-level {
-    font-size: 10px;
-  }
-  .loc-hud-gold {
     font-size: 11px;
   }
+  .loc-hud-gold {
+    font-size: 12px;
+  }
+}
+
+/* ===== Inline coin icon (replaces 🪙 and ◈ across HUD/shop/inventory) ===== */
+.coin-inline {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+  margin-right: 4px;
+  display: inline-block;
+}
+@media (max-width: 1400px) {
+  .coin-inline { width: 16px; height: 16px; }
+}
+
+/* Class-element badge in HUD — PNG replaces old emoji */
+.hud-class-badge .hud-badge-img {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+  margin-right: 2px;
 }

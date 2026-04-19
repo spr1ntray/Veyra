@@ -85,7 +85,7 @@ function updateLocationHUD() {
 
   if (nameEl)  nameEl.textContent  = state.name;
   if (levelEl) levelEl.textContent = `${state.level}`;
-  if (goldEl)  goldEl.textContent  = `◈ ${state.gold}`;
+  if (goldEl)  goldEl.innerHTML   = `<img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">${state.gold}`;
 
   renderHudBuffs();
 }
@@ -103,7 +103,7 @@ function updateLocationActions(locationId) {
     const btn = document.createElement('button');
     btn.className = 'location-action-btn';
     const trainingImg = document.createElement('img');
-    trainingImg.src = 'assets/generated/pixel/training_icon.png';
+    trainingImg.src = 'assets/generated/pixel/training_icon_v2.png';
     trainingImg.width = 28;
     trainingImg.height = 28;
     trainingImg.style.cssText = 'image-rendering:pixelated;vertical-align:middle;margin-right:6px';

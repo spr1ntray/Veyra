@@ -366,10 +366,11 @@ function renderShop() {
     // Цена (со скидкой — зачёркнутая базовая и новая)
     const priceEl = document.createElement('div');
     priceEl.className = 'shop-item-price';
+    const coinImg = '<img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">';
     if (hasDiscount) {
-      priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5">🪙 ${basePrice}</span><br>🪙 ${finalPrice}`;
+      priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5">${coinImg}${basePrice}</span><br>${coinImg}${finalPrice}`;
     } else {
-      priceEl.textContent = `🪙 ${finalPrice}`;
+      priceEl.innerHTML = `${coinImg}${finalPrice}`;
     }
 
     // Кнопка покупки — задизейблена если не хватает золота
@@ -409,7 +410,7 @@ function renderShop() {
 
   // Обновляем золото в шапке попапа
   const goldEl = document.getElementById('shop-gold-display');
-  if (goldEl) goldEl.textContent = `🪙 ${state.gold}`;
+  if (goldEl) goldEl.innerHTML = `<img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">${state.gold}`;
 }
 
 // ===== LORE TOOLTIP =====

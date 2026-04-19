@@ -162,6 +162,10 @@ function renderHanger() {
 
     const emojiEl = document.getElementById(`hanger-${slot}-emoji`);
     if (emojiEl) emojiEl.textContent = SLOT_EMOJI[slot];
+
+    // Show/hide overlay sprite based on equipped state
+    const spriteEl = document.getElementById(`hanger-sprite-${slot}`);
+    if (spriteEl) spriteEl.style.display = (itemId && item) ? '' : 'none';
   }
 }
 
@@ -178,7 +182,7 @@ function renderCharBlock() {
 
   if (nameEl)  nameEl.textContent  = state.name;
   if (levelEl) levelEl.textContent = `Level ${state.level}`;
-  if (goldEl)  goldEl.textContent  = `🪙 ${state.gold}`;
+  if (goldEl)  goldEl.innerHTML   = `<img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">${state.gold}`;
 
   // XP progress bar
   const xpNeeded = xpForLevel(state.level);

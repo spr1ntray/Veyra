@@ -477,6 +477,44 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 
 ---
 
+## Сессия 2026-04-19 (поздняя)
+
+### [HOTFIX] Бой не стартует — ReferenceError updateTimerDisplay
+- **Причина**: регрессия от ранней правки сессии — функция `updateTimerDisplay` удалена, но её вызов остался в `renderBattleUI` (combat.js:2189). Консоль: `Uncaught ReferenceError: updateTimerDisplay is not defined`.
+- **Фикс** (Coder): вызов удалён, комментарий о старом таймере оставлен.
+- **Файл**: src/js/combat.js:2186-2189
+
+### [DONE] HUD +1px — читаемость
+- Пользователь: "слишком мелко, сложно читать". Design-director одобрил +1px по всем шрифтам HUD без ломки композиции.
+- Base: name 14→15, level 12→13, gold 14→15, separator 12→13, padding 4px 10px → 5px 12px.
+- Media (<1400 и <1280): 11→12, 10→11.
+- **Файл**: src/css/main.css (~905, 1252-1311)
+
+### [DONE] 11 новых SpriteCook ассетов
+- Сгенерированы (132 кредита, остаток 310): training_icon_v2, shop_icon_v2, coin_icon, badge_fire/water/air/earth, hanger_empty, sprite_staff/hat/robe.
+- asset_id'ы в spritecook-assets.json (блок assets_v2).
+
+### [DONE] Интеграция ассетов в UI
+- `◈`/`🪙` заменены на `<img src="coin_icon.png" class="coin-inline">` в HUD, inventory, shop, ui.js (battle rewards), dailylogin, main.css `.hud-gold::before`.
+- `loc-hud-class-badge`: emoji стихии заменён на `<img src="badge_{element}.png">` в grimoire.js::updateHudClassBadge.
+- Training button: `training_icon.png` → `training_icon_v2.png` (main.js:106).
+- Инвентарь: старая `вешалка.png` заменена на `hanger_empty.png`; добавлены 3 overlay `<img>` (sprite_hat/robe/staff) с абсолютным позиционированием, видимость управляется `renderHanger()` по `state.equipment[slot]`.
+- CSS: добавлены `.coin-inline`, `.hud-badge-img`, `.hanger-sprite*` в main.css и inventory.css.
+- **Файлы**: index.html (~96-98, 148, 161-174, 597), src/js/main.js (~88, 106), src/js/shop.js (~370-372, 412), src/js/inventory.js (~156-166, 181), src/js/ui.js (~140, 167, 209), src/js/dailylogin.js (~159-165), src/js/grimoire.js (~589-591), src/css/main.css (~198-210, 1314+), src/css/inventory.css (~150+).
+
+### [DONE] Sigil Resonance GDD — Variant A+ (открытый доступ)
+- Пользователь указал на дыру: при фиксированной стихии класса counter-pick ломается в mirror-матче.
+- Game-designer разобрал варианты A/B/В: проблема — не в системе сигил, а в гипотетической фиксации доступа к стихиям.
+- **Решение (Variant A+): все 4 стихии доступны всем классам**. Идентичность защищена через: (1) classElementalMod ±10%, (2) resonanceDmgBonus работает только на спеллы своей стихии в гримуаре, (3) классовые keystone-ноды залочены на native-стихию.
+- Файл: design/sigil-resonance.md (§9.5 Decision + правки §5, §7.2). 0 строк кода — просто не добавлять фильтр.
+
+### Блокеры
+- Sigil Tree редизайн (запрос пользователя) отложен: Design-director агент упёрся в лимит Anthropic (reset 17:00 MSK).
+
+### Next: визуальный редизайн Sigil Tree → одобрение Sigil Resonance MVP → имплементация
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -502,6 +540,9 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 | 2026-04-10 | Башня: 10 этажей, HP carryover, 3 попытки/день | Эндгейм контент, не gear check а skill check |
 | 2026-04-10 | Пассивные навыки: Ley Threads, 8 universal + 20 class | Отдельно от гримуара, ~68 threads к max level |
 | 2026-04-10 | SPELL_020=drain_life, SPELL_021=blizzard (оба файла TSUNAMI) | Временное решение, tsunami нужна своя иконка |
+| 2026-04-19 | Sigil Resonance: Variant A+ — открытый доступ ко всем 4 стихиям | Фиксация класса к стихии ломает mirror-match counterplay; идентичность защищена модификаторами |
+| 2026-04-19 | Монета/стихии в UI — PNG вместо emoji/unicode | Единый pixel-art язык, убираем эмодзи из готической эстетики |
+| 2026-04-19 | Вешалка = empty hanger + 3 overlay-спрайта | Предыдущая вешалка "кривая"; overlay даёт визуализацию экипированных предметов |
 | 2026-04-10 | Верификация иконок: 31/31 SPELL файлов на диске, привязки ОК | tsunami без иконки, 6 universal спеллов на старых ассетах |
 | 2026-04-18 | Ley Loom → The Sigil Tree (ресурс: Ley Threads → Sigils) | Понятное dark-fantasy имя вместо academic; resonates с игроком |
 | 2026-04-18 | leyThreads field сохранён для compat, UI показывает Sigils | Без breaking changes в сейвах, graceful migration |

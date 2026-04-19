@@ -137,7 +137,7 @@ export function showPopupResult(data) {
   if (statsEl) {
     let html = `
       <div class="result-stat">
-        <span class="stat-icon">🪙</span>
+        <span class="stat-icon"><img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt=""></span>
         <span class="stat-label">Gold:</span>
         <span class="stat-value">+${data.goldEarned}</span>
       </div>
@@ -164,7 +164,7 @@ export function showPopupResult(data) {
         <div class="result-stat result-bonus">
           <span class="stat-icon">🏆</span>
           <span class="stat-label">5-win bonus!</span>
-          <span class="stat-value">+25🪙 +50✨</span>
+          <span class="stat-value">+25 <img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt=""> +50✨</span>
         </div>
       `;
     }
@@ -206,7 +206,7 @@ export function showPopupLevelUp(newLevel) {
   const rewardEl = document.getElementById('levelup-reward');
   if (rewardEl) {
     const goldReward = 5 * newLevel;
-    let rewardText = `+${goldReward} 🪙 gold`;
+    let rewardText = `+${goldReward} gold`;
     rewardText += '\n+1 Attribute Point';
 
     // Особые награды на определённых уровнях

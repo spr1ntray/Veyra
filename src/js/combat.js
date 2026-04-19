@@ -2185,9 +2185,6 @@ function renderBattleUI(enemy) {
   const logEl = document.getElementById('combat-log');
   if (logEl) logEl.innerHTML = '';
 
-  // Таймер
-  updateTimerDisplay();
-
   addCombatLog(`Battle started vs ${enemy.name}!`, '#c9a84c');
 
   // Лор-подсказка при первом бою — показываем один раз и прячем через 8 сек

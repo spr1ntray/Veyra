@@ -156,13 +156,14 @@ function showClaimAnimation(result) {
   if (!rewardEl) return;
 
   let rewardText = '';
-  if (result.gold > 0) rewardText += `+${result.gold} 🪙 `;
+  const coinImg = '<img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">';
+  if (result.gold > 0) rewardText += `+${result.gold} ${coinImg} `;
   if (result.itemReceived) {
     const item = ITEMS_DATA[result.itemReceived];
     if (item) rewardText += `+ ${item.name}`;
   }
 
-  rewardEl.textContent = rewardText || 'Reward received!';
+  rewardEl.innerHTML = rewardText || 'Reward received!';
   rewardEl.classList.add('reward-animate');
   setTimeout(() => rewardEl.classList.remove('reward-animate'), 1000);
 }

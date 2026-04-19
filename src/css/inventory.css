@@ -147,6 +147,33 @@
   filter: drop-shadow(0 0 12px rgba(201, 168, 76, 0.3)); /* золото вместо фиолетового */
 }
 
+/* ===== Equipment overlay sprites on the new empty hanger ===== */
+.hanger-sprite {
+  position: absolute;
+  image-rendering: pixelated;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.4));
+  z-index: 5;
+}
+.hanger-sprite-hat {
+  top: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30%;
+}
+.hanger-sprite-cloak {
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 42%;
+}
+.hanger-sprite-staff {
+  top: 10%;
+  left: 72%;
+  transform: translateX(-50%);
+  width: 22%;
+}
+
 /* ===== YELLOW CIRCLE INDICATORS ===== */
 
 /* Clickable circle positioned over hanger image via inline top/left % */

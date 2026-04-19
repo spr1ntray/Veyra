@@ -586,8 +586,9 @@ export function updateHudClassBadge() {
     return;
   }
 
-  // Содержимое: символ + аббревиатура
-  badge.innerHTML = `${badgeData.symbol} ${badgeData.abbr}`;
+  // Содержимое: PNG-бейдж стихии + аббревиатура
+  const elementFile = `assets/generated/pixel/badge_${element}.png`;
+  badge.innerHTML = `<img src="${elementFile}" class="hud-badge-img" alt=""> ${badgeData.abbr}`;
 
   // Сбрасываем все badge-* классы и назначаем актуальный
   badge.classList.remove('badge-fire', 'badge-air', 'badge-water', 'badge-earth');

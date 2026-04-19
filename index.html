@@ -95,7 +95,7 @@
       <span id="loc-hud-name" class="loc-hud-name">Mage</span>
       <span id="loc-hud-class-badge" class="hud-class-badge" style="display:none"></span>
       <span id="loc-hud-level" class="loc-hud-level">1</span>
-      <span id="loc-hud-gold" class="loc-hud-gold">◈ 0</span>
+      <span id="loc-hud-gold" class="loc-hud-gold"><img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">0</span>
       <div class="hud-buffs" id="hud-buffs"></div>
     </div>
 
@@ -145,7 +145,7 @@
       <button class="inv-back-btn" id="btn-home-back">← Back</button>
       <div class="inv-header-title">Inventory</div>
       <button class="inv-back-btn" id="btn-open-passives" style="margin-left:auto;margin-right:8px;border-color:#4a6a9a;color:#9dc8f0">Sigil Tree</button>
-      <div class="inv-header-gold" id="inv-gold">🪙 0</div>
+      <div class="inv-header-gold" id="inv-gold"><img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">0</div>
     </div>
 
     <!-- Основной layout: левая вешалка + правая сетка -->
@@ -159,13 +159,17 @@
         <div class="inv-hanger-interactive">
           <!-- Wrapper — точно по размеру изображения, зоны позиционируются внутри -->
           <div class="hanger-img-wrapper">
-            <img src="assets/generated/pixel/вешалка.png" class="hanger-main-img" alt="hanger">
+            <img src="assets/generated/pixel/hanger_empty.png" class="hanger-main-img" alt="hanger">
 
-            <!-- Circle indicators for equipment slots -->
-            <!-- Position via top/left percentages. Adjust to match your hanger image (337x600). -->
-            <div class="hanger-circle" id="hanger-slot-hat" data-slot="hat" style="top: 10%; left: 42%;"></div>
-            <div class="hanger-circle" id="hanger-slot-cloak" data-slot="cloak" style="top: 45%; left: 18%;"></div>
-            <div class="hanger-circle" id="hanger-slot-staff" data-slot="staff" style="top: 40%; left: 72%;"></div>
+            <!-- Equipment overlay sprites — shown only when the corresponding item is equipped -->
+            <img src="assets/generated/pixel/sprite_hat.png" id="hanger-sprite-hat" class="hanger-sprite hanger-sprite-hat" alt="" style="display:none">
+            <img src="assets/generated/pixel/sprite_robe.png" id="hanger-sprite-cloak" class="hanger-sprite hanger-sprite-cloak" alt="" style="display:none">
+            <img src="assets/generated/pixel/sprite_staff.png" id="hanger-sprite-staff" class="hanger-sprite hanger-sprite-staff" alt="" style="display:none">
+
+            <!-- Clickable filter zones (unchanged IDs for inventory.js) -->
+            <div class="hanger-circle" id="hanger-slot-hat" data-slot="hat" style="top: 8%; left: 38%;"></div>
+            <div class="hanger-circle" id="hanger-slot-cloak" data-slot="cloak" style="top: 42%; left: 38%;"></div>
+            <div class="hanger-circle" id="hanger-slot-staff" data-slot="staff" style="top: 18%; left: 72%;"></div>
           </div>
 
           <!-- Скрытые элементы для совместимости с inventory.js -->
@@ -594,7 +598,7 @@
   <div class="popup-box shop-popup-box">
     <div class="shop-header">
       <h2 class="shop-title">Merchant's Wares</h2>
-      <span id="shop-gold-display" class="shop-gold">🪙 0</span>
+      <span id="shop-gold-display" class="shop-gold"><img src="assets/generated/pixel/coin_icon.png" class="coin-inline" alt="">0</span>
     </div>
     <!-- Имя торговца и реплика -->
     <div class="shop-merchant-voice">
