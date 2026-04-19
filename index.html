@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="src/css/awakening.css">
   <link rel="stylesheet" href="src/css/tower.css">
   <link rel="stylesheet" href="src/css/passives.css">
+  <link rel="stylesheet" href="src/css/action-combat.css">
 </head>
 <body>
 
@@ -133,6 +134,12 @@
       <img src="assets/generated/pixel/Tower_Icon.png" class="map-marker-img" alt="The Spire">
       <div class="map-marker-label">The Spire</div>
     </div>
+
+    <!-- TEST button: Action Dungeon prototype -->
+    <button class="map-back-btn" id="btn-test-action-dungeon"
+      style="bottom:auto;top:16px;right:16px;left:auto;background:rgba(255,106,0,0.18);border-color:#ff6a00;color:#ff6a00">
+      ⚔ TEST: Action Dungeon
+    </button>
 
     <button class="map-back-btn" id="btn-map-back">← Back</button>
   </div>
@@ -533,6 +540,75 @@
     </div>
 
   </div>
+
+  <!-- ===== ACTION COMBAT SCREEN (new engine) ===== -->
+  <!-- NOTE: Do NOT delete or modify #screen-combat above — it remains for legacy battles. -->
+  <div id="screen-action-combat" class="screen">
+
+    <!-- Fixed-viewport container: canvas + HUD scale together via CSS transform -->
+    <div id="action-combat-container">
+
+      <!-- Main game canvas: tilemap + entities layer -->
+      <canvas id="action-canvas" width="1280" height="720"></canvas>
+
+      <!-- DOM HUD overlay — positioned absolutely over the canvas -->
+      <div id="action-hud" style="display:none">
+
+        <!-- HP bar (top-left) -->
+        <div class="action-hud-hp">
+          <div class="action-hp-bar-bg">
+            <div class="action-hp-bar-fill" id="action-hp-bar-fill" style="width:100%"></div>
+          </div>
+          <div class="action-hp-text" id="action-hp-text">100 / 100</div>
+        </div>
+
+        <!-- Gold display (under HP) -->
+        <div class="action-hud-gold" id="action-gold">Gold: 0</div>
+
+        <!-- Run timer (top-center) -->
+        <div class="action-hud-timer" id="action-timer">00:00</div>
+
+        <!-- Mini-map (top-right) -->
+        <div class="action-hud-minimap">
+          <canvas id="action-minimap" width="150" height="150"></canvas>
+        </div>
+
+        <!-- Hotbar (bottom-center) — 5 slots -->
+        <div class="action-hotbar">
+          <div class="hotbar-slot" id="hotbar-slot-1">
+            <span class="hotbar-key">1</span>
+            <span class="hotbar-icon">F</span>
+            <div class="hotbar-cd-overlay" style="display:none"></div>
+          </div>
+          <div class="hotbar-slot hotbar-slot-empty">
+            <span class="hotbar-key">2</span>
+          </div>
+          <div class="hotbar-slot hotbar-slot-empty">
+            <span class="hotbar-key">3</span>
+          </div>
+          <div class="hotbar-slot hotbar-slot-empty">
+            <span class="hotbar-key">4</span>
+          </div>
+          <div class="hotbar-slot hotbar-slot-empty">
+            <span class="hotbar-key">5</span>
+          </div>
+        </div>
+
+      </div><!-- /#action-hud -->
+
+      <!-- Extraction / Death popup -->
+      <div id="action-popup" style="display:none">
+        <div class="action-popup-box">
+          <div class="action-popup-text" id="action-popup-text">Extract?</div>
+          <div class="action-popup-buttons">
+            <button class="action-popup-btn action-popup-yes" id="action-popup-yes">Yes</button>
+            <button class="action-popup-btn action-popup-no"  id="action-popup-no">No</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /#action-combat-container -->
+  </div><!-- /#screen-action-combat -->
 
 </div><!-- /game-container -->
 

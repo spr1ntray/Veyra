@@ -524,12 +524,277 @@ if (_state.passives.leyThreadsTotal === 0 && _state.passives.unlocked.length ===
 
 ---
 
-## Статистика
+---
 
-- Всего найдено: 19
-- Открыто: 15
-- Закрыто: 4
+## Pivot prototype — initial QA (2026-04-19)
 
 ---
 
-*Последнее обновление: 2026-04-19 (сессия 2026-04-19 — баг-фиксы и улучшения UI)*
+### BUG-019: input.js — addEventListener вызывается при каждом enterCombat, listener'ы накапливаются
+
+**Тип:** средний
+**Статус:** FIXED (2026-04-19)
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/engine/input.js — initInput(), строки 44-69
+
+**Fix summary:** Добавлена функция `destroyInput()` (экспортируемая), которая снимает все handler'ы с container и window. `initInput()` вызывает `destroyInput()` в первой строке, поэтому повторный вызов всегда начинается с чистого листа. Handler'ы хранятся в модульном объекте `_handlers` (не анонимные лямбды) — это необходимо для корректного `removeEventListener`.
+
+**Описание:**
+`initInput(canvas, container)` вызывается из `dungeon.js::startRun()` при каждом запуске раны. Функция вызывает `addEventListener` на `container` и `window` без проверки — не существует флага "уже инициализировано" и не вызывается `removeEventListener` при очистке. `clearInput()` только сбрасывает данные, но не снимает обработчики. При третьем запуске в одной сессии на `window` будут висеть три keydown/keyup listener'а, что вызовет тройную регистрацию каждого клика и клавиши. Реальный эффект: `_tryFireball` может вызываться несколько раз за один тик при нажатии `1` — суперпозиция listener'ов на `window.addEventListener('keydown', ...)`.
+
+**Ожидаемое поведение:**
+Каждый listener добавляется ровно один раз за сессию.
+
+**Шаги воспроизведения:**
+1. Войти в Action Dungeon, умереть или экстрактиться.
+2. Войти снова.
+3. Нажать `1` — Fireball срабатывает дважды за тик (два projectile в одном кадре).
+
+**Рекомендация:**
+Добавить флаг `let _initialized = false;` в `input.js`. Если `true` — `initInput` пропускает привязку обработчиков. Альтернатива — хранить ссылки на handler'ы и вызывать `removeEventListener` в `clearInput()`. window-обработчики снимать при `clearInput()`:
+```js
+let _keydownHandler = null;
+let _keyupHandler = null;
+// в initInput:
+if (_keydownHandler) window.removeEventListener('keydown', _keydownHandler);
+_keydownHandler = (e) => { ... };
+window.addEventListener('keydown', _keydownHandler);
+```
+
+---
+
+### BUG-020: dungeon.js — seed не детерминирован: использует Date.now() вместо переданного seed
+
+**Тип:** средний
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/dungeon/dungeon.js — startRun(), строка 308
+
+**Описание:**
+ADR §2.2 требует deterministic seed для on-chain верификации. В `startRun()` seed вычисляется как `Date.now() & 0xFFFFFFFF` — это всегда уникальный нон-детерминированный seed. `enterCombat()` не передаёт seed в `startRun()`. Как следствие: (1) replay двух одинаковых ранов невозможен; (2) Abstract L2 PvP-верификация сломается, когда её будут добавлять. `combat_bridge.js::enterCombat()` также не принимает и не передаёт seed.
+
+**Ожидаемое поведение:**
+`enterCombat(biomeId, opts)` должен принимать `opts.seed` и передавать его в `startRun(seed)`. Если seed не задан — генерировать и логировать его (для последующей воспроизводимости).
+
+**Рекомендация:**
+```js
+// combat_bridge.js
+export function enterCombat(biomeId = 'crypt_1', opts = {}) {
+  const seed = opts.seed ?? (Date.now() & 0xFFFFFFFF);
+  console.log('[run] seed:', seed); // для debug
+  startRun(seed);
+}
+// dungeon.js
+export function startRun(seed) {
+  _world = new World(seed ?? (Date.now() & 0xFFFFFFFF));
+  ...
+}
+```
+
+---
+
+### BUG-021: entities.js — _nextId не сбрасывается между ранами, ID растёт бесконечно
+
+**Тип:** незначительный
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/engine/entities.js — _nextId, строка 15
+
+**Описание:**
+`_nextId` — модульная переменная, начинается с 1 и растёт при каждом `new Entity()`. `resetEntityIds()` экспортирована, но нигде не вызывается — ни в `startRun()`, ни в `stopRun()`. После 10 ранов в сессии ID у врагов/игрока продолжают расти. Практического эффекта на MVP нет (ID используются только для `ownerId` в projectile), но при масштабировании может привести к: (1) ID overflow на uint32 при очень длинной сессии (маловероятно, но возможно); (2) сложность отладки реплеев.
+
+**Рекомендация:**
+Вызвать `resetEntityIds()` в `startRun()` перед созданием мира:
+```js
+import { resetEntityIds } from '../engine/entities.js';
+// в начале startRun():
+resetEntityIds();
+```
+
+---
+
+### BUG-022: player.js — onDestroy не вызывается из takeDamage когда hp=0, если transitionTo DEAD вызван раньше
+
+**Тип:** критический
+**Статус:** FIXED (2026-04-19)
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/engine/entities.js — takeDamage(), строка 83; src/js/dungeon/player.js — update(), строка 38
+
+**Fix summary:** В `player.js::update()` добавлен вызов `this.onDestroy(world)` в fallback-ветке смерти (строка 50). Это обеспечивает эмит `player_died` при любом источнике урона — включая будущие DoT и прямую запись в `this.hp`. `takeDamage()` остаётся основным путём (он уже вызывал `onDestroy`); `update()` теперь служит страховкой.
+
+**Описание:**
+Смерть игрока реализована в двух местах с потенциальным конфликтом:
+
+1. `entities.js::takeDamage()` — если `hp <= 0`: вызывает `transitionTo(DEAD)` → `onDestroy(world)`.
+2. `player.js::update()` — если `hp <= 0 && this.alive`: вызывает `transitionTo(DEAD, world)` без `onDestroy`.
+
+`EnemyActor` использует только путь через `takeDamage()` — `onDestroy` у него вызывается корректно (эмит `enemy_died`). Игрок тоже получает урон через `takeDamage()` (из `ai.js::updateEnemyAI`, строка 221). Значит первичный путь — `takeDamage` → `this.alive = false` → `onDestroy` → эмит `player_died`.
+
+Но `player.js::update()` содержит дублирующую проверку: `if (this.hp <= 0 && this.alive) { this.alive = false; transitionTo(DEAD, world); }` — без вызова `onDestroy`. Если по какой-то причине `takeDamage` не вызывается (например, будущая DoT-логика обновляет `hp` напрямую), `player_died` не будет эмитирован и игра зависнет.
+
+**Ожидаемое поведение:**
+Смерть игрока должна всегда эмитировать `player_died` через единый путь.
+
+**Рекомендация:**
+В `player.js::update()` заменить:
+```js
+if (this.hp <= 0 && this.alive) {
+  this.alive = false;
+  this.transitionTo(ActorState.DEAD, world);
+  // ДОБАВИТЬ:
+  this.onDestroy(world);
+}
+```
+Либо убрать дублирующую проверку из `update()` — она избыточна, так как `takeDamage` уже делает то же самое.
+
+---
+
+### BUG-023: ai.js — _lastAttackTick инициализирован 0, первая атака происходит немедленно (тик 0)
+
+**Тип:** средний
+**Статус:** FIXED (2026-04-19)
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/engine/ai.js — updateEnemyAI(), строки 218-223; src/js/dungeon/enemy.js — строка 44
+
+**Fix summary:** В `updateEnemyAI()` при переходе из `chase` → `attack` добавлена строка `enemy._lastAttackTick = world.tick` (ai.js:200). Теперь первый удар происходит через полный `attackCooldownTicks` (90 тиков = 1.5s) после первого касания дистанции атаки. Инициализация конструктора `enemy.js:41` не изменялась — значение 0 при спавне безвредно, так как враг не переходит в `attack` state без прохождения `chase` → `attack`.
+
+**Описание:**
+`EnemyActor._lastAttackTick = 0` (строка 44 enemy.js). В `updateEnemyAI` первая атака происходит когда `world.tick - enemy._lastAttackTick >= attackCD`. На тике 90+ враг, впервые вошедший в `attack` state, немедленно бьёт (90 - 0 = 90 >= 90). Однако если игрок стартует в центре 25×18 комнаты, а враги — в углах, они достигнут игрока примерно за 1.5–2 секунды (90–120 тиков). На момент первого `attack` тик уже > 90, значит `world.tick - 0 >= 90` — атака **немедленно** без визуального замаха. Это создаёт instant-hit ощущение при первом контакте.
+
+**Ожидаемое поведение:**
+Первый удар должен происходить через `attackCooldown` тиков ПОСЛЕ перехода в `attack` state, не от тика 0.
+
+**Рекомендация:**
+В `updateEnemyAI` при переходе в `attack` state инициализировать `_lastAttackTick` текущим тиком:
+```js
+case 'chase':
+  if (dist <= attackRange) {
+    enemy.aiState = 'attack';
+    enemy._lastAttackTick = world.tick; // первый удар через полный CD
+    break;
+  }
+```
+
+---
+
+### BUG-024: extraction.js — TRIGGER_RANGE слишком мал, игрок должен стоять вплотную к порталу
+
+**Тип:** незначительный
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/dungeon/extraction.js — строки 12, 44
+
+**Описание:**
+`TRIGGER_RANGE = TILE_SIZE * 1.2 = 38.4 px`. Условие срабатывания: `dist < player.radius + portal.radius + TRIGGER_RANGE = 20 + 24 + 38.4 = 82.4 px`. При player.radius=20 и portal.radius=24 суммарный контакт = 44 px. Trigger_range добавляет 38 px сверху, итого ~2.5 тайла вокруг портала. Это разумно. Однако в `_drawPortal` в render.js портал рисуется относительно `_camX + portal.x`, а координаты портала в dungeon.js задаются через `tileToRoom(ROOM_COLS-3, ROOM_ROWS-3)` — это пиксельный центр тайла в **room-space**, но render добавляет `_camX/_camY` к этим координатам при рисовании. В `checkExtractionTrigger` проверяется расстояние `player.x - portal.x` в **room-space** (без камеры). Это правильно — симуляция вся в room-space. Проблемы нет.
+
+**Уточнение:** после повторной проверки BUG-024 не является реальным багом в координатной системе. Однако визуально портал рисуется с двойным смещением камеры. Render вызывает `_camX + portal.x`, где `portal.x` — уже room-space координата (например ~704px для col=22). `_camX` — смещение комнаты от края viewport. Итого portal рисуется на `_camX + 704 = ~80 + 704 = 784px` по X — правильно для комнаты 25 тайлов×32px = 800px, viewport 1280px, offset (1280-800)/2 = 240px → фактически `_camX=240`. Тогда портал рисуется на `240 + 704 = 944px` по X. Это корректно.
+
+**Вердикт:** Координатная система согласована. Пометить как ложный баг.
+
+**Статус:** закрыт (ложный)
+
+---
+
+### BUG-025: dungeon.js — после смерти rAF останавливается, но _loop может выполниться ещё раз до cancelAnimationFrame
+
+**Тип:** средний
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/dungeon/dungeon.js — _showDeathScreen(), строки 516-523; _loop(), строки 418-442
+
+**Описание:**
+`_showDeathScreen()` вызывается изнутри `_processEvents()`, которая вызывается из `_loop()`. Внутри `_showDeathScreen()`:
+```js
+cancelAnimationFrame(_rafId);
+_rafId = null;
+```
+Но к моменту, когда `_processEvents` вызвана, rAF уже перепланирован: `_rafId = requestAnimationFrame(_loop)` выполнен в **начале** `_loop()` (строка 421). Это означает: cancel отменяет уже следующий кадр (правильно). Но в текущем кадре после `_processEvents` ещё выполняется `draw()` и `updateDungeonHUD()` (строки 439–441). Т.е. мёртвый мир ещё один раз рендерится и обновляет HUD. Это не критично само по себе.
+
+Реальная проблема: если `player_died` эмитируется и `_showDeathScreen()` зануляет `_rafId=null` и `_world`, а затем (на следующем микрофреймовом тике) `_loop()` всё же вызывается (race condition), в начале `_loop()` есть guard `if (!_world) return;` — это защищает. Однако `_rafId = requestAnimationFrame(_loop)` в строке 421 записывается в `_rafId` до guard'а, что означает `_rafId` уже перезаписан до того как `_showDeathScreen` пытается его отменить внутри того же кадра.
+
+Конкретный race: `cancelAnimationFrame(_rafId)` в `_showDeathScreen` отменяет **уже следующий** scheduled frame — тот, который был запланирован в **этом** вызове `_loop` (строка 421). Это корректно. Но `draw()` и `updateDungeonHUD()` после `_processEvents()` запускаются на уже остановленном мире с `_world = null` (если `stopRun` вызывается внутри `yesBtn.click` — но он вызывается позже, при клике). Т.е. сам `stopRun` вызывается только из кнопки popup, не из `_showDeathScreen`. `_world` остаётся жив. Реального null-crash нет.
+
+**Вердикт:** Архитектурная слабость: две точки остановки (popup button + cancelAnimationFrame в showDeathScreen). Без run-time crash, но запутывает поток управления.
+
+**Рекомендация:**
+Убрать `cancelAnimationFrame` из `_showDeathScreen`. Пусть loop продолжается — добавить guard `if (_deathShown || _extractionShown) return;` в начало _loop после `if (!_world) return;`. Единственная точка остановки — `stopRun()`.
+
+---
+
+### BUG-026: hud.js — mini-map координаты врагов не учитывают camera offset, рисуются в room-space
+
+**Тип:** визуальный
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/dungeon/hud.js — _drawMinimap(), строки 172-181
+
+**Описание:**
+В `_drawMinimap` врагов рисуют по формуле `px = e.x * scaleX`. Но `scaleX = mw / world.tilemap.pixelW` — масштаб от размера **комнаты** (25×32=800px) к размеру мини-карты (150px). Это корректно для room-space координат (0..800). Игрок и враги хранят координаты в room-space (0..pixelW). Рисование `e.x * scaleX` правильно.
+
+Однако портал и gold pickups рисуются так же, и они тоже в room-space. Согласованность соблюдена.
+
+**Вердикт:** Мини-карта отображает координаты корректно. Ложный баг, пометить как закрыт.
+
+**Статус:** закрыт (ложный)
+
+---
+
+### BUG-027: Нет Dash (Space) механики — GDD §2.1 требует, не реализовано
+
+**Тип:** средний
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/engine/ai.js, src/js/dungeon/player.js — функция отсутствует
+
+**Описание:**
+GDD §2.1: "Hotkey Space (dash) → рывок на 4 тайла в направлении курсора. CD 4 секунды. Неуязвимость 0.3 сек." ADR §9.4 Definition of Done: "Dash (Space) работает." Полный grep по движку и dungeon показывает нулевое упоминание `Space` или `dash`. Эта механика не реализована.
+
+**Это нормально для placeholder-версии** (ADR roadmap step 5 — только click-to-move). Но если это блокер MVP launch критерия — нужно добавить.
+
+**Рекомендация:**
+Реализовать в `updatePlayerAI()`:
+```js
+if (input.keysPressed.has(' ')) {
+  const DASH_TILES = 4;
+  const DASH_PX = DASH_TILES * TILE_SIZE;
+  const dx = input.mouseX - player.x;
+  const dy = input.mouseY - player.y;
+  const len = Math.sqrt(dx*dx + dy*dy) || 1;
+  player.x += (dx/len) * DASH_PX; // instant teleport
+  player.y += (dy/len) * DASH_PX;
+  world.tilemap.resolveMove(player, {x:0, y:0}, player.radius); // de-wall
+}
+```
+
+---
+
+### BUG-028: Нет run timer в HUD для Death Wave — только отсчёт секунд, нет предупреждения на 8 мин
+
+**Тип:** незначительный
+**Статус:** открыт
+**Дата обнаружения:** 2026-04-19
+**Компонент:** src/js/dungeon/hud.js, src/js/dungeon/dungeon.js
+
+**Описание:**
+GDD §3.5: "Через 8 минут — уведомление `Death Wave incoming in 60s`." Таймер в HUD работает (отображает `mm:ss`), но никакого callback'а при достижении 8 минут (28800 тиков) нет. Не является блокером MVP (GDD явно говорит "для MVP можно взять hard timeout 10 минут"), но нужно добавить хотя бы hard-timeout 10 мин.
+
+**Рекомендация:**
+В `world.update()` добавить:
+```js
+const RUN_LIMIT_TICKS = 10 * 60 * 60; // 10 минут
+if (this.tick >= RUN_LIMIT_TICKS) {
+  this.events.push({ type: 'portal_reached' }); // форс-экстракция
+}
+```
+
+---
+
+## Статистика
+
+- Всего найдено: 28
+- Открыто: 17
+- Закрыто: 9 (BUG-001, 003, 007, 016, 024, 026 — реальные/ложные; BUG-019, 022, 023 — fixed 2026-04-19)
+
+---
+
+*Последнее обновление: 2026-04-19 (BUG-019, 022, 023 fixed — pre-demo session)*

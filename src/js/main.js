@@ -19,6 +19,7 @@ import {
 import { openShop, bindShopEvents } from './shop.js';
 import { initTower, openTowerScreen, onFloorWon, onFloorLost, restoreTowerSummary } from './tower.js';
 import { initPassivesScreen, renderPassivesScreen, bindPassivesEvents } from './passives_ui.js';
+import { enterCombat } from './combat_bridge.js';
 
 // Текущая локация (используется для восстановления экрана после боя)
 let currentLocation = 'square';
@@ -427,6 +428,11 @@ function bindEvents() {
   // Карта
   document.getElementById('btn-map-back')?.addEventListener('click', () => {
     goToLocation(currentLocation);
+  });
+
+  // TEST: Action Dungeon button (on map screen)
+  document.getElementById('btn-test-action-dungeon')?.addEventListener('click', () => {
+    enterCombat();
   });
 
   // Дом / инвентарь

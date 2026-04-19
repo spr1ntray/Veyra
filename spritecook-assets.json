@@ -37,6 +37,118 @@
       "generated": "2026-04-19"
     }
   ],
+  "pivot_assets": [
+    {
+      "asset_id": "cdcb1136-e6e3-4768-95d8-6cd8f787f49d",
+      "sha12": "486d23494adb",
+      "label": "pyromancer_idle",
+      "local_path": "assets/generated/pixel/pivot/pyromancer_idle.png",
+      "width": 384,
+      "height": 96,
+      "generated": "2026-04-19",
+      "description": "Pyromancer Idle sprite sheet — 2 frames × 4 directions (S/E/N/W), 48×48 per frame",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "ee89d84e-b55e-4b0e-bc92-e394d4953c4c",
+      "sha12": "30b838819309",
+      "label": "pyromancer_walk",
+      "local_path": "assets/generated/pixel/pivot/pyromancer_walk.png",
+      "width": 512,
+      "height": 192,
+      "generated": "2026-04-19",
+      "description": "Pyromancer Walk sprite sheet — 4 frames × 4 directions (S/E/N/W), 48×48 per frame",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "0796caec-ad40-4564-9e03-21a24b835681",
+      "sha12": "4fc544ee63a8",
+      "label": "pyromancer_cast",
+      "local_path": "assets/generated/pixel/pivot/pyromancer_cast.png",
+      "width": 512,
+      "height": 192,
+      "generated": "2026-04-19",
+      "description": "Pyromancer Cast/Attack sprite sheet — 4 frames × 4 directions (S/E/N/W), 48×48 per frame",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "9092de5b-81c8-49eb-9c74-b508f9002129",
+      "sha12": "b6a45640130a",
+      "label": "tileset_floor",
+      "local_path": "assets/generated/pixel/pivot/tileset_floor.png",
+      "width": 128,
+      "height": 32,
+      "generated": "2026-04-19",
+      "description": "Floor tileset — 4 variants (plain / cracked / moss / bloodstained), 32×32 per tile, seamless",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "d8512520-f8ac-4e82-b045-e2cf12f3ea69",
+      "sha12": "93821c87edb5",
+      "label": "tileset_wall",
+      "local_path": "assets/generated/pixel/pivot/tileset_wall.png",
+      "width": 224,
+      "height": 32,
+      "generated": "2026-04-19",
+      "description": "Wall tileset — 7 pieces (straight H/V, broken, moss, inner corner, outer corner, T-junction), 32×32 per tile",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "230f4003-2470-44d3-9e2d-36d9d7158354",
+      "sha12": "8fecce8c7e2a",
+      "label": "zombie_idle",
+      "local_path": "assets/generated/pixel/pivot/zombie_idle.png",
+      "width": 384,
+      "height": 96,
+      "generated": "2026-04-19",
+      "description": "Zombie Idle sprite sheet — 2 frames × 4 directions (S/E/N/W), 48×48 per frame",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "251c4fa5-bc86-4bdd-87b2-0fc1bfdac389",
+      "sha12": "87e418a3d7b1",
+      "label": "zombie_walk",
+      "local_path": "assets/generated/pixel/pivot/zombie_walk.png",
+      "width": 512,
+      "height": 192,
+      "generated": "2026-04-19",
+      "description": "Zombie Walk sprite sheet — 4 frames × 4 directions (S/E/N/W), 48×48 per frame",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "84e2367d-d1e6-4d99-88d9-c6033d2a5058",
+      "sha12": "07d7ebf889c7",
+      "label": "zombie_attack",
+      "local_path": "assets/generated/pixel/pivot/zombie_attack.png",
+      "width": 512,
+      "height": 192,
+      "generated": "2026-04-19",
+      "description": "Zombie Attack sprite sheet — 4 frames × 4 directions (S/E/N/W), 48×48 per frame",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "467596a8-2073-46ff-8e57-5c3f04a58a1c",
+      "sha12": "29bd18c195d7",
+      "label": "fireball",
+      "local_path": "assets/generated/pixel/pivot/fireball.png",
+      "width": 144,
+      "height": 24,
+      "generated": "2026-04-19",
+      "description": "Fireball projectile — 6-frame loop, east-facing, 24×24 per frame, engine rotates",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "63c5dbce-b32c-44b5-84fe-91b8b435ebdf",
+      "sha12": "076e6e30edb6",
+      "label": "fire_impact",
+      "local_path": "assets/generated/pixel/pivot/fire_impact.png",
+      "width": 384,
+      "height": 64,
+      "generated": "2026-04-19",
+      "description": "Fire Impact VFX — 6-frame one-shot explosion, 64×64 per frame",
+      "credits_used": 12
+    }
+  ],
   "assets_v2": [
     {
       "asset_id": "fb57a935-7c29-4b46-b504-1c2ff368578e",

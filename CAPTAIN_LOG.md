@@ -550,6 +550,69 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 
 ---
 
+## Сессия 2026-04-19 (PIVOT: Action RPG — Diablo-like)
+
+**КРИТИЧНО**: Это самый крупный архитектурный pivot проекта. Старая механика (autocast idle RPG) заменена на 2D top-down action RPG в духе Diablo. Старый combat.js остаётся в репо для отката, но новый движок — чистая замена. Пользователь выбрал этот путь явно, после отказа от horde-survivors альтернативы.
+
+### [PIVOT] Game Design: Action RPG — Diablo-like pivot
+- **Агент**: Creative + Game-designer + PM
+- **Суть**: Пользователь принял решение пивотиться с idle autocast RPG на 2D top-down pixel art action RPG (Diablo/Titan Quest). Выбраны ключевые механики:
+  1. **Click-to-move** (канон Diablo): ЛКМ — движение, ПКМ/1-5 — override скиллов
+  2. **Auto-cast с кулдаунами**: 5 скиллов выбираются ПЕРЕД данжем, в бою кастуются автоматически по aggro range (8 тайлов) и CD. Manual override через hotkey.
+  3. **Extraction-механика (Tarkov-style)**: в каждом биоме есть Exit Portal. Игрок может выйти с лутом или рискнуть дальше. Смерть до следующего Exit = ран-лут в ноль.
+  4. **Короткий забег** (D3 Rifts): 2-5 мин per run, идеально под лидерборд Abstract.
+  5. **Pseudo-MMO**: каждый игрок в своём инстансе, никакого real-time сетевого кода. Async PvP через снапшоты — на v1.1+.
+  6. **2D pixel art**, фиксированный viewport 1280×720.
+- **Решения пользователя по 5 вопросам архитектуры**:
+  - Viewport: фиксированный 1280×720 с CSS scale
+  - HUD: DOM-overlay (не canvas)
+  - Sprite format: PNG
+  - Mana: убрана, только CD на скиллах
+  - Death penalty: весь ран-лут + 50% XP за ран, мета (level/sigils/equip/gold) сохраняется
+- **Файл**: `design/action-rpg-pivot-gdd.md`
+
+### [ARCH] ADR — Action RPG engine architecture
+- **Агент**: Architect
+- **Суть**: Canvas 2D без либ (vanilla JS победил). Fixed 60Hz update + variable render. Seeded mulberry32 RNG (обязательно для детерминизма перед миграцией на Abstract — блокер для on-chain PvP verify). Tiles 32×32, sprite units 48×48. Entity hierarchy: Entity → Actor → Player/Enemy. Simple classes + composition (НЕ ECS на MVP). Hybrid pathfinding: A* редко для игрока, LOS-greedy + cached-A* для мобов. Object pools для projectiles (256) и particles (512) для zero-allocation в hot path. `currentRun` в памяти (НЕ в localStorage — анти-чит).
+- **Module structure**: `src/js/engine/` (rng, render, tilemap, entities, ai, pathfinding, input, pools) + `src/js/dungeon/` (player, enemy, dungeon, extraction, loot, hud) + `src/js/combat_bridge.js` (единственный контакт с существующим UI/state).
+- **No-go libs**: Pixi/Phaser/Kontra отвергнуты для MVP. Если упрёмся в perf — план B = Pixi на render слое.
+- **Файл**: `design/adr-action-rpg-engine.md`
+
+### [DESIGN] Visual spec для pivot'а
+- **Агент**: Design-director
+- **Суть**: Юниты 48×48, тайлы 32×32, fireball 24×24, VFX 64×64. 4 направления (S/E/N/W) вместо 8 — W = mirror(E) в коде, экономия 25% кредитов. Анимации: idle 2 кадра, walk 4, cast/attack 4. Визуально pivot сохраняет dark fantasy DNA (палитра, painterly pixels, gold/bronze accents), меняется только ракурс на top-down 45°. Pyromancer получает огненно-оранжевые акценты.
+- **P0 asset list** (10 ассетов): Pyromancer idle/walk/cast, Zombie idle/walk/attack, tileset floor/wall, Fireball, Fire impact VFX.
+- **Файл**: `design/pivot-visual-spec.md`
+
+### [DONE] P0 SpriteCook assets — сгенерированы
+- **Агент**: DevOps
+- **Суть**: 10 ассетов сгенерированы (120 кредитов вместо 90 — SpriteCook биллит фиксированно 12/job независимо от размера). Остаток 166. Ассеты: `assets/generated/pixel/pivot/` (pyromancer_idle/walk/cast, zombie_idle/walk/attack, tileset_floor/wall, fireball, fire_impact). Реальные размеры sprite sheets отличаются от спека — coder адаптировал layout в sprites.js на основе факта.
+- **Манифест**: `spritecook-assets.json` — секция `pivot_assets`
+
+### [DONE] Vertical slice прототип (placeholder → sprites)
+- **Агент**: Lead-coder (две волны)
+- **Волна 1 — placeholder geometry**: 17 новых файлов, 2624 строки. Движок engine/ + dungeon/ + combat_bridge.js + action-combat.css. Game loop, click-to-move, pathfinding A*, auto-cast Fireball, zombie AI, Exit portal, extraction popup, death screen. Старый combat.js НЕ тронут.
+- **Волна 2 — sprite integration**: Подключены 10 PNG из pivot/, новый модуль `engine/sprites.js` (470 строк). Реальные размеры отличались от спека, layout адаптирован через Read PNG + Node.js PNG header parsing. Offset-якоря: bottom-center спрайта = position entity (ноги на полу).
+- **Точка входа**: кнопка "⚔ TEST: Action Dungeon" на screen-map (top-right, оранжевая).
+- **MVP-контент**: 1 биом (Ruins), 1 класс (Pyromancer), 1 скилл (Fireball), 3 zombie, 1 Exit portal.
+- **Файлы**: `src/js/engine/*.js` (9), `src/js/dungeon/*.js` (6), `src/js/combat_bridge.js`, `src/css/action-combat.css`, `index.html` (новый screen), `src/js/main.js` (кнопка).
+
+### [QA] Smoke-test — 7 багов, 3 критичных для демо
+- **Агент**: Tester
+- **Суть**: Проверена регрессия на существующих экранах — ВСЁ работает (screen-combat legacy жив, инвентарь, гримуар, башня и т.д. не сломаны). Прототип соответствует 14/16 пунктам ADR+GDD чеклиста, кроме Dash (Space) и Hard timeout (не в MVP scope).
+- **Баги**: BUG-019 (listener leak на 2+ ранах, MED), BUG-020 (seed не детерминирован, MED — блокер Abstract verify), BUG-022 (двойной путь смерти, CRIT), BUG-023 (первая атака моба мгновенная, MED), BUG-025 (двойная остановка loop, MED), BUG-027 (Dash не реализован, LOW), BUG-028 (нет hard timeout, LOW).
+- **Фикс-сессия**: BUG-019, 022, 023 — исправлены прямо в этой сессии. BUG-020, 025, 027, 028 — в TODO.
+- **Файл**: `BUGS.md` (секция Pivot prototype initial QA).
+
+---
+
+## Next для продолжения работы
+- **User-тест прототипа**: открыть `http://localhost:8000`, дойти до TEST: Action Dungeon, дать фидбек по feel. Ожидается: визуальные косяки спрайтов (возможны "сплюснутые" кадры из-за mismatch размеров), отсутствие death animation (fallback — оранжевая вспышка).
+- **После user-фидбека**: либо P1 ассеты + улучшения feel, либо pivot на следующий скилл/моб/биом.
+- **Блокеры для MVP (не для демо)**: BUG-020 seed-детерминизм (Abstract PvP verify), Skeleton Archer (ranged variety), Deep Portal (риск-механика), 2-й биом, Dash, Death Wave.
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -590,19 +653,32 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 | 2026-04-19 | Target network: Abstract L2 (ZKsync EraVM) | Пользователь выбрал Abstract как сеть для деплоя — экосистема с активным фармом поинтов через dApps |
 | 2026-04-19 | Async PvP через снапшоты персонажей, B не участвует | Пользовательское требование: бой с "рандомным" персонажем реального игрока без участия его клиента |
 | 2026-04-19 | Локальное PvP-тестирование через MockChainProvider + BroadcastChannel | Нужно тестить без деплоя в mainnet; два инкогнито-окна на одной машине закрывают 80% сценариев |
+| 2026-04-19 | PIVOT: idle autocast RPG → 2D top-down action RPG (Diablo-like) | Пользователь: "Мне совсем не нравится механика, нужно интереснее". Диабло был выбран из 5 архетипов |
+| 2026-04-19 | Канон: click-to-move + auto-cast с CD на известных скиллах | Пользователь: сохраняет автокаст-идею, переносит в реал-тайм топ-даун |
+| 2026-04-19 | Extraction-механика (Tarkov-style): Exit Portal в каждом биоме | Пользователь: рискнуть дальше или вынести лут — ключевой выбор забега |
+| 2026-04-19 | Pseudo-MMO (каждый в своём инстансе, async PvP на v1.1+) | Пользователь: "real-time не нужен, давай pseudo". GitHub Pages остаётся рабочим хостом |
+| 2026-04-19 | Мана убрана, только CD на скиллах | Пользователь: "давай уберём пока". В D2/D3 мана раздражала больше, чем регулировала темп |
+| 2026-04-19 | Canvas 2D vanilla без либ; Pixi — план B при perf-проблемах | Architect: контроль над fixed timestep + zero build stack + легко мигрировать позже |
 
 ---
 
 ## 8. Открытые задачи / TODO
 
+### Pivot Action RPG (2026-04-19)
+- [ ] **Pivot prototype — user-test фидбек и итерация** (визуальный feel, спрайт-оффсеты, feel боёвки)
+- [ ] **BUG-020 seed-детерминизм**: startRun должен принимать seed из аргумента (нужно для Abstract on-chain verify)
+- [ ] **BUG-025, 027, 028**: double-loop-stop, Dash (Space), Hard timeout 10 мин
+- [ ] **P1 ассеты**: Skeleton Archer, Death-анимации, UI frames, Portal/Stairs (~62 кредита, остаток 166)
+- [ ] **Pivot v1.1**: 2-й биом, Deep Portal (risk-extraction), mini-boss, 2-й класс
+
+### Основной контент (AFTER PIVOT STABILIZATION)
 - [ ] **Abstract migration Phase 1**: Storage Provider абстракция в state.js (подготовка к on-chain миграции)
 - [ ] **Seeded RNG в combat.js**: заменить 11 мест `Math.random()` на seeded PRNG (mulberry32) — блокер PvP verify
 - [ ] **Async PvP MVP**: имплементация Shadow Duels после одобрения GDD пользователем
 - [ ] **Leaderboard MVP**: 3 ladder (PvP Arena, Spire Depth, Resonance Mastery) — после одобрения ideation
-- [ ] **Sigil Resonance MVP**: имплементация (GDD Variant A+ готов с 2026-04-19)
-- [ ] Sigil Resonance — имплементация MVP (после одобрения GDD)
-- [ ] Иконка для tsunami (SPELL_032_TSUNAMI.png) — нужна генерация
-- [ ] Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption)
+- [ ] **Sigil Resonance MVP**: имплементация (GDD Variant A+ готов с 2026-04-19) (AFTER PIVOT STABILIZATION)
+- [ ] Иконка для tsunami (SPELL_032_TSUNAMI.png) — нужна генерация (AFTER PIVOT STABILIZATION)
+- [ ] Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption) (AFTER PIVOT STABILIZATION)
 - [ ] GitHub: убрать токен из remote URL, настроить credential helper
 
 ---
