@@ -1,0 +1,40 @@
+{
+  "assets": [
+    {
+      "asset_id": "193cc2d7-e3c4-494c-b45c-cd270078001a",
+      "sha12": "cde5766cc2dc",
+      "label": "training_icon",
+      "local_path": "assets/generated/pixel/training_icon.png",
+      "width": 72,
+      "height": 72,
+      "generated": "2026-04-19"
+    },
+    {
+      "asset_id": "637f1b08-c69f-4166-bfc2-c0408942e95b",
+      "sha12": "3c5f8f06a675",
+      "label": "shop_icon",
+      "local_path": "assets/generated/pixel/shop_icon.png",
+      "width": 92,
+      "height": 92,
+      "generated": "2026-04-19"
+    },
+    {
+      "asset_id": "c8b9abec-efc0-4f39-99fd-d3df97e1a170",
+      "sha12": "4985a896f9d0",
+      "label": "inventory_icon",
+      "local_path": "assets/generated/pixel/inventory_icon.png",
+      "width": 78,
+      "height": 78,
+      "generated": "2026-04-19"
+    },
+    {
+      "asset_id": "c20cc3f7-e031-451f-baa9-157cb1d43a25",
+      "sha12": "ba5f37c2f1a7",
+      "label": "training_dummy",
+      "local_path": "assets/generated/pixel/training_dummy.png",
+      "width": 174,
+      "height": 174,
+      "generated": "2026-04-19"
+    }
+  ]
+}

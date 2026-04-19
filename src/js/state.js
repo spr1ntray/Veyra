@@ -728,7 +728,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 1, max: 2 },
     description: 'Does not attack. For practice.',
     recommendedLevel: 1,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/training_dummy.png'
   },
   skeleton_warrior: {
     id: 'skeleton_warrior',
@@ -743,7 +743,7 @@ export const ENEMIES_DATA = {
     goldReward: { min: 4, max: 7 },
     description: 'Slow and predictable. Weak to Fire.',
     recommendedLevel: 2,
-    img: 'assets/generated/training_dummy.png'
+    img: 'assets/generated/pixel/training_dummy.png'
   },
   shadow_wraith: {
     id: 'shadow_wraith',
@@ -1279,11 +1279,41 @@ export function loadState() {
       }
 
       // v3→v4 migration: removed universal spells (arcane_barrage, shadow_bolt, void_eruption).
-      // Clear these IDs from grimoire if old saves still reference them.
+      // Clear these IDs from grimoire, then attempt to backfill empty slots with a
+      // compatible known spell so the player can fight immediately without manual re-setup.
       if (_state.version < 4) {
         const REMOVED_SPELLS = new Set(['arcane_barrage', 'shadow_bolt', 'void_eruption']);
         if (Array.isArray(_state.grimoire)) {
           _state.grimoire = _state.grimoire.map(id => REMOVED_SPELLS.has(id) ? null : id);
+
+          // Try to fill null slots with a compatible spell the player already knows.
+          // "Compatible" means: not in REMOVED_SPELLS, classRestriction matches player's
+          // class (or is null/undefined), and not already occupying another grimoire slot.
+          const knownSpells = Array.isArray(_state.knownSpells) ? _state.knownSpells : [];
+          const usedInGrimoire = new Set(_state.grimoire.filter(id => id !== null));
+          const playerClass = _state.classType ?? null; // null = pre-Awakening, all valid
+
+          // Build ordered list of candidate spells (prefer class-matched, then universal)
+          const candidates = knownSpells.filter(id => {
+            if (REMOVED_SPELLS.has(id)) return false;
+            if (usedInGrimoire.has(id)) return false;
+            const sp = SPELLS_DATA[id];
+            if (!sp) return false;
+            if (playerClass === null) return true; // pre-Awakening: all valid
+            return sp.classRestriction === null || sp.classRestriction === undefined || sp.classRestriction === playerClass;
+          });
+
+          let candidateIdx = 0;
+          _state.grimoire = _state.grimoire.map(id => {
+            if (id !== null) return id; // slot already filled
+            if (candidateIdx < candidates.length) {
+              const fill = candidates[candidateIdx];
+              usedInGrimoire.add(fill);
+              candidateIdx++;
+              return fill;
+            }
+            return null; // no candidate left — stays null, player gets warning on battle start
+          });
         }
         _state.version = 4;
       }

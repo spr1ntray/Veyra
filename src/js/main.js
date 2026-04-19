@@ -84,8 +84,8 @@ function updateLocationHUD() {
   const goldEl  = document.getElementById('loc-hud-gold');
 
   if (nameEl)  nameEl.textContent  = state.name;
-  if (levelEl) levelEl.textContent = `Lv. ${state.level}`;
-  if (goldEl)  goldEl.textContent  = `🪙 ${state.gold}`;
+  if (levelEl) levelEl.textContent = `${state.level}`;
+  if (goldEl)  goldEl.textContent  = `◈ ${state.gold}`;
 
   renderHudBuffs();
 }

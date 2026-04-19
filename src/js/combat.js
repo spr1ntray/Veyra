@@ -251,7 +251,11 @@ export function initBattle(enemyId, options = {}) {
   // Если classType === null (игрок < уровня Awakening), считаем все спеллы валидными,
   // чтобы не блокировать бои до первого выбора класса.
   const rawSlots = state.grimoire.filter(id => id !== null);
-  if (rawSlots.length < 3) return false;
+  if (rawSlots.length === 0) {
+    // Гримуар полностью пуст — показываем явное предупреждение, не молчим
+    showNotification('Гримуар пуст. Открой гримуар и добавь заклинания.', 'warning');
+    return false;
+  }
 
   const compatibleSlots = rawSlots.filter(id => {
     const sp = SPELLS_DATA[id];
@@ -464,15 +468,18 @@ function scheduleNextCast(skipCount = 0) {
   const spellId = battleState.grimoire[battleState.currentSlotIndex];
   const spell = SPELLS_DATA[spellId];
   if (!spell) {
-    // Пустой слот — пропускаем
+    // Пустой слот — пропускаем без таймаута (activeSlots фильтрует null в initBattle,
+    // но страховка нужна на случай edge-case добавления null в бою).
     advanceGrimoire();
-    // Если все слоты пусты — не зацикливаемся
     if (skipCount + 1 >= totalSlots) {
-      addCombatLog('No spells in loadout!', '#888');
-      showNotification('Grimoire had no compatible spells — battle forfeited.', 'warning');
-      endBattle('loss');
+      // Все слоты оказались пустыми — явное сообщение, не молча "проигрываем"
+      addCombatLog('Нет заклинаний в гримуаре!', '#e8a020');
+      showNotification('В гримуаре нет совместимых заклинаний — бой завершён.', 'warning');
+      // Небольшая задержка, чтобы игрок успел прочитать уведомление
+      battleState.castTimeout = _schedule(() => { endBattle('loss'); }, 1500);
       return;
     }
+    // Пропускаем пустой слот немедленно (без таймаута), двигаемся к следующему
     scheduleNextCast(skipCount + 1);
     return;
   }
@@ -482,20 +489,19 @@ function scheduleNextCast(skipCount = 0) {
   // эта ветка — страховка на edge cases.
   const state = getState();
   if (spell.classRestriction !== null && spell.classRestriction !== undefined && state.classType !== null && spell.classRestriction !== state.classType) {
-    // Капитализируем название класса для сообщения
     const className = spell.classRestriction.charAt(0).toUpperCase() + spell.classRestriction.slice(1);
     advanceGrimoire();
 
-    // Если все слоты несовместимы — честное поражение, не ложная победа
     if (skipCount + 1 >= totalSlots) {
-      addCombatLog('No compatible spells in loadout!', '#888');
-      showNotification('Grimoire had no compatible spells — battle forfeited.', 'warning');
-      endBattle('loss');
+      // Все слоты оказались несовместимы с классом игрока — явное завершение
+      addCombatLog('Нет совместимых заклинаний!', '#e8a020');
+      showNotification('В гримуаре нет заклинаний для твоего класса. Открой гримуар и переназначь слоты.', 'warning');
+      battleState.castTimeout = _schedule(() => { endBattle('loss'); }, 1500);
       return;
     }
 
-    addCombatLog(`${spell.name}: Requires ${className}`, '#888');
-    // Небольшая пауза чтобы лог не спамил при нескольких несовместимых слотах подряд
+    addCombatLog(`${spell.name}: требует ${className}`, '#888');
+    // Пауза CAST_GAP перед следующим слотом, чтобы лог не спамил мгновенно
     battleState.castTimeout = _schedule(() => {
       if (battleState.active) scheduleNextCast(skipCount + 1);
     }, CAST_GAP);
@@ -2161,7 +2167,7 @@ function renderBattleUI(enemy) {
   // Enemy
   const enemyImg = document.getElementById('enemy-img');
   if (enemyImg) {
-    enemyImg.src = enemy.img || 'assets/generated/training_dummy.png';
+    enemyImg.src = enemy.img || 'assets/generated/pixel/training_dummy.png';
     enemyImg.alt = enemy.name;
   }
   const enemyLabel = document.getElementById('enemy-label');

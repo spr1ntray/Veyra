@@ -447,6 +447,36 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 
 ---
 
+## Сессия 2026-04-19
+
+### [DONE] Bug-регрессия: бои в башне после миграции v3→v4 — не стартуют
+- **Root cause** (Tester): миграция v3→v4 (state.js:1283) зануляет удалённые спеллы (arcane_barrage, shadow_bolt, void_eruption); в combat.js:254 `rawSlots.length < 3` молча `return false` из initBattle → бой визуально "стоит". Вторая ветка: class-restricted mismatch → scheduleNextCast скипает все слоты → endBattle('loss') без каста.
+- **Фикс** (Coder): порог понижен до 1, добавлен showNotification на все "молчаливые" return false; автозаполнение пустых слотов из knownSpells в миграции v3→v4; warning при загрузке боя с incompatible слотами.
+- **Файлы**: src/js/combat.js (~254-258, 470-482, 489-506), src/js/state.js (~1281-1323)
+
+### [DONE] Skip Fight — подтверждён как рабочий
+- Tester: кнопка #btn-skip-fight, overlay и simulateBattle() реализованы в combat.js:286-302, 1467. Зависимость от Bug-1 — после фикса работает.
+
+### [DONE] HUD редизайн — компактная капсула
+- Проблема (User): HUD статуса слишком большой, много пустот.
+- Решение (Design-director + Coder): padding 4px 10px, gap 8px, border-radius 14px, max-width max-content, nowrap. Шрифты 12-14px (было 17-20). Глиф-разделитель │, префикс ✦ для уровня, unicode ◈ вместо emoji 🪙. Баффы в absolute-блок ниже капсулы.
+- Файлы: src/css/main.css (~905-968, 1252-1297), index.html (~97-98), src/js/main.js (~87-88)
+
+### [DONE] SpriteCook: 4 новые иконки
+- Сгенерированы (DevOps, 48 кредитов): training_icon.png (72x72), shop_icon.png (92x92), inventory_icon.png (78x78), training_dummy.png (174x174). Стиль: pixel art, dark fantasy, палитра gold/bronze/brown.
+- asset_id'ы в spritecook-assets.json
+- Путь в коде обновлён на assets/generated/pixel/ (combat.js:2170, state.js:731/746, index.html:432)
+
+### [RESEARCH+GDD] Sigil Resonance — механика skill>level
+- Researcher проанализировал HS/MTG/Pokemon/TFT/SW/Darkest Dungeon; Creative предложил 7 идей; выбран гибрид Sigil Resonance.
+- GDD: design/sigil-resonance.md (~1700 слов). Концепция: 3 слота стихий перед боем, моно-сет +36%/-24%, противоположности -50% урона, 1 слот гримуара в жертву + Sigils 5/12/25.
+- Разблокировка через Sigil Tree keystones: Elemental Pact (lv15), Deepening Pact (lv25), Shattered Pact (lv35).
+- Статус: GDD готов, ожидает одобрения пользователя перед имплементацией.
+
+### Next: одобрение Sigil Resonance GDD пользователем → Architect → Coder
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -477,15 +507,18 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 | 2026-04-18 | leyThreads field сохранён для compat, UI показывает Sigils | Без breaking changes в сейвах, graceful migration |
 | 2026-04-18 | Skip Fight = гибрид-симуляция (Option C) | Сохраняет все боевые механики, мгновенный исход без чит-ощущения |
 | 2026-04-18 | classType=null → все спеллы валидны в combat | Игроки до Awakening (до lv3) не блокируются от боя |
+| 2026-04-19 | HUD статуса — компактная капсула 26px с max-content | Убрать пустоты, плотная плотность без резерва под баффы |
+| 2026-04-19 | Порог rawSlots в initBattle: 3→1 | После миграции v3→v4 игроки с null-слотами не могут начать бой |
+| 2026-04-19 | Все silent `return false` в combat.js дают showNotification | Игрок должен понимать почему бой не стартует |
+| 2026-04-19 | Sigil Resonance — выбранная модель counterplay для PvP | Element triangle + sideboard-аналог, лучший trade-off cool×feasible |
 
 ---
 
 ## 8. Открытые задачи / TODO
 
+- [ ] Sigil Resonance — имплементация MVP (после одобрения GDD)
 - [ ] Иконка для tsunami (SPELL_032_TSUNAMI.png) — нужна генерация
 - [ ] Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption)
-- [ ] Реализация башни tower.js (Phase 1 MVP) — GDD готов
-- [ ] Реализация пассивных навыков (Phase 1 Foundation) — GDD готов
 - [ ] GitHub: убрать токен из remote URL, настроить credential helper
 
 ---
