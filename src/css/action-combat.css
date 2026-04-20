@@ -8,7 +8,7 @@
  */
 
 /* ─── Screen wrapper ─────────────────────────────────────────── */
-#screen-action-combat {
+#screen-action-combat.active {
   display: flex;
   align-items: center;
   justify-content: center;

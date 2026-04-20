@@ -739,7 +739,23 @@
 </div>
 
 <!-- ES6 модули — точка входа -->
-<script type="module" src="src/js/main.js?v=2"></script>
+<script type="module">
+  function showErr(msg) {
+    document.body.style.background = '#0a0a0e';
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="position:fixed;top:0;left:0;right:0;background:#8b0000;color:#fff;padding:16px;font:14px monospace;z-index:99999;white-space:pre-wrap;word-break:break-all;">${msg}</div>`);
+  }
+  window.addEventListener('error', e => {
+    if (e.filename && !e.filename.includes('inpage') && !e.filename.includes('evmAsk')) {
+      showErr(`❌ JS Error: ${e.message}\nat ${e.filename}:${e.lineno}`);
+    }
+  });
+  try {
+    await import('./src/js/main.js?v=4');
+  } catch(e) {
+    showErr(`❌ Module load failed:\n${e}`);
+  }
+</script>
 
 </body>
 </html>
