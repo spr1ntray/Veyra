@@ -7,7 +7,7 @@
  */
 
 import { ActorState } from './entities.js';
-import { TILE_SIZE }  from './config.js';
+import { TILE_SIZE, VIEWPORT_W, VIEWPORT_H }  from './config.js';
 import { findPath }   from './pathfinding.js';
 
 // Auto-cast scan interval in ticks (6 ticks ≈ 100ms at 60Hz)
@@ -27,10 +27,19 @@ const AUTO_CAST_INTERVAL = 6;
 export function updatePlayerAI(player, world) {
   const input = world.input;
 
+  // --- Compute camera offset once per AI update (room centred in viewport) ---
+  // Input coords are canvas-space (0..VIEWPORT_W/H); entity coords are
+  // room-relative (0..tilemap.pixelW/H). Subtract camX/camY to convert.
+  const camX = Math.round((VIEWPORT_W - world.tilemap.pixelW) / 2);
+  const camY = Math.round((VIEWPORT_H - world.tilemap.pixelH) / 2);
+
   // --- Manual override: RMB click on enemy ---
   if (input.rightClicks.length > 0) {
     const click = input.rightClicks[0];
-    const enemy = _nearestEnemyAt(click.x, click.y, world, 32);
+    // Convert canvas-space → room-relative before proximity test
+    const rx = click.x - camX;
+    const ry = click.y - camY;
+    const enemy = _nearestEnemyAt(rx, ry, world, 32);
     if (enemy) {
       player.forcedTarget = enemy;
       _tryFireball(player, enemy, world);
@@ -48,20 +57,26 @@ export function updatePlayerAI(player, world) {
   // --- LMB click → set move target (A* path) ---
   if (input.leftClicks.length > 0) {
     const click = input.leftClicks[input.leftClicks.length - 1];
-    // Check if clicking on exit portal
+    // Convert canvas-space → room-relative coords before passing to pathfinding.
+    // tilemap.toTile(), findPath(), and entity positions are all room-relative.
+    const rx = click.x - camX;
+    const ry = click.y - camY;
+
+    // Check if clicking near the exit portal (portal coords are room-relative)
     if (world.exitPortal) {
       const ep = world.exitPortal;
-      const dx = click.x - ep.x;
-      const dy = click.y - ep.y;
+      const dx = rx - ep.x;
+      const dy = ry - ep.y;
       if (Math.sqrt(dx*dx + dy*dy) < ep.radius + 10) {
-        // Move toward portal
+        // Move toward portal using room-relative coords
         player.moveTarget = { x: ep.x, y: ep.y };
         player.path = findPath(world.tilemap, player.x, player.y, ep.x, ep.y);
         return;
       }
     }
-    player.moveTarget = { x: click.x, y: click.y };
-    player.path = findPath(world.tilemap, player.x, player.y, click.x, click.y);
+    // Room-relative destination for pathfinding
+    player.moveTarget = { x: rx, y: ry };
+    player.path = findPath(world.tilemap, player.x, player.y, rx, ry);
     player.forcedTarget = null;
   }
 

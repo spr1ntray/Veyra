@@ -6,29 +6,22 @@
  * at variable frame rates without affecting simulation.
  *
  * Layering order (back → front):
- *   1. Floor tiles      (tileset_floor.png variants)
- *   2. Wall tiles       (tileset_wall.png)
- *   3. Exit portal
+ *   1. Floor tiles      (programmatic: dark arena look)
+ *   2. Wall tiles       (programmatic: perimeter border only)
+ *   3. Exit portal      (programmatic: glowing ring with ✦ symbol)
  *   4. Pickups (gold piles)
- *   5. Entities sorted by Y (depth sort) — sprites or placeholder fallback
- *   6. Projectiles      (fireball.png animated)
- *   7. Impact VFX       (fire_impact.png one-shot)
+ *   5. Entities sorted by Y (depth sort) — programmatic placeholder art
+ *   6. Projectiles      (programmatic: fireball with trail)
+ *   7. Impact VFX       (programmatic: particle burst on hit)
  *   8. Particles
  *   9. Damage numbers
  *  10. Debug overlay (if enabled)
  *
- * Sprite system:
- *   - sprites.pyromancer / sprites.zombie — SpriteSheet (col=dir, row=frame)
- *   - sprites.fireball / sprites.impact   — AnimStrip (row-major frames)
- *   - sprites.floor / sprites.wall        — TileSheet (grid index)
+ * Visual style: cute-minimalism-dark-fantasy placeholder.
+ * All rendering is purely programmatic (no PNG sprite sheets) until
+ * the design director delivers the final visual spec.
  *
- * Fallback: if a sprite sheet failed to load, placeholder geometry is drawn
- * instead (colored circle / rectangle). The engine never crashes on missing assets.
- *
- * Pixel art crispness:
- *   ctx.imageSmoothingEnabled = false is set inside SpriteSheet/AnimStrip/TileSheet
- *   before every drawImage call. It's also cleared here at the start of draw()
- *   for non-sprite canvas ops that don't need smoothing.
+ * Sprite imports are kept so the module compiles; they are not actively used.
  */
 
 import { TILE_SIZE, VIEWPORT_W, VIEWPORT_H, DEBUG_OVERLAY } from './config.js';
@@ -77,7 +70,7 @@ export function draw(world, alpha) {
 
   // --- Exit portal ---
   if (world.exitPortal) {
-    _drawPortal(ctx, world.exitPortal);
+    _drawPortal(ctx, world.exitPortal, world.tick);
   }
 
   // --- Pickups ---
@@ -138,58 +131,46 @@ export function draw(world, alpha) {
 // ─────────────────────────────────────────────
 
 /**
- * Draws floor then wall tiles.
- * Uses tileset sprites when loaded; falls back to colored rectangles.
+ * Draws the room tilemap using pure programmatic rendering.
  *
- * Wall tile index mapping from tileset_wall.png (4 cols × 2 rows = 8 slots):
- *   Index 0 — straight wall horizontal
- *   Index 1 — straight wall vertical
- *   Index 2 — broken wall
- *   Index 3 — moss-covered wall
- *   Index 4 — inner corner
- *   Index 5 — outer corner
- *   Index 6 — T-junction
- *   (slot 7 is empty in the sheet — never used)
- *
- * For the current single-room layout (perimeter walls only) we always
- * use index 0 (solid wall). Corner/junction detection can be added later.
+ * Visual spec (placeholder):
+ *   Floor: #1a1a24 fill with thin #22222e grid lines (0.5px) between tiles
+ *   Wall (perimeter only): #0d0d14 fill, #2a2a3a border highlight
+ *   The room reads as a single open arena — no internal obstacles.
  */
 function _drawTilemap(ctx, tilemap, tick) {
-  const floorLoaded = sprites.floor.loaded && !sprites.floor.failed;
-  const wallLoaded  = sprites.wall.loaded  && !sprites.wall.failed;
-
   for (let r = 0; r < tilemap.rows; r++) {
     for (let c = 0; c < tilemap.cols; c++) {
       const px = _camX + c * TILE_SIZE;
       const py = _camY + r * TILE_SIZE;
 
       if (tilemap.isWall(c, r)) {
-        if (wallLoaded) {
-          // Use wall tile index 0 (straight wall) for all perimeter walls
-          ctx.imageSmoothingEnabled = false;
-          sprites.wall.drawTile(ctx, 0, px, py);
-        } else {
-          // Placeholder: dark rect with edge highlight
-          ctx.fillStyle = '#0a0a0e';
-          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-          ctx.fillStyle = '#1a1a28';
+        // Perimeter wall — very dark fill, subtle inner-edge highlight
+        ctx.fillStyle = '#0d0d14';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        // Edge highlight on the interior-facing sides
+        ctx.fillStyle = '#2a2a3a';
+        // bottom edge of top-row walls, top edge of bottom-row walls, etc.
+        if (r === 0) {
+          ctx.fillRect(px, py + TILE_SIZE - 2, TILE_SIZE, 2);
+        }
+        if (r === tilemap.rows - 1) {
           ctx.fillRect(px, py, TILE_SIZE, 2);
+        }
+        if (c === 0) {
+          ctx.fillRect(px + TILE_SIZE - 2, py, 2, TILE_SIZE);
+        }
+        if (c === tilemap.cols - 1) {
           ctx.fillRect(px, py, 2, TILE_SIZE);
         }
       } else {
-        if (floorLoaded) {
-          // Pick variant from pre-assigned map (seeded RNG at build time)
-          const variantIdx = tilemap.floorVariants[r * tilemap.cols + c];
-          ctx.imageSmoothingEnabled = false;
-          sprites.floor.drawTile(ctx, variantIdx, px, py);
-        } else {
-          // Placeholder: dark floor with subtle grid lines
-          ctx.fillStyle = '#2a2a33';
-          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-          ctx.fillStyle = '#22222b';
-          ctx.fillRect(px + TILE_SIZE - 1, py, 1, TILE_SIZE);
-          ctx.fillRect(px, py + TILE_SIZE - 1, TILE_SIZE, 1);
-        }
+        // Floor tile — dark base
+        ctx.fillStyle = '#1a1a24';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        // Thin grid lines on right and bottom edge of each tile
+        ctx.fillStyle = '#22222e';
+        ctx.fillRect(px + TILE_SIZE - 1, py, 1, TILE_SIZE);
+        ctx.fillRect(px, py + TILE_SIZE - 1, TILE_SIZE, 1);
       }
     }
   }
@@ -200,15 +181,9 @@ function _drawTilemap(ctx, tilemap, tick) {
 // ─────────────────────────────────────────────
 
 /**
- * Draws an entity using its sprite sheet if available.
- *
- * Sprite anchor offset:
- *   The entity position (x, y) is the feet/base of the character (physics centre).
- *   The 48×96 sprite is drawn so its bottom-centre aligns with (x, y).
- *   Therefore top-left corner = (x - 24, y - 90).
- *
- *   The -90 (instead of -96) gives a small ground anchor, so the character
- *   doesn't appear to float. Adjust if sprites look sunken.
+ * Draws an entity using programmatic placeholder art.
+ * Entity (x, y) is the physics/feet centre, room-relative.
+ * _camX/_camY are added here to translate to canvas-space.
  */
 function _drawEntity(ctx, entity, tick) {
   const px = _camX + entity.x;
@@ -221,83 +196,111 @@ function _drawEntity(ctx, entity, tick) {
   }
 }
 
+/**
+ * Pyromancer placeholder — cute-minimalism-dark-fantasy style.
+ *
+ * Visual spec:
+ *   - Gold circle radius 14px, fill #e8b84b, glow shadowBlur=15 #f5c842
+ *   - Small wizard-hat triangle above (#c9901a)
+ *   - Direction dot 3px white in the facing direction
+ */
 function _drawPlayer(ctx, player, px, py, tick) {
-  const DRAW_W = 48;
-  const DRAW_H = 96;
-  // Bottom-center of sprite at entity position; slight upward offset so feet are on the tile
-  const dx = px - DRAW_W / 2;
-  const dy = py - DRAW_H + 6; // +6 = 6px ground anchor
+  const R = 14;
 
-  const animKey  = player.animState || 'idle';
-  const dirIndex = player.dirIndex  || 0;
+  // Derive facing angle from dirIndex (0=S, 1=E, 2=N, 3=W)
+  // Used to place the direction indicator dot
+  const DIR_ANGLES = [Math.PI / 2, 0, -Math.PI / 2, Math.PI]; // S, E, N, W
+  const angle = DIR_ANGLES[player.dirIndex || 0];
 
-  // Pick sprite sheet for current anim state
-  let sheet = sprites.pyromancer.idle;
-  if (animKey === 'walk' && sprites.pyromancer.walk.loaded && !sprites.pyromancer.walk.failed) {
-    sheet = sprites.pyromancer.walk;
-  } else if (animKey === 'cast' && sprites.pyromancer.cast.loaded && !sprites.pyromancer.cast.failed) {
-    sheet = sprites.pyromancer.cast;
-  }
+  // --- Outer glow ---
+  ctx.save();
+  ctx.shadowBlur  = 15;
+  ctx.shadowColor = '#f5c842';
 
-  if (sheet.loaded && !sheet.failed) {
-    const frame = computeAnimFrame(tick, player.animEnterTick, sheet.framesPerDir, animKey, animKey !== 'death');
-    ctx.imageSmoothingEnabled = false;
-    sheet.drawFrame(ctx, dx, dy, dirIndex, frame);
-  } else {
-    // Fallback: blue circle
-    ctx.beginPath();
-    ctx.arc(px, py, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#4488ff';
-    ctx.fill();
-    ctx.strokeStyle = '#aaccff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // Direction dot
-    ctx.beginPath();
-    ctx.arc(px, py - player.radius * 0.5, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-  }
+  // --- Main body circle ---
+  ctx.beginPath();
+  ctx.arc(px, py, R, 0, Math.PI * 2);
+  ctx.fillStyle = '#e8b84b';
+  ctx.fill();
+
+  ctx.restore(); // clear shadow before drawing crisp overlays
+
+  // --- Wizard hat (small triangle above the circle) ---
+  const hatW = 10;
+  const hatH = 12;
+  const hatBaseY = py - R + 2; // sits on top of circle
+  ctx.beginPath();
+  ctx.moveTo(px, hatBaseY - hatH);          // tip
+  ctx.lineTo(px - hatW / 2, hatBaseY);      // bottom-left
+  ctx.lineTo(px + hatW / 2, hatBaseY);      // bottom-right
+  ctx.closePath();
+  ctx.fillStyle = '#c9901a';
+  ctx.fill();
+
+  // --- Direction dot (3px, white) at facing edge ---
+  const dotX = px + Math.cos(angle) * (R - 3);
+  const dotY = py + Math.sin(angle) * (R - 3);
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
 }
 
+/**
+ * Zombie placeholder — cute-minimalism-dark-fantasy style.
+ *
+ * Visual spec:
+ *   - Dark green circle radius 13px, fill #3d4a3a, outline #6b8b5e 2px
+ *   - Two small green dot eyes (#a8ff78, 3px each)
+ *   - Direction dot 2px #a8ff78 at facing edge
+ *   - HP bar above
+ */
 function _drawEnemy(ctx, enemy, px, py, tick) {
-  const DRAW_W = 48;
-  const DRAW_H = 96;
-  const dx = px - DRAW_W / 2;
-  const dy = py - DRAW_H + 6;
+  const R = enemy.radius || 13;
+  // Clamp visual radius so it's consistent regardless of physics radius
+  const VR = 13;
 
-  const animKey  = enemy.animState || 'idle';
-  const dirIndex = enemy.dirIndex  || 0;
-
-  // For now all enemies are zombies — can be extended when more enemy types added
-  let sheet = sprites.zombie.idle;
-  if (animKey === 'walk' && sprites.zombie.walk.loaded && !sprites.zombie.walk.failed) {
-    sheet = sprites.zombie.walk;
-  } else if (animKey === 'attack' && sprites.zombie.attack.loaded && !sprites.zombie.attack.failed) {
-    sheet = sprites.zombie.attack;
+  // Derive facing angle from velocity (or fall back to 0=S)
+  let angle = Math.PI / 2; // default S
+  const speed = enemy.vx * enemy.vx + enemy.vy * enemy.vy;
+  if (speed > 0.0001) {
+    angle = Math.atan2(enemy.vy, enemy.vx);
   }
 
-  if (sheet.loaded && !sheet.failed) {
-    const frame = computeAnimFrame(tick, enemy.animEnterTick, sheet.framesPerDir, animKey, true);
-    ctx.imageSmoothingEnabled = false;
-    sheet.drawFrame(ctx, dx, dy, dirIndex, frame);
-  } else {
-    // Fallback: green circle
+  // --- Main body circle ---
+  ctx.beginPath();
+  ctx.arc(px, py, VR, 0, Math.PI * 2);
+  ctx.fillStyle = '#3d4a3a';
+  ctx.fill();
+  ctx.strokeStyle = '#6b8b5e';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // --- Eyes: two small dots offset from centre ---
+  // Eyes are placed ~5px above centre, spaced 5px apart
+  const eyeY = py - 3;
+  const eyeOffsets = [-4, 4];
+  for (const ex of eyeOffsets) {
     ctx.beginPath();
-    ctx.arc(px, py, enemy.radius, 0, Math.PI * 2);
-    ctx.fillStyle = enemy.color || '#44cc44';
+    ctx.arc(px + ex, eyeY, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#a8ff78';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
   }
 
-  // HP bar is always drawn (even over sprite) — small bar above the sprite
-  const barW  = DRAW_W;
-  const barH  = 3;
-  const barX  = px - DRAW_W / 2;
-  const barY  = dy - 5; // 5px above sprite top
-  const pct   = enemy.hp / enemy.hpMax;
+  // --- Direction dot (2px, green) at facing edge ---
+  const dotX = px + Math.cos(angle) * (VR - 2);
+  const dotY = py + Math.sin(angle) * (VR - 2);
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#a8ff78';
+  ctx.fill();
+
+  // --- HP bar above the enemy ---
+  const barW = VR * 2 + 10;
+  const barH = 3;
+  const barX = px - barW / 2;
+  const barY = py - VR - 8;
+  const pct  = enemy.hp / enemy.hpMax;
 
   ctx.fillStyle = '#1a0000';
   ctx.fillRect(barX, barY, barW, barH);
@@ -319,32 +322,44 @@ function _drawDeathFlash(ctx, entity) {
 // ─────────────────────────────────────────────
 
 /**
- * Draws a fireball projectile.
- * Rotates the AnimStrip frame to match flight direction.
- * Falls back to glowing circle if sprite not loaded.
+ * Draws a fireball projectile — programmatic placeholder.
+ *
+ * Visual spec:
+ *   - Core circle radius 7px, fill #ff6b2b, inner glow shadowBlur=12 #ffaa40
+ *   - Trail: 4 semi-transparent circles behind the ball, fading out
  */
 function _drawProjectile(ctx, proj, tick) {
   const px = _camX + proj.x;
   const py = _camY + proj.y;
 
-  if (sprites.fireball.loaded && !sprites.fireball.failed) {
-    // Compute angle from velocity
-    const angle = Math.atan2(proj.vy, proj.vx);
-    // 6-frame loop, 5 ticks/frame
-    const frame = Math.floor(tick / 5) % sprites.fireball.totalFrames;
-    ctx.imageSmoothingEnabled = false;
-    sprites.fireball.drawCentered(ctx, px, py, frame, angle);
-  } else {
-    // Fallback: glowing orange circle
-    ctx.beginPath();
-    ctx.arc(px, py, proj.radius + 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 100, 0, 0.25)';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(px, py, proj.radius, 0, Math.PI * 2);
-    ctx.fillStyle = proj.color || '#ff6a00';
-    ctx.fill();
+  const speed = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
+  const R = 7;
+
+  // --- Trail (4 ghost circles behind the ball along the velocity axis) ---
+  if (speed > 0) {
+    const nx = proj.vx / speed; // normalised direction
+    const ny = proj.vy / speed;
+    for (let i = 1; i <= 4; i++) {
+      const tx = px - nx * i * 5;
+      const ty = py - ny * i * 5;
+      const trailAlpha = 0.18 - i * 0.04;
+      const trailR = Math.max(2, R - i * 1.5);
+      ctx.beginPath();
+      ctx.arc(tx, ty, trailR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 107, 43, ${trailAlpha})`;
+      ctx.fill();
+    }
   }
+
+  // --- Core glow ---
+  ctx.save();
+  ctx.shadowBlur  = 12;
+  ctx.shadowColor = '#ffaa40';
+  ctx.beginPath();
+  ctx.arc(px, py, R, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff6b2b';
+  ctx.fill();
+  ctx.restore();
 }
 
 // ─────────────────────────────────────────────
@@ -352,63 +367,119 @@ function _drawProjectile(ctx, proj, tick) {
 // ─────────────────────────────────────────────
 
 /**
- * Draws one frame of a fire_impact one-shot animation.
- * The impact is centered at (imp.x, imp.y).
+ * Draws a hit-impact burst using programmatic particles.
+ *
+ * Visual spec:
+ *   - 5 orange spark dots radiate from impact point
+ *   - Total lifetime 18 ticks (~300ms at 60Hz)
+ *   - Alpha fades from 1.0 → 0 over lifetime
  */
 function _drawImpact(ctx, imp, tick) {
-  if (!sprites.impact.loaded || sprites.impact.failed) return;
+  const LIFETIME = 18; // ticks
+  const elapsed  = tick - imp.spawnTick;
+  if (elapsed >= LIFETIME) return;
 
-  const TICKS_PER_FRAME = 5;
-  const frameIdx = Math.floor((tick - imp.spawnTick) / TICKS_PER_FRAME);
-  if (frameIdx >= sprites.impact.totalFrames) return; // already expired
+  const progress = elapsed / LIFETIME;     // 0..1
+  const alpha    = 1 - progress;
+  const px       = _camX + imp.x;
+  const py       = _camY + imp.y;
 
-  const px = _camX + imp.x;
-  const py = _camY + imp.y;
+  // 5 sparks at evenly-spaced angles, moving outward over lifetime
+  const NUM_SPARKS = 5;
+  const MAX_DIST   = 18; // max travel distance in pixels
 
-  ctx.imageSmoothingEnabled = false;
-  sprites.impact.drawCentered(ctx, px, py, frameIdx, 0);
+  ctx.globalAlpha = alpha;
+  for (let i = 0; i < NUM_SPARKS; i++) {
+    const a  = (i / NUM_SPARKS) * Math.PI * 2;
+    const d  = progress * MAX_DIST;
+    const sx = px + Math.cos(a) * d;
+    const sy = py + Math.sin(a) * d;
+    const r  = Math.max(1, 3 * (1 - progress));
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff8c40';
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ─────────────────────────────────────────────
 // Portal, pickup, particle, damage number
 // ─────────────────────────────────────────────
 
-function _drawPortal(ctx, portal) {
+/**
+ * Exit portal — cute-minimalism-dark-fantasy placeholder.
+ *
+ * Visual spec:
+ *   - Translucent fill circle rgba(201,168,76,0.15), radius 22
+ *   - Dashed gold border #c9a84c, 2px, animated rotation
+ *   - Outer glow shadowBlur=20 #c9a84c
+ *   - Inner ✦ symbol #c9a84c 16px
+ */
+function _drawPortal(ctx, portal, tick) {
   const px = _camX + portal.x;
   const py = _camY + portal.y;
+  const R  = portal.radius || 22;
 
-  // Glow ring
+  // Outer ambient glow (no shadow needed — just a larger semi-transparent circle)
   ctx.beginPath();
-  ctx.arc(px, py, portal.radius + 8, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 215, 0, 0.12)';
+  ctx.arc(px, py, R + 10, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(201, 168, 76, 0.07)';
   ctx.fill();
 
-  // Main circle
+  // Fill
   ctx.beginPath();
-  ctx.arc(px, py, portal.radius, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffd700';
+  ctx.arc(px, py, R, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(201, 168, 76, 0.15)';
   ctx.fill();
 
-  // Inner highlight
+  // Animated dashed border — rotate by using ctx.save/rotate
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate((tick * 0.015) % (Math.PI * 2)); // slow clockwise spin
   ctx.beginPath();
-  ctx.arc(px, py, portal.radius * 0.55, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff8c0';
-  ctx.fill();
+  ctx.arc(0, 0, R, 0, Math.PI * 2);
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth   = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]); // reset dash
+  ctx.restore();
 
-  // Label
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 10px monospace';
+  // Glow highlight on top (rendered via shadowBlur)
+  ctx.save();
+  ctx.shadowBlur  = 20;
+  ctx.shadowColor = '#c9a84c';
+  ctx.beginPath();
+  ctx.arc(px, py, R - 2, 0, Math.PI * 2);
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  // ✦ symbol centred inside
+  ctx.fillStyle = '#c9a84c';
+  ctx.font      = '16px serif';
   ctx.textAlign = 'center';
-  ctx.fillText('EXIT', px, py + portal.radius + 16);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✦', px, py);
+  ctx.textBaseline = 'alphabetic'; // restore default
 }
 
+/**
+ * Gold pickup — small 8×8 square with thin glow.
+ */
 function _drawPickup(ctx, pickup) {
   const px = _camX + pickup.x;
   const py = _camY + pickup.y;
-  ctx.beginPath();
-  ctx.arc(px, py, pickup.radius, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffd700';
-  ctx.fill();
+  const S  = 8; // square size
+
+  ctx.save();
+  ctx.shadowBlur  = 6;
+  ctx.shadowColor = '#f0c040';
+  ctx.fillStyle   = '#f0c040';
+  ctx.fillRect(px - S / 2, py - S / 2, S, S);
+  ctx.restore();
 }
 
 function _drawParticle(ctx, p) {
