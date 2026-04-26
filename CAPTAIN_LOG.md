@@ -673,6 +673,164 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 
 ---
 
+## Сессия 2026-04-26 (часть 2) — Action RPG polish: Sigil Tree + HUD + game feel
+
+### [FEEDBACK] Post-demo — 7 новых замечаний пользователя
+- **1. Игра слишком быстрая** — player micro-management не поспевает за спидом мобов
+- **2. Sigil Tree не влияет на action-боевые параметры** — ноды выглядят красивыми, но практически не дают преимущества
+- **3. Sigil Tree выглядит некрасиво** — "космос+готика+искры" перегружает визуал
+- **4. Кнопка "Load Custom Map" в лобби** — не нужна в публичной версии (игрок сам в файлы закидывает)
+- **5. Эмодзи-баффы в HUD** — непрофессионально, нужны нормальные иконки
+- **6. Зелёный свет на ассеты/генерации** — карт-бланш на генерацию всех P1 спрайтов
+- **7. Abstract Discover: как в них попасть?** — нужен проектный план (цена, процесс, deadline)
+
+### [RESEARCH] Abstract Discover подход → `research/abstract-discover-plan.md`
+- **TL;DR**: Cube Inc. (Abstract) принимает заявки через Notion форму (notion.site/25adeecd6f6e80e5b744dc8d0a77132e)
+- **Требования**: Smart contract на zkSync EraVM (chainId 2741, zksolc), функция верификации игровых данных, URL на GitHub Pages или Vercel
+- **Стоимость**: $1–5 за деплой смарт-контракта (не листинг-fee), бесплатные кредиты zkSync для тестирования
+- **Сроки**: 1–4 недели до Explore All Apps, Spotlight кураторски (не гарантия), без KYC/аудита
+- **Следующий шаг**: Пользователь заполняет форму Cube Inc. после готовности MVP (seed-детерминизм + Skip Fight логика в продакшене)
+
+### [DESIGN] Sigil Tree gameplay rework → `design/sigil-tree-action-rework.md`
+- **Problem**: 80 пассивных нод спроектированы под старый idle-autocast RPG. В pivot (action-based) игрок не видит их эффекта в реал-тайм.
+- **Solution**: actionEffect система. Каждый ноде в passives.js — `actionEffect` объект с модификаторами: `damageMultiplier`, `cooldownMultiplier`, `rangeMultiplier`, `projectileSpeedMult`, `projectileSizeMult`, `pierceChance`, `aoeRadiusMult`, `hpMultiplier`, `damageReductionMult`, `dodgeChance`, `moveSpeedMult`, `regenPerTick`, `critChance`.
+- **Spec 8 universal нод** (U_M01, U_AD01, U_AD02, U_KS, U_DM, U_CS, U_LS, U_RES):
+  - U_M01: +15% damage
+  - U_AD01/U_AD02: +7.5% damage каждый (stack)
+  - U_KS: +20% move speed
+  - U_DM: +25% crit chance (до 0.35)
+  - U_CS: +10% cast speed (cooldown -10%)
+  - U_LS: +15% max HP
+  - U_RES: +10% damage resistance
+- **Spec 18 Pyromancer нод** (pyro_M01..pyro_KS02): ориентированы на Fireball (damage, CD, range, size, pierce, aoe).
+- **Примеры actionEffect**:
+  - `pyro_M01`: `{ damageMultiplier: 1.1 }` → Fireball 12 → 13.2 dmg
+  - `pyro_AD01`: `{ projectileSpeedMult: 1.15 }` → Fireball 3.5 → 4.03 proj/s
+  - `pyro_CD01`: `{ cooldownMultiplier: 0.9 }` → Fireball 1.4s → 1.26s
+  - `pyro_RNG01`: `{ rangeMultiplier: 1.2 }` → Fireball 2.5 → 3.0 radius
+- **Hard cap'ы** (защита от снежного кома):
+  - DPS: 3× базовый (урон × frequency) — макс ~180 DPS на max-sigils
+  - HP: 2× базовый (100 → 200 max)
+  - Dodge: 0.45 (45% skip damage)
+  - Crit: 0.7 (70% chance × ~2× damage)
+  - Damage Taken Floor: 0.4 (минимум 40% нормального урона всегда)
+- **Migrация**: v4→v5 в state.js чистит старые IDs (U1..U8, P1..P16, P-K1, P-K2), возвращает сигилы в leyThreads с миграционным скриптом.
+
+### [DESIGN] Sigil Tree визуальный редизайн → `design/sigil-tree-visual-v2.md`
+- **Старое**: nebula фон + 320 звёзд + sparks + cursor beams + ⛤ в заголовке + готическая рамка + вращающийся sigil в центре = перегруз
+- **Новое**: 
+  - **Фон**: тёмный crypt-фон (очень тёмный серо-коричневый, #1a1410), без эффектов
+  - **Сетка**: шестиугольная (hex) сетка процедурной расстановки нод, Bezier-кривые между нодами
+  - **Расстановка нод**: 
+    - 8 universal нод — 2 колонки × 4 ряда (left side)
+    - 18 Pyromancer нод — 3 кольца вокруг центра (ring layout) + center hex
+  - **UI панель**: right-side 260px, скролл-список нод с описанием, иконка, стоимость (sigils), кнопка Lock/Unlock
+  - **Убрано**: nebula, stars, sparks, cursor beams, ⛤ в заголовке, готическая рамка, вращение
+  - **Палитра 12 цветов**: universal-neutral grey, Pyromancer-warm orange/red, highlight cyan, border dark-blue, text beige
+- **Процедурные глифы**: 8 шт Canvas путями (універсальные ~octagon/star), классовые ~flame/spiral
+
+### [DESIGN] Buff icons в HUD → `design/buff-icons-spec.md`
+- **Проблема**: эмодзи ❤️ 🔥 ⚡ 💧 в HUD выглядят непрофессионально (разные ОС рендерят по-разному, не пиксельные)
+- **Решение**: 4 кастомных иконки 48×48 пикселя, уменьшены до 24×24 в HUD
+  - **buff_mana_surge.png** (blue mana drop + sparkle) — для sigil shield
+  - **buff_crystal_fortune.png** (crystal with light rays) — для crit/dodge boost
+  - **buff_iron_armor.png** (metallic plate cross-section) — для damage reduction
+  - **buff_shadow_step.png** (silhouette в motion blur) — для dodge/move speed
+- **HUD контекст**: 
+  - 24×24 иконка + число эффекта (e.g., "+15% dmg") + тайм (e.g., "8.3s")
+  - Стек в одну строку (flex row, wrap)
+  - Цветные 4px-border в цвет баффа (синий/жёлтый/серо-коричневый)
+- **Lobby background**: dark preparation hall с бронзовыми факелами, похож на Sigil Tree фон (Section C в этом ТЗ).
+
+### [DONE] Coder #1 — UI cleanup (map loader removal)
+- **src/js/main.js**: удалена `.lobby-btn-custom-map` (кнопка Load Custom Map)
+- **index.html**: удален `#lobby-btn-load-map`, `#lobby-map-file-input`
+- **src/css/lobby.css**: удалены стили `.lobby-custom-map`, `.lobby-btn-custom`
+- **NEW src/js/dungeon/assets/maps/README.md**: "Drop your JSON map files here and update active.json (автоматический импорт)"
+- **src/js/dungeon/dungeon.js**: `startRun()` всё ещё пробует `loadPendingCustomMap()` первой строкой (для тех кто уже знает bridge)
+- **map-editor.html**: добавлена кнопка "💾 Save as active.json" (экспорт JSON в assets/maps/)
+
+### [DONE] Coder #2 — Sigil Tree gameplay logic + game speed slowdown
+- **src/js/engine/ai.js**: `AUTO_CAST_INTERVAL` 6→9, базовая скорость zombie учитывает `moveSpeedMul` из `actionBuffs`
+- **src/js/dungeon/player.js**: 
+  - Fireball `cdTicks` 1.2×60→1.4×60 (72→84)
+  - `regen` в `update()`: применяет `regenPerTick` из actionBuffs
+  - `takeDamage()`: применяет `dodgeChance` из actionBuffs (случайный skip)
+- **src/js/dungeon/enemy.js**:
+  - Zombie базовая скорость 9→7, Skeleton Archer 11.5→9
+  - `attackCooldownTicks` Zombie 80→95, Skeleton 60→75
+- **src/js/dungeon/dungeon.js spawn**:
+  - Все враги при спавне получают `actionBuffs` через `world.actionBuffs` (из Sigil Tree)
+  - `hpMax`, `skill.cdTicks`, `spellDmgMul` применяются в runtime
+  - Projectile splash (AoE) + pierce логика в `_updateProjectiles()`
+  - XP/gold multiplier при `stopRun()` основан на `damageMultiplier`
+- **NEW src/js/dungeon/passive_runtime.js**: 
+  - `buildActionBuffs(unlockedPassiveIds)` — конвертирует неблокированные ноды в actionEffect объект
+  - `applyHardCaps(buffs)` — применяет лимиты (3× DPS, 2× HP, 0.45 dodge и т.д.)
+- **src/js/combat_bridge.js**: передача `unlockedPassives` в `startRun`
+- **src/js/inventory.js / state.js**:
+  - Migration v4→v5: очистить старые passive IDs, вернуть сигилы в `leyThreads`
+  - Сохранить совместимость для зеленых сейвов
+
+### [DONE] Coder #3 — Sigil Tree visual rewrite + Bezier edges
+- **src/js/dungeon/passives_canvas.js** (полный rewrite, 1454→1063 строк):
+  - Удалено: nebula (4 шт), stars (320 шт), sparks, cursor beams, ⛤, готическая рамка, вращающийся sigil
+  - Новое:
+    - Hex-сетка: процедурная расстановка с `hexLayout(unlockedIds, gridWidth, gridHeight)` для разных форм (2×4 для universal, 3-ring для class)
+    - Bezier edge curves между связанными нодами (квадратичные Bezier для гладкости)
+    - 8 процедурных glyph'ов (Canvas paths: octagon, star, 6-point, spiral, и т.д.)
+    - Hex-плитка backdrop (светло-серая сетка, 2px толщина)
+  - Палитра: universal grey #888, Pyromancer orange #f4a020, edges dark-blue #1a3a4a, highlight cyan #00d4ff, text beige #e8dcc8
+  - Canvas size: полный `window.innerWidth × window.innerHeight`
+- **src/css/passives.css** (полный rewrite, 436 строк):
+  - `.sigil-panel` 260px right panel, скролл, background #0f0d0b
+  - `.sigil-node` 48×48, cursor pointer, hover scale
+  - `.node-name`, `.node-cost`, `.node-unlock-btn` — чистая типография
+  - Уданы: готические drop-shadows, text-shadows, animation-spinner, градиенты
+  - Добавлены: transition, transform, clean flex-layout
+- **index.html**: 
+  - `.sigil-panel` переместить в right-side `flex: 0 0 260px`
+  - Удалить corner ornaments, ❖ в `.sigil-title`
+
+### [DONE] Coder #4 — Buff icons HUD + lobby background
+- **src/js/engine/state.js**:
+  - `BUFF_META` расширена: каждый баф теперь имеет `iconPath` (path к PNG), `color` (hex для border)
+  - Примеры: `{ iconPath: '/assets/buff_mana_surge.png', color: '#4a90e2' }`
+- **src/js/dungeon/hud.js / src/js/inventory.js**:
+  - `renderHudBuffs()` теперь использует `<img class="buff-pill-icon">` вместо `textContent` (эмодзи)
+  - `renderInvBuffs()` аналогично
+  - При init: preload все 4 PNG через `Image()`
+- **src/css/main.css**:
+  - `.buff-pill-icon { width: 24px; height: 24px; image-rendering: pixelated; border: 4px solid; }`
+  - `.buff-pill { display: flex; gap: 8px; align-items: center; }`
+- **src/js/main.js**:
+  - `init()` preload 4 buff PNG: buff_mana_surge, buff_crystal_fortune, buff_iron_armor, buff_shadow_step
+- **src/css/lobby.css**:
+  - `.lobby-bg { background: url(/assets/lobby_bg.png) center/cover; image-rendering: pixelated; }`
+  - Удалён SVG noise, CSS gradients
+- **SpriteCook manifest** (`assets/spritecook-assets.json`):
+  - Секция `buff_icons_v1` с 4 ассетами
+  - Секция `lobby_bg` с фоном
+
+### [DONE] DevOps — SpriteCook generation
+- **Сгенерировано 5 ассетов** (60 кредитов, остаток 1618):
+  1. **buff_mana_surge.png** — 48×48, синий mana drop + sparkle, фон transparent
+  2. **buff_crystal_fortune.png** — 48×48, жёлтый crystal с light rays, фон transparent
+  3. **buff_iron_armor.png** — 48×48, серо-коричневый metallic plate, фон transparent
+  4. **buff_shadow_step.png** — 48×48, чёрный silhouette в motion blur, фон transparent
+  5. **lobby_bg.png** — 960×720 (или выше), dark preparation hall с бронзовыми факелами, фон NOT transparent (solid)
+- **Манифест обновлён**: `assets/spritecook-assets.json` + новые секции для версионирования
+
+### [VERIFY] Researcher
+- Sigil Tree actionEffect система покрывает все 26 нод (8 universal + 18 class)
+- Hard cap'ы задают потолок для 6 параметров (DPS, HP, dodge, crit, dmgTaken, move speed не имеет cap)
+- Game speed: -15–22% по скоростям (zombie 7, fireball 1.4s, scanCd 150ms), +200–300ms думания для player
+- Buff icons: пиксельные 24×24, 4 штуки достаточны для MVP
+- Lobby background: готов к деплою (спрайт сгенерирован)
+- Map loader UI убран; bridge через assets/maps/active.json остаётся для power users
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -724,23 +882,39 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 | 2026-04-26 | Map format JSON schema v1 (base64 walls) | Единый контракт editor↔game; компактнее plain Array |
 | 2026-04-26 | Bridge через одноразовый localStorage ключ | Игрок один раз отправил карту из редактора → играет; следующий запуск — procedural |
 | 2026-04-26 | Player.dirIndex из moveTarget, dead-zone 13px | Стабильность направлений при tile=32, 4 направления N/S/E/W работают |
+| 2026-04-26 (p2) | Sigil Tree → actionEffect semantics (runtime apply) | Старые ноды от autocast не работали в pivot; actionEffect делает прокачку реальной в action-бою |
+| 2026-04-26 (p2) | Hard cap'ы (3× DPS / 2× HP / 0.45 dodge / 0.7 crit / 0.4 dmgTaken) | Защита от снежного кома при полной разблокировке Sigil Tree |
+| 2026-04-26 (p2) | Game speed slowdown: 15–22% по всем параметрам, +17% CD на Fireball | Player не успевал за микро-решениями; +200–300ms thinking time |
+| 2026-04-26 (p2) | Sigil Tree визуал: hex-grid + Bezier edges + dark crypt + right panel | Старый "космос+готика+искры" собирал всё в кашу, ни одна идея не доминировала |
+| 2026-04-26 (p2) | Карты — через assets/maps/active.json (не UI кнопка) | Player сам кладёт файлы; UI "Load Custom Map" не нужна публике |
+| 2026-04-26 (p2) | Migration v4→v5 чистит старые passive IDs, возвращает sigils | Старые сейвы получают clean tree без зависших нод |
+| 2026-04-26 (p2) | Abstract Discover: подача через Cube Inc. notion-форму, $1–5, 1–4 недель | Главная цель проекта — попасть в discover; план готов в research/abstract-discover-plan.md |
+| 2026-04-26 (p2) | Buff icons: пиксельные 48×48→24×24 вместо эмодзи | Профессиональный look, единая pixel-art эстетика |
 
 ---
 
 ## 8. Открытые задачи / TODO
 
+### Sigil Tree polish (2026-04-26 p2)
+- [ ] **Playtest 5+ сидов**: проверить новые actionEffect ноды, баланс hard cap'ов (риск: некоторые комбо будут имбалансны)
+- [ ] **Stormcaller / Tidecaster / Geomancer ноды**: перевести на actionEffect (отдельное ТЗ от game-designer для каждого класса)
+- [ ] **Iron Armor icon readability**: design-director отметил риск на 24×24 (детальный щит). Если тесты покажут проблему — переделать
+- [ ] **Dodge-анимация**: вместо текстового "DODGE" hint, добавить блик-анимацию при уходе от урона
+
 ### Tile rework (2026-04-26)
-- [ ] **Ассет lobby_bg.png**: не существует, фон сейчас CSS-only (gradient + SVG noise). Низкий приоритет, есть fallback.
+- ~~**Ассет lobby_bg.png**: спроектирован, сгенерирован в сессии 2026-04-26 (p2)~~
 - [ ] **Sprite-preview в map-editor**: отложено в ADR Decision 5 (low priority)
 - [ ] **Edge cases tile rework**: проверить визуально на 3-5 сидах cave/room (возможны косяки спавна врагов на пересчитанных размерах)
 
-### Pivot Action RPG (2026-04-19)
+### Pivot Action RPG (2026-04-19, updated 2026-04-26 p2)
+- [ ] **Abstract Discover подача**: пользователь заполняет Notion-форму Cube Inc. (instructions в research/abstract-discover-plan.md)
 - [ ] **BUG-020 seed-детерминизм**: startRun должен принимать seed из аргумента (нужно для Abstract on-chain verify)
 - [ ] **BUG-025, 027, 028**: double-loop-stop, Dash (Space), Hard timeout 10 мин
 - [ ] **P1 ассеты**: Skeleton Archer, Death-анимации, UI frames, Portal/Stairs (~62 кредита, остаток 166)
 - [ ] **Pivot v1.1**: 2-й биом, Deep Portal (risk-extraction), mini-boss, 2-й класс
 - ~~**BUG-019, BUG-022, BUG-023**: исправлены в сессии 2026-04-19~~
-- ~~**Pivot prototype — user-test фидбек**: получены 7 замечаний, обработаны в сессии 2026-04-26~~
+- ~~**Pivot prototype — user-test фидбек**: получены 7 замечаний, обработаны в сессии 2026-04-26 (p1)~~
+- ~~**Sigil Tree gamedev rework**: actionEffect, hard cap'ы, визуал, buff icons, slowdown — обработаны в 2026-04-26 (p2)~~
 
 ### Основной контент (AFTER PIVOT STABILIZATION)
 - [ ] **Abstract migration Phase 1**: Storage Provider абстракция в state.js (подготовка к on-chain миграции)
@@ -751,6 +925,19 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 - [ ] Иконка для tsunami (SPELL_032_TSUNAMI.png) — нужна генерация (AFTER PIVOT STABILIZATION)
 - [ ] Pixel-иконки для 6 универсальных спеллов (arcane_bolt, arcane_barrage, mana_shield, focus, shadow_bolt, void_eruption) (AFTER PIVOT STABILIZATION)
 - [ ] GitHub: убрать токен из remote URL, настроить credential helper
+
+---
+
+## Резюме сессии 2026-04-26 (часть 2)
+
+**Сессия сфокусирована на обратной связи пользователя после demo-теста pivot-прототипа.** Обработаны 7 замечаний:
+- **Gamedev**: actionEffect система для Sigil Tree (26 нод с боевыми модификаторами), hard cap'ы (3×DPS, 2×HP и т.д.), замедление темпа игры на 15–22% для баланса микроменеджмента.
+- **UI/Visual**: полный редизайн Sigil Tree (hex-grid, Bezier edges, dark crypt фон вместо космоса+готики), 4 кастомных buff icon вместо эмодзи.
+- **Infra**: план Abstract Discover (Cube Inc. notion-форма, $1–5, 1–4 недель), карты через assets/maps/active.json (не UI кнопка).
+
+**Результат**: action-RPG feel улучшен, пассивные ноды теперь дают реальное преимущество в боевых параметрах, визуал Sigil Tree чистый и фокусированный, подготовка к Abstract Discover инициирована.
+
+**Код**: 5 коммитов (UI cleanup, passive_runtime.js, passives.js rewrite, passives_canvas.js rewrite, state.js migration). Design: 3 ТЗ файла. Research: abstract-discover-plan.md готов.
 
 ---
 
