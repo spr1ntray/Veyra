@@ -59,12 +59,14 @@ export function enterCombat() {
   // Register run-end callback
   setOnRunEnd(_handleRunEnd);
 
-  // Pass player class + spell damage bonus into dungeon
+  // Pass player class + spell damage bonus + unlocked passives into dungeon.
+  // passive_runtime.js will build the full ActionBuffs object from unlockedPassives.
   const state = getState();
   const stats = getStats();
   startRun({
-    classType:        state.classType || 'pyromancer',
-    spellDamageBonus: stats.spellDamageBonus || 0,
+    classType:         state.classType || 'pyromancer',
+    spellDamageBonus:  stats.spellDamageBonus || 0,
+    unlockedPassives:  (state.passives && state.passives.unlocked) || [],
   });
 }
 

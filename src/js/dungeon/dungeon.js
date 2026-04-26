@@ -23,7 +23,8 @@ import { EnemyActor }                from './enemy.js';
 import { collectPickups, createGoldPickup, updateGoldMagnet } from './loot.js';
 import { createExitPortal, checkExtractionTrigger } from './extraction.js';
 import { updateHUD as updateDungeonHUD, initHUD, destroyHUD } from './hud.js';
-import { loadPendingCustomMap }      from './custom_map.js';
+import { loadPendingCustomMap, importCustomMap } from './custom_map.js';
+import { buildActionBuffs } from './passive_runtime.js';
 
 // ─────────────────────────────────────────────
 // Cave configuration
@@ -237,16 +238,20 @@ class World {
   spawnProjectile(opts) {
     const p = this.projectilePool.spawn();
     if (!p) return; // pool exhausted
-    p.x          = opts.x;
-    p.y          = opts.y;
-    p.vx         = opts.vx;
-    p.vy         = opts.vy;
-    p.radius     = opts.radius || 8;
-    p.ticksLeft  = Math.round((opts.ttl || 2.0) * 60);
-    p.dmg        = opts.dmg   || 25;
-    p.ownerId    = opts.ownerId;
-    p.team       = opts.team  || 'player';
-    p.color      = opts.color || '#ff6a00';
+    p.x           = opts.x;
+    p.y           = opts.y;
+    p.vx          = opts.vx;
+    p.vy          = opts.vy;
+    p.radius      = opts.radius || 8;
+    p.ticksLeft   = Math.round((opts.ttl || 2.0) * 60);
+    p.dmg         = opts.dmg   || 25;
+    p.ownerId     = opts.ownerId;
+    p.team        = opts.team  || 'player';
+    p.color       = opts.color || '#ff6a00';
+    // Passive-buff extensions
+    p.aoeRadius   = opts.aoeRadius  || 0;   // px — > 0 triggers AoE splash on impact
+    p.pierceCount = opts.pierceCount || 0;   // max enemies to pierce
+    p.pierceHits  = opts.pierceHits  || 0;   // remaining pierce charges (counts down)
   }
 
   _updateProjectiles() {
@@ -263,12 +268,29 @@ class World {
         return;
       }
 
-      // Wall collision
+      // Wall collision — AoE also triggers on wall hit
       const tc = this.tilemap.toTile(p.x, p.y);
       if (this.tilemap.isWall(tc.col, tc.row)) {
         p.alive = false;
         this._spawnImpact(p.x, p.y);
         this._spawnImpactParticles(p.x, p.y, '#ff6a00', 5);
+        // Wall AoE splash
+        if (p.aoeRadius > 0) {
+          const splashDmg = Math.round(p.dmg * 0.70);
+          const r2 = p.aoeRadius * p.aoeRadius;
+          for (const other of this.entities) {
+            if (!other.alive) continue;
+            if (other.team === p.team) continue;
+            const ox = other.x - p.x;
+            const oy = other.y - p.y;
+            if (ox*ox + oy*oy < r2) {
+              const splashDied = other.takeDamage(splashDmg, this);
+              this._spawnImpactParticles(other.x, other.y, '#ff8800', 5);
+              this._spawnDamageNumber(other.x, other.y - 80, splashDmg, '#ffcc66');
+              if (splashDied) this.killCount++;
+            }
+          }
+        }
         return;
       }
 
@@ -280,16 +302,43 @@ class World {
         const dy   = e.y - p.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         if (dist < e.radius + p.radius) {
-          // Hit!
+          // ── Direct hit ────────────────────────────────────────────────
           const died = e.takeDamage(p.dmg, this);
           this._spawnImpact(p.x, p.y);
           this._spawnImpactParticles(p.x, p.y, '#ff6a00', 8);
           // y-80 puts number near head in screen space (drawH=48, ISO_Y=0.6 → 48/0.6≈80)
           this._spawnDamageNumber(e.x, e.y - 80, p.dmg, '#ffee40');
-          p.alive = false;
-          if (died) {
-            this.killCount++;
+          if (died) this.killCount++;
+
+          // ── AoE splash (Blastwave / Wreath of Cinders) ────────────────
+          // Deals 70% of primary hit damage to all other enemies in aoeRadius.
+          if (p.aoeRadius > 0) {
+            const splashDmg = Math.round(p.dmg * 0.70);
+            const r2 = p.aoeRadius * p.aoeRadius;
+            for (const other of this.entities) {
+              if (other === e) continue;      // already hit above
+              if (!other.alive) continue;
+              if (other.team === p.team) continue;
+              const ox = other.x - p.x;
+              const oy = other.y - p.y;
+              if (ox*ox + oy*oy < r2) {
+                const splashDied = other.takeDamage(splashDmg, this);
+                this._spawnImpactParticles(other.x, other.y, '#ff8800', 5);
+                this._spawnDamageNumber(other.x, other.y - 80, splashDmg, '#ffcc66');
+                if (splashDied) this.killCount++;
+              }
+            }
           }
+
+          // ── Pierce (Wreath of Cinders) ─────────────────────────────────
+          // Projectile passes through up to pierceCount enemies before dying.
+          if (p.pierceHits != null && p.pierceHits > 0) {
+            p.pierceHits--;
+            // Don't mark p.alive = false — continue traveling
+            return; // restart forEach iteration (not nested; skip remaining checks)
+          }
+
+          p.alive = false;
           return;
         }
       }
@@ -437,7 +486,12 @@ export async function startRun(playerConfig = {}) {
   const seed = Date.now() & 0xFFFFFFFF;
 
   _world = new World(seed);
-  _world.playerConfig = playerConfig; // { classType, spellDamageBonus }
+  _world.playerConfig = playerConfig; // { classType, spellDamageBonus, unlockedPassives }
+
+  // Build action buffs from unlocked passive nodes — used throughout the run.
+  // Stored on world so ai.js / player.js can read without coupling to state.js.
+  const unlockedPassives = playerConfig.unlockedPassives || [];
+  _world.actionBuffs = buildActionBuffs(unlockedPassives);
 
   /** Converts tile (col, row) → pixel centre (world-relative). */
   function tileCenter(c, r) {
@@ -445,9 +499,32 @@ export async function startRun(playerConfig = {}) {
   }
 
   // ── Tilemap: custom map OR procedural generation ───────────────────────────
-  // loadPendingCustomMap() reads localStorage['veyra:loadMap'] once and deletes it.
-  // Returns { tilemap, spawns } if a valid custom map was pending, otherwise null.
-  const customMapResult = loadPendingCustomMap();
+  // Priority 1: assets/maps/active.json (file dropped into project by developer).
+  // Priority 2: localStorage['veyra:loadMap'] (sent from map-editor via "Send to Game").
+  // Priority 3: procedural cave generation.
+  //
+  // fetch() with cache:'no-store' so a freshly-placed file is always picked up.
+  // 404 or JSON errors are caught silently — fall through to next priority.
+  let customMapResult = null;
+
+  try {
+    const resp = await fetch('assets/maps/active.json', { cache: 'no-store' });
+    if (resp.ok) {
+      const json = await resp.json();
+      const result = importCustomMap(json);
+      if (result) {
+        customMapResult = result;
+        console.log('[dungeon] assets/maps/active.json loaded as custom map');
+      }
+    }
+  } catch {
+    // 404 or parse error — fall through to localStorage / procedural
+  }
+
+  // If no file-based map, check localStorage (editor "Send to Game" flow)
+  if (!customMapResult) {
+    customMapResult = loadPendingCustomMap();
+  }
 
   let reachable, sc, sr, useCustomSpawns = false, customSpawns = null;
 
@@ -473,6 +550,25 @@ export async function startRun(playerConfig = {}) {
   // Player at start tile
   const pPos = tileCenter(sc, sr);
   _world.player = new PlayerActor({ x: pPos.x, y: pPos.y, classType: playerConfig.classType || 'pyromancer' });
+
+  // Apply passive buff overrides that must be set once at run-start:
+  //  maxHpMul  — scale player's max and starting HP
+  //  spellCdMul — scale Fireball (and other) skill cooldowns
+  {
+    const buffs = _world.actionBuffs;
+    if (buffs.maxHpMul !== 1.0) {
+      _world.player.hpMax = Math.round(100 * buffs.maxHpMul);
+      _world.player.hp    = _world.player.hpMax;
+    } else {
+      // Ensure hpMax is always set even without buffs (referenced by regen)
+      _world.player.hpMax = _world.player.hp;
+    }
+    if (buffs.spellCdMul !== 1.0) {
+      for (const skill of _world.player.skills) {
+        skill.cdTicks = Math.round(skill.cdTicks * buffs.spellCdMul);
+      }
+    }
+  }
 
   // Initial camera position — centred on player before first update tick.
   // getZoomLevel() at this point returns 1.0 (default), but call it correctly
@@ -513,10 +609,12 @@ export async function startRun(playerConfig = {}) {
         collisionHalf:       em.elite ? 14 : 10,
         hp:                  em.elite ? 200 : 100,
         damage:              em.elite ? 35 : 20,
-        moveSpeed:           em.elite ? 11.5 : 9.0,
+        // Slowed from 11.5/9.0 → 9.0/7.0 (-22%) for better kiting window
+        moveSpeed:           em.elite ? 9.0 : 7.0,
         aggroRange:          14 * TILE_SIZE,
         attackRange:         28,
-        attackCooldownTicks: em.elite ? 60 : 80,
+        // Attack CDs increased: normal 80→95 (+19%), elite 60→75 (+25%)
+        attackCooldownTicks: em.elite ? 75 : 95,
         color:               em.elite ? '#cc2222' : '#44cc44',
         goldDrop:            em.elite ? 22 : 12,
         xpDrop:              em.elite ? 40 : 22,
@@ -543,12 +641,13 @@ export async function startRun(playerConfig = {}) {
         collisionHalf:  elite ? 14 : 10,
         hp:             elite ? 200 : 100,
         damage:         elite ? 35 : 20,
-        // Player speed = 10 tiles/s. Elites > player, normals slightly slower
-        // so player can still tactically space — but no kiting forever.
-        moveSpeed:      elite ? 11.5 : 9.0,
+        // Slowed: player base 8.5 tiles/s; elites 9.0 (faster), normals 7.0 (kitable)
+        // Previously 11.5/9.0 — reduced 22% for better thinking window.
+        moveSpeed:      elite ? 9.0 : 7.0,
         aggroRange:     14 * TILE_SIZE,
         attackRange:    28, // pixels — melee contact range (TILE_SIZE=32; ~1 tile reach)
-        attackCooldownTicks: elite ? 60 : 80,
+        // Attack CDs: normal 80→95 ticks (+19%), elite 60→75 (+25%) — more dodge window
+        attackCooldownTicks: elite ? 75 : 95,
         color:          elite ? '#cc2222' : '#44cc44',
         goldDrop:       elite ? 22 : 12,
         xpDrop:         elite ? 40 : 22,
@@ -674,13 +773,16 @@ export function stopRun(outcome) {
   clearInput();
   destroyHUD();
 
-  const xpBase = _world ? _world.killCount * 15 : 0;
-  const xpMult = (_world && _world._deathXpHalf) ? 0.5 : 1.0;
+  const xpBase    = _world ? _world.killCount * 15 : 0;
+  const deathMult = (_world && _world._deathXpHalf) ? 0.5 : 1.0;
+  const xpPassive = (_world && _world.actionBuffs && _world.actionBuffs.xpMul) || 1.0;
+  const goldPassive = (_world && _world.actionBuffs && _world.actionBuffs.goldMul) || 1.0;
+  const rawGold   = _world ? _world.player.goldCollected : 0;
   const result = {
     outcome,
-    goldEarned: _world ? _world.player.goldCollected : 0,
-    xpEarned:   Math.floor(xpBase * xpMult),
-    kills:      _world ? _world.killCount             : 0,
+    goldEarned: Math.round(rawGold * goldPassive),
+    xpEarned:   Math.floor(xpBase * deathMult * xpPassive),
+    kills:      _world ? _world.killCount : 0,
   };
 
   _world = null;

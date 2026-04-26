@@ -160,6 +160,10 @@ function openTowerLobby() {
  * Инициализация игры при загрузке страницы
  */
 function init() {
+  // Preload buff icon PNGs so first activation has no flicker
+  ['buff_mana_surge', 'buff_crystal_fortune', 'buff_iron_armor', 'buff_shadow_step']
+    .forEach(n => { const img = new Image(); img.src = `assets/generated/pixel/${n}.png`; });
+
   // Dev panel — инициализируется до всего остального,
   // доступна только при вводе пароля (Ctrl+Shift+D)
   initDevPanel();
@@ -469,30 +473,6 @@ function bindEvents() {
   });
   document.getElementById('lobby-btn-enter')?.addEventListener('click', () => {
     enterCombat();
-  });
-
-  // Load Custom Map — file input → write to localStorage → start run
-  const lobbyMapFile = document.getElementById('lobby-map-file-input');
-  document.getElementById('lobby-btn-load-map')?.addEventListener('click', () => {
-    lobbyMapFile?.click();
-  });
-  lobbyMapFile?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        // Basic parse check — importCustomMap in dungeon will validate fully
-        JSON.parse(reader.result);
-        localStorage.setItem('veyra:loadMap', reader.result);
-        enterCombat();
-      } catch (err) {
-        showNotification('Invalid map file: ' + err.message, 'warning');
-      }
-    };
-    reader.readAsText(file);
-    // Reset so same file can be re-selected after returning from run
-    e.target.value = '';
   });
 
   // Дом / инвентарь

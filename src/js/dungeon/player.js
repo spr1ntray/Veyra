@@ -11,13 +11,17 @@ import { Actor, ActorState } from '../engine/entities.js';
 // Kept separate from Actor.radius so combat hit-detection range stays independent.
 const PLAYER_COLLISION_HALF = 12;
 
-/** Returns the primary skill definition for a given class. */
+/**
+ * Returns the primary skill definition for a given class.
+ * Fireball base CD: 84 ticks (1.4 s) — slowed from 72 ticks (1.2 s) for better pacing.
+ * spellCdMul from passive buffs is applied after construction in dungeon.js.
+ */
 function _classSkill(classType) {
   switch (classType) {
     case 'stormcaller': return { id: 'lightning', name: 'Lightning Bolt', icon: 'lightning', cdTicks: Math.round(0.7 * 60), lastUsedTick: 0 };
     case 'tidecaster':  return { id: 'waterbolt', name: 'Water Bolt',     icon: 'water',     cdTicks: Math.round(1.0 * 60), lastUsedTick: 0 };
     case 'geomancer':   return { id: 'earthspike',name: 'Earth Spike',    icon: 'earth',     cdTicks: Math.round(1.8 * 60), lastUsedTick: 0 };
-    default:            return { id: 'fireball',  name: 'Fireball',       icon: 'fire',      cdTicks: Math.round(1.2 * 60), lastUsedTick: 0 };
+    default:            return { id: 'fireball',  name: 'Fireball',       icon: 'fire',      cdTicks: Math.round(1.4 * 60), lastUsedTick: 0 };
   }
 }
 
@@ -55,6 +59,15 @@ export class PlayerActor extends Actor {
     if (this.state !== ActorState.DEAD) {
       // Use AABB half-size for movement (not combat radius) — see PLAYER_COLLISION_HALF
       world.tilemap.resolveMove(this, { x: this.vx, y: this.vy }, PLAYER_COLLISION_HALF);
+    }
+
+    // HP regeneration from passive buffs (hpRegenPerSec).
+    // Applied every tick at 1/60 s resolution, clamped to hpMax.
+    if (this.state !== ActorState.DEAD && this.alive) {
+      const buffs = world.actionBuffs;
+      if (buffs && buffs.hpRegenPerSec > 0) {
+        this.hp = Math.min(this.hpMax, this.hp + buffs.hpRegenPerSec / 60);
+      }
     }
 
     if (this.hp <= 0 && this.alive) {
@@ -101,13 +114,38 @@ export class PlayerActor extends Actor {
   }
 
   /**
-   * Override: on any damage, trigger a brief camera shake for feedback.
-   * Shake scales with damage amount (10 dmg → 6px, 50 dmg → 12px peak).
+   * Override: on any damage, apply passive defensive buffs then trigger camera shake.
+   *
+   * Order of operations:
+   *  1. Dodge roll — if success, skip all damage (full miss).
+   *  2. dmgTakenMul — reduce/amplify incoming amount (armour / Glassblower trade-off).
+   *  3. Camera shake proportional to final damage taken.
+   *
+   * @param {number} amount — incoming raw damage
+   * @param {Object} world
+   * @returns {boolean} whether the hit killed the player
    */
   takeDamage(amount, world) {
-    const died = super.takeDamage(amount, world);
+    const buffs = world && world.actionBuffs;
+
+    // Dodge: full miss — no damage, tiny visual hint
+    if (buffs && buffs.dodgeChance > 0 && Math.random() < buffs.dodgeChance) {
+      // Spawn a "DODGE" damage number in grey as visual feedback
+      if (world && typeof world._spawnDamageNumber === 'function') {
+        world._spawnDamageNumber(this.x, this.y - 40, 'DODGE', '#aaaaaa');
+      }
+      return false;
+    }
+
+    // dmgTakenMul: < 1.0 = damage reduction, > 1.0 = fragile trade-off
+    let finalAmount = amount;
+    if (buffs && buffs.dmgTakenMul != null) {
+      finalAmount = Math.round(amount * buffs.dmgTakenMul);
+    }
+
+    const died = super.takeDamage(finalAmount, world);
     if (world && typeof world.triggerShake === 'function') {
-      const mag = Math.min(14, 4 + Math.sqrt(amount) * 1.2);
+      const mag = Math.min(14, 4 + Math.sqrt(finalAmount) * 1.2);
       world.triggerShake(mag, died ? 24 : 12);
     }
     return died;

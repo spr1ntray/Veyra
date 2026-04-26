@@ -149,6 +149,65 @@
       "credits_used": 12
     }
   ],
+  "buff_icons_v1": [
+    {
+      "asset_id": "68d7e228-1e91-4f62-a206-9e5518d2a3d4",
+      "sha12": "63df0a31a7bc",
+      "label": "buff_mana_surge",
+      "local_path": "assets/generated/pixel/buff_mana_surge.png",
+      "width": 48,
+      "height": 48,
+      "generated": "2026-04-26",
+      "description": "BUFF_001 — Mana Surge effect icon. Luminous arcane teardrop + energy arc. Blue palette #4a90d9. 48×48 source, display at 24×24.",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "12dcc736-5bc7-49ae-8ccd-14903fa9f145",
+      "sha12": "3e8daf7b9175",
+      "label": "buff_crystal_fortune",
+      "local_path": "assets/generated/pixel/buff_crystal_fortune.png",
+      "width": 48,
+      "height": 48,
+      "generated": "2026-04-26",
+      "description": "BUFF_002 — Crystal Fortune effect icon. Floating crystalline shard with star-spark tip flare. Violet palette #8b5cd6. 48×48 source, display at 24×24.",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "3211b01a-d1f6-4f8a-bb72-320d9429ff8f",
+      "sha12": "d8afb28794f2",
+      "label": "buff_iron_armor",
+      "local_path": "assets/generated/pixel/buff_iron_armor.png",
+      "width": 48,
+      "height": 48,
+      "generated": "2026-04-26",
+      "description": "BUFF_003 — Iron Flask armor-up effect icon. Kite-shield rune emblem with ember glyph. Gold/grey palette #e8b44a/#3a3a4a. 48×48 source, display at 24×24.",
+      "credits_used": 12
+    },
+    {
+      "asset_id": "7cdfe157-ef6a-405b-ba55-e5b6473fbccc",
+      "sha12": "4903a2a3172e",
+      "label": "buff_shadow_step",
+      "local_path": "assets/generated/pixel/buff_shadow_step.png",
+      "width": 48,
+      "height": 48,
+      "generated": "2026-04-26",
+      "description": "BUFF_004 — Shadow Dust evasion/xp effect icon. Chibi hood silhouette + violet ghost afterimage + dust particles. Ink/violet palette #0e0e18/#8b5cd6. 48×48 source, display at 24×24.",
+      "credits_used": 12
+    }
+  ],
+  "lobby_bg": [
+    {
+      "asset_id": "aa41b4ed-6b7b-4d9d-b646-7323c47b20d9",
+      "sha12": "e95dda82598c",
+      "label": "lobby_bg",
+      "local_path": "assets/generated/pixel/lobby_bg.png",
+      "width": 512,
+      "height": 288,
+      "generated": "2026-04-26",
+      "description": "Lobby background — dark fantasy preparation hall. Symmetric stone walls, central archway, bronze sconces. Replaces programmatic CSS gradient in src/css/lobby.css. Source 512×288, scaled via CSS background-size:cover to 1280×720 viewport.",
+      "credits_used": 12
+    }
+  ],
   "assets_v2": [
     {
       "asset_id": "fb57a935-7c29-4b46-b504-1c2ff368578e",

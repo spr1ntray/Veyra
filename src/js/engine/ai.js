@@ -12,8 +12,9 @@ import { findPath }   from './pathfinding.js';
 import { velToDir }   from './sprites.js';
 import { getZoomLevel } from './render.js';
 
-// Auto-cast scan interval in ticks (6 ticks ≈ 100ms at 60Hz)
-const AUTO_CAST_INTERVAL = 6;
+// Auto-cast scan interval in ticks.
+// 9 ticks ≈ 150ms at 60Hz — less "machine-gun", more deliberate spell-like cadence.
+const AUTO_CAST_INTERVAL = 9;
 
 // ─────────────────────────────────────────────
 // PLAYER AUTO-CAST FSM
@@ -99,7 +100,10 @@ export function updatePlayerAI(player, world) {
 
   // --- Auto-cast scan (every AUTO_CAST_INTERVAL ticks) ---
   if (world.tick % AUTO_CAST_INTERVAL === 0) {
-    const aggroRange = 8 * TILE_SIZE;
+    // Base aggro range scaled by spellRangeMul from passive buffs
+    const buffs      = world.actionBuffs;
+    const rangeMul   = (buffs && buffs.spellRangeMul) || 1.0;
+    const aggroRange = 8 * TILE_SIZE * rangeMul;
     const enemy = _nearestEnemyInRange(player, world, aggroRange);
     if (enemy && player.autoCastEnabled) {
       _trySkill(player, 0, enemy, world);
@@ -158,13 +162,45 @@ function _spawnFireball(player, target, world, dmgBonus = 0) {
   const dy  = target.y - player.y;
   const len = Math.sqrt(dx * dx + dy * dy);
   if (len < 1) return;
-  const speed = 22 * TILE_SIZE;
+
+  const buffs = world.actionBuffs || {};
+
+  // Base constants from SPELLS spec
+  const BASE_SPEED  = 22 * TILE_SIZE;
+  const BASE_RADIUS = 8;
+  const BASE_DMG    = 25;
+  const BASE_TTL    = 1.5;
+
+  // Apply passive multipliers
+  const speed  = BASE_SPEED  * (buffs.projSpeedMul  || 1.0);
+  const radius = BASE_RADIUS * (buffs.projRadiusMul || 1.0);
+  const aoe    = buffs.aoeRadius    || 0;
+  const pierce = buffs.pierceCount  || 0;
+
+  // Base damage: flat INT bonus (legacy compat) + passive spellDmgMul multiplier
+  let dmg = (BASE_DMG + dmgBonus) * (buffs.spellDmgMul || 1.0);
+
+  // Crit roll
+  const crit = Math.random() < (buffs.critChance || 0);
+  if (crit) {
+    dmg *= (buffs.critMul || 1.5);
+  }
+
+  dmg = Math.round(dmg);
+
   world.spawnProjectile({
     x: player.x, y: player.y,
     vx: (dx / len) * speed,
     vy: (dy / len) * speed,
-    radius: 8, ttl: 1.5, dmg: 25 + dmgBonus,
-    ownerId: player.id, team: 'player', color: '#ff6a00',
+    radius,
+    ttl:          BASE_TTL,
+    dmg,
+    ownerId:      player.id,
+    team:         'player',
+    color:        crit ? '#ffdd00' : '#ff6a00', // golden tint on crit
+    aoeRadius:    aoe,    // handled in dungeon._updateProjectiles
+    pierceCount:  pierce, // handled in dungeon._updateProjectiles
+    pierceHits:   pierce, // countdown — decremented on each pierce hit
   });
 }
 
@@ -252,7 +288,11 @@ function _followPath(player, world) {
   const dx      = wp.x - player.x;
   const dy      = wp.y - player.y;
   const dist    = Math.sqrt(dx * dx + dy * dy);
-  const SPEED   = 10 * TILE_SIZE; // tiles/sec × px/tile = px/sec
+  // Player base speed: 8.5 tiles/sec (slowed from 10 — gives ~200ms extra thinking time).
+  // Scaled by moveSpeedMul from passive buffs if available.
+  const buffs      = world.actionBuffs || {};
+  const speedMul   = buffs.moveSpeedMul || 1.0;
+  const SPEED   = 8.5 * TILE_SIZE * speedMul;
   const DT_SEC  = 1 / 60;
 
   if (dist < 4) {

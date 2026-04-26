@@ -1,14 +1,18 @@
 /**
- * passives_canvas.js — Skyrim-style constellation visualiser for the Sigil Tree passive tree.
+ * passives_canvas.js — Sigil Tree canvas renderer (v2 crypt-altar aesthetic)
  *
- * Renders passive nodes as stars on a dark cosmic background, connected by
- * glowing constellation lines. Nodes are arranged in concentric arcs by tier
- * (minor → major → keystone), Universal nodes in a separate top-left cluster.
+ * Renders passive nodes as hexagonal tiles on a hex-cluster constellation
+ * layout, connected by quadratic Bezier curves. Background: dark crypt
+ * stone with faint runic symbols. No stars, nebulae, sparks, or ⛤.
+ *
+ * Layout:
+ *   - Universal cluster: top-left, 2 rows × 4 hex-snapped positions
+ *   - Class cluster: centre-right, 3 rings (inner/mid/outer)
  *
  * Public API:
- *   PassiveTreeCanvas.init(containerEl)  — attach canvas to DOM, start render loop
- *   PassiveTreeCanvas.refresh()          — call after state changes (unlock / respec)
- *   PassiveTreeCanvas.destroy()          — stop loop, remove canvas
+ *   PassiveTreeCanvas.init(containerEl)  — attach canvas, start pulse loop
+ *   PassiveTreeCanvas.refresh()          — recompute layout + node states
+ *   PassiveTreeCanvas.destroy()          — stop loop, remove DOM elements
  */
 
 import {
@@ -21,51 +25,219 @@ import { getState, saveState } from './state.js';
 import { showNotification } from './ui.js';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Palette — strictly from sigil-tree-visual-v2.md
 // ---------------------------------------------------------------------------
 
-/** Class accent colours */
-const CLASS_COLORS = {
-  pyromancer:  '#ff6b35',
-  stormcaller: '#64b5f6',
-  tidecaster:  '#26c6da',
-  geomancer:   '#a5d6a7',
-  universal:   '#ffd54f'
+const C = {
+  bg:           '#0e0e18',   // Shadow Ink
+  tileGrid:     '#1a1a24',   // Crypt Stone
+  locked:       '#3a3a4a',   // Moss Grey
+  available:    '#e8b44a',   // Ember Gold
+  unlocked:     '#ff7a1a',   // Fire Orange
+  edgeLocked:   '#3a3a4a',   // 25% alpha applied at draw-time
+  textPrimary:  '#d8d2c0',   // Bone
+  textDim:      '#3a3a4a',
+  pyromancer:   '#ff7a1a',
+  stormcaller:  '#8b5cd6',
+  tidecaster:   '#5c9fd6',
+  geomancer:    '#5cd66b',
+  universal:    '#e8b44a',
+};
+
+/** Per-class accent colour lookup */
+function classColor(cls) {
+  return C[cls] || C.universal;
+}
+
+// ---------------------------------------------------------------------------
+// Hex geometry
+// ---------------------------------------------------------------------------
+
+/** Flat-top hexagon circumradius per node type */
+const HEX_R = {
+  minor:    20,
+  major:    26,
+  keystone: 34,
 };
 
 /**
- * Node hex-cell outer radius (circumradius of the hexagon).
- * Minor = small hex, Keystone = large glowing hex.
+ * Return the 6 vertices of a flat-top hex centred at (cx, cy) with circumradius r.
+ * @returns {Array<[number,number]>}
  */
-const STAR_RADIUS = {
-  minor:    14,
-  major:    21,
-  keystone: 32
-};
+function hexVertices(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 - Math.PI / 6; // flat-top: offset -30°
+    pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return pts;
+}
 
-/** Number of constellation particles per active (both-unlocked) edge */
-const PARTICLES_PER_EDGE = 4;
+/** Draw a closed hex path at (cx, cy) with circumradius r. */
+function hexPath(ctx, cx, cy, r) {
+  const v = hexVertices(cx, cy, r);
+  ctx.beginPath();
+  ctx.moveTo(v[0][0], v[0][1]);
+  for (let i = 1; i < 6; i++) ctx.lineTo(v[i][0], v[i][1]);
+  ctx.closePath();
+}
 
-/** Total background stars to scatter across the canvas */
-const BG_STAR_COUNT = 320;
+// ---------------------------------------------------------------------------
+// Hex-grid coordinate helpers (offset row layout)
+// ---------------------------------------------------------------------------
 
-// Constellation arc layout parameters (radii from the class tree centre)
-const ARC_RADIUS = {
-  // Minor nodes that have no prerequisites → starter ring close to centre
-  innerMinor: 80,
-  // All other minor + major nodes
-  mid:        180,
-  // Keystones
-  outer:      290
-};
+/**
+ * Convert (col, row) in a flat-top hex grid to pixel (x, y).
+ * Odd rows are offset by half the column spacing.
+ * @param {number} col
+ * @param {number} row
+ * @param {number} hexR   circumradius of hex cell
+ * @param {number} gap    pixel gap between hex cells
+ */
+function hexToPixel(col, row, hexR, gap) {
+  const w    = hexR * 2;                        // flat-top hex width
+  const h    = hexR * Math.sqrt(3);             // flat-top hex height
+  const colW = w * 0.75 + gap;                  // horizontal pitch
+  const rowH = h + gap;                         // vertical pitch
+  const x = col * colW;
+  const y = row * rowH + (col % 2 === 1 ? rowH / 2 : 0);
+  return [x, y];
+}
 
-// The class tree occupies the right ~80% of the canvas; Universal cluster is top-left
-const UNIV_CLUSTER_X_FRAC = 0.12; // fraction of canvas width
-const UNIV_CLUSTER_Y_FRAC = 0.18; // fraction of canvas height
+// ---------------------------------------------------------------------------
+// Runic glyph catalogue — all drawn procedurally via Canvas paths
+// ---------------------------------------------------------------------------
 
-// Angular arc that class nodes spread over (radians).
-// ~220° so the arc doesn't wrap all the way around and leave gaps.
-const CLASS_ARC_SPAN = (220 / 180) * Math.PI;
+/**
+ * Draw a category glyph inside hex at (cx, cy), scaled to innerR.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} glyphKey
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} innerR  usable radius inside the hex
+ */
+function drawGlyph(ctx, glyphKey, cx, cy, innerR) {
+  const s = innerR * 0.55; // glyph scale
+  ctx.beginPath();
+  switch (glyphKey) {
+    case 'triple-stroke': {
+      // 3 vertical strokes ↑↑↑ — damage bonus
+      const gap = s * 0.55;
+      for (let i = -1; i <= 1; i++) {
+        ctx.moveTo(cx + i * gap, cy - s);
+        ctx.lineTo(cx + i * gap, cy + s);
+      }
+      break;
+    }
+    case 'cross': {
+      // Rotated + — crit / range
+      ctx.moveTo(cx - s, cy); ctx.lineTo(cx + s, cy);
+      ctx.moveTo(cx, cy - s); ctx.lineTo(cx, cy + s);
+      break;
+    }
+    case 'square': {
+      // Rounded square — HP
+      const hs = s * 0.75;
+      ctx.rect(cx - hs, cy - hs, hs * 2, hs * 2);
+      break;
+    }
+    case 'triangle-up': {
+      // Triangle △ — mana / speed
+      ctx.moveTo(cx, cy - s);
+      ctx.lineTo(cx + s * 0.87, cy + s * 0.5);
+      ctx.lineTo(cx - s * 0.87, cy + s * 0.5);
+      ctx.closePath();
+      break;
+    }
+    case 'diamond': {
+      // ◆ — major node
+      ctx.moveTo(cx, cy - s);
+      ctx.lineTo(cx + s * 0.7, cy);
+      ctx.lineTo(cx, cy + s);
+      ctx.lineTo(cx - s * 0.7, cy);
+      ctx.closePath();
+      break;
+    }
+    case 'six-star': {
+      // 6-point star (2 overlapping triangles) — keystone
+      for (let t = 0; t < 2; t++) {
+        const offset = t * Math.PI / 3;
+        ctx.moveTo(
+          cx + s * Math.cos(-Math.PI / 2 + offset),
+          cy + s * Math.sin(-Math.PI / 2 + offset)
+        );
+        for (let i = 1; i <= 3; i++) {
+          const a = -Math.PI / 2 + offset + (i * 2 * Math.PI) / 3;
+          ctx.lineTo(cx + s * Math.cos(a), cy + s * Math.sin(a));
+        }
+        ctx.closePath();
+      }
+      break;
+    }
+    case 'circle': {
+      // ⊙ — universal node
+      ctx.arc(cx, cy, s, 0, Math.PI * 2);
+      ctx.moveTo(cx + s * 0.35, cy);
+      ctx.arc(cx, cy, s * 0.35, 0, Math.PI * 2);
+      break;
+    }
+    case 'arrow-up': {
+      // Arrow up — projectile/speed
+      ctx.moveTo(cx, cy - s);
+      ctx.lineTo(cx + s * 0.55, cy);
+      ctx.moveTo(cx, cy - s);
+      ctx.lineTo(cx - s * 0.55, cy);
+      ctx.moveTo(cx, cy - s);
+      ctx.lineTo(cx, cy + s);
+      break;
+    }
+    default: {
+      // Fallback: small circle
+      ctx.arc(cx, cy, s * 0.5, 0, Math.PI * 2);
+    }
+  }
+}
+
+/**
+ * Map a node data object to its glyph key.
+ * Keystones always get 'six-star'. Universal gets 'circle'.
+ * Others keyed on effect fields and name patterns.
+ */
+function glyphForNode(node) {
+  if (node.type === 'keystone') return 'six-star';
+  if (node.type === 'major')    return 'diamond';
+  if (!node.classRestriction)   return 'circle'; // universal minor
+
+  // Class minor — pick by dominant effect
+  const e  = node.actionEffect || {};
+  const name = node.name.toLowerCase();
+  if (e.spellDmgMul || e.critChance || name.includes('damage') || name.includes('ember') || name.includes('crucible')) return 'triple-stroke';
+  if (e.spellCdMul || e.projSpeedMul || name.includes('speed') || name.includes('pace') || name.includes('stride'))   return 'arrow-up';
+  if (e.maxHpMul || e.dmgTakenMul || name.includes('hp') || name.includes('heart') || name.includes('veil') || name.includes('bloom')) return 'square';
+  if (e.spellRangeMul || name.includes('range') || name.includes('reach') || name.includes('eye')) return 'cross';
+  if (e.moveSpeedMul || name.includes('walk') || name.includes('ash') || name.includes('wayfarer')) return 'triangle-up';
+  return 'cross';
+}
+
+// ---------------------------------------------------------------------------
+// Colour helpers
+// ---------------------------------------------------------------------------
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function rgba(hex, a) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function lighten(hex, f) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgb(${Math.min(255, (r + (255 - r) * f) | 0)},${Math.min(255, (g + (255 - g) * f) | 0)},${Math.min(255, (b + (255 - b) * f) | 0)})`;
+}
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -75,90 +247,67 @@ let _canvas    = null;
 let _ctx       = null;
 let _container = null;
 let _rafId     = null;
+let _roHandle  = null;
 
-/** Accumulated rotation (radians) for the central runic sigil */
-let _sigilRot  = 0;
+/** Computed layout nodes: { data, x, y, radius, color, state:'locked'|'available'|'unlocked' } */
+let _nodes = [];
+/** Edges: { from:layoutNode, to:layoutNode } */
+let _edges = [];
 
-/** Computed layout nodes — { data, x, y, radius, color, state } */
-let _nodes     = [];
-/** Edges — { from: layoutNode, to: layoutNode } */
-let _edges     = [];
-/** Particles — { edge, t, speed } */
-let _particles = [];
-
-let _tooltip   = null;   // DOM overlay
+/** Hover node id */
 let _hoveredId = null;
-let _lastTs    = 0;      // timestamp from last RAF for delta-time
-let _roHandle  = null;   // ResizeObserver
 
-// Cached static star field — regenerated when canvas dimensions change
-let _starCache = null;
+/** Selected node id — shown in right panel */
+let _selectedId = null;
 
-// Parallax mouse state: smoothed normalised position in range -0.5..0.5
-let _mx = 0;   // current smoothed X
-let _my = 0;   // current smoothed Y
-let _targetMX = 0;  // raw normalised from last mousemove
-let _targetMY = 0;
+/** Timestamp for last RAF — delta-time budget */
+let _lastTs = 0;
 
-// Last known raw canvas mouse coords (used for cursor-beam feature)
-let _rawMouseX = 0;
-let _rawMouseY = 0;
-
-// ── Zoom / pan view transform ─────────────────────────────────────────────
-// Applied to the graph layer only (nodes, edges, particles).
-// Background (stars, nebulae) stays fixed.
-const MIN_SCALE = 0.35;
-const MAX_SCALE = 3.5;
+// Zoom / pan view transform (graph layer only)
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 4.0;
 let _view = { scale: 1, dx: 0, dy: 0 };
-
-// Drag state (null when not dragging)
 let _drag = null; // { startX, startY, startDx, startDy }
 
-/**
- * Falling gold sparks — SHOULD 6
- * Each spark: { x, y, vx, vy, alpha, r }
- * Initialised once; wraps around when spark falls off the bottom.
- */
-const SPARK_COUNT = 25;
-let _sparks = [];
+/** Pre-generated runic background symbols — re-seeded on canvas resize */
+let _runeCache = null;
+
+/** Minimal hover tooltip (name + type, no description — that lives in sigil-panel) */
+let _tooltip = null;
 
 // ---------------------------------------------------------------------------
-// Public API (object export keeps the same interface as the previous version)
+// Public API
 // ---------------------------------------------------------------------------
 
 export const PassiveTreeCanvas = {
 
-  /**
-   * Attach canvas to containerEl and start the render loop.
-   * @param {HTMLElement} containerEl
-   */
   init(containerEl) {
     _container = containerEl;
 
     _canvas = document.createElement('canvas');
     _canvas.style.cssText = 'display:block;width:100%;height:100%;cursor:default;';
     containerEl.appendChild(_canvas);
-
     _ctx = _canvas.getContext('2d');
 
-    // Tooltip overlay (positioned absolutely inside the container)
+    _roHandle = new ResizeObserver(() => this._resize());
+    _roHandle.observe(containerEl);
+    this._resize();
+
+    // Minimal tooltip overlay (name + type only)
     _tooltip = document.createElement('div');
     _tooltip.className = 'ptc-tooltip';
     _tooltip.style.display = 'none';
     containerEl.style.position = 'relative';
     containerEl.appendChild(_tooltip);
 
-    // Keep pixel dimensions in sync with CSS layout
-    _roHandle = new ResizeObserver(() => this._resize());
-    _roHandle.observe(containerEl);
-    this._resize();
-
-    // Seed falling sparks (SHOULD 6)
-    _initSparks();
-
-    // Input
+    // Input events
     _canvas.addEventListener('mousemove',  e => this._onMouseMove(e));
-    _canvas.addEventListener('mouseleave', () => { _hideTooltip(); _drag = null; });
+    _canvas.addEventListener('mouseleave', () => {
+      _hoveredId = null;
+      _drag = null;
+      _canvas.style.cursor = 'default';
+      if (_tooltip) _tooltip.style.display = 'none';
+    });
     _canvas.addEventListener('click',      e => this._onClick(e));
     _canvas.addEventListener('wheel',      e => this._onWheel(e), { passive: false });
     _canvas.addEventListener('mousedown',  e => this._onMouseDown(e));
@@ -168,37 +317,37 @@ export const PassiveTreeCanvas = {
     this._startLoop();
   },
 
-  /** Recompute layout and particle set from current game state. */
   refresh() {
     _computeLayout();
-    _rebuildParticles();
+    _scheduleRedraw();
   },
 
-  /** Stop loop and remove DOM elements. */
   destroy() {
     if (_rafId)    cancelAnimationFrame(_rafId);
     if (_roHandle) _roHandle.disconnect();
     if (_canvas)   _canvas.remove();
     if (_tooltip)  _tooltip.remove();
-    _canvas = _ctx = _container = _tooltip = _roHandle = null;
-    _nodes = _edges = _particles = [];
-    _view = { scale: 1, dx: 0, dy: 0 };
-    _drag = null;
+    _canvas = _ctx = _container = _roHandle = _tooltip = null;
+    _nodes = []; _edges = [];
+    _view  = { scale: 1, dx: 0, dy: 0 };
+    _drag  = null;
   },
 
-  // ---- internal helpers ----
+  // ---- internals ----
 
   _resize() {
     if (!_canvas || !_container) return;
     const r = _container.getBoundingClientRect();
     _canvas.width  = r.width;
     _canvas.height = r.height;
-    _starCache = null;  // invalidate star field
+    _runeCache = null;
     _computeLayout();
-    _rebuildParticles();
+    _scheduleRedraw();
   },
 
   _startLoop() {
+    // RAF loop: only needed for pulsing animations (available nodes, unlocked glow).
+    // We run it continuously but it's cheap — only background + pulse sin().
     const loop = ts => {
       _drawFrame(ts);
       _rafId = requestAnimationFrame(loop);
@@ -210,32 +359,36 @@ export const PassiveTreeCanvas = {
     if (!_canvas) return;
     const { mx, my } = _canvasCoords(e);
 
-    // Drag-to-pan
     if (_drag) {
       _view.dx = _drag.startDx + (mx - _drag.startX);
       _view.dy = _drag.startDy + (my - _drag.startY);
       _canvas.style.cursor = 'grabbing';
-      return; // skip tooltip while dragging
+      return;
     }
 
-    // Update raw mouse for cursor-beam effect
-    _rawMouseX = mx;
-    _rawMouseY = my;
+    const hit = _hitTest(mx, my);
+    const newId = hit ? hit.data.id : null;
+    if (newId !== _hoveredId) {
+      _hoveredId = newId;
+      _canvas.style.cursor = _hoveredId ? 'pointer' : 'default';
+    }
 
-    // Update parallax target (normalised -0.5..0.5)
-    _targetMX = mx / _canvas.width  - 0.5;
-    _targetMY = my / _canvas.height - 0.5;
-
-    const hit = _getNodeAt(mx, my);
-    if (hit) {
-      _canvas.style.cursor = 'pointer';
-      _hoveredId = hit.data.id;
-      _showTooltip(hit, e.clientX - _canvas.getBoundingClientRect().left,
-                        e.clientY - _canvas.getBoundingClientRect().top);
-    } else {
-      _canvas.style.cursor = 'default';
-      _hoveredId = null;
-      _hideTooltip();
+    // Update hover tooltip (name + type, 2 lines, 140px per ТЗ §1)
+    if (hit && _tooltip) {
+      _tooltip.style.display = 'block';
+      _tooltip.innerHTML = `
+        <div class="ptc-tt-name">${hit.data.name}</div>
+        <div class="ptc-tt-type">${hit.data.type}</div>
+      `;
+      const cx = _container.getBoundingClientRect();
+      let tx = (e.clientX - cx.left) + 14;
+      let ty = (e.clientY - cx.top)  - 30;
+      if (tx + 150 > cx.width - 8)  tx = (e.clientX - cx.left) - 154;
+      if (ty < 2) ty = 2;
+      _tooltip.style.left = `${tx}px`;
+      _tooltip.style.top  = `${ty}px`;
+    } else if (_tooltip) {
+      _tooltip.style.display = 'none';
     }
   },
 
@@ -243,12 +396,11 @@ export const PassiveTreeCanvas = {
     e.preventDefault();
     if (!_canvas) return;
     const { mx, my } = _canvasCoords(e);
-    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const factor   = e.deltaY < 0 ? 1.12 : 1 / 1.12;
     const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, _view.scale * factor));
     if (newScale === _view.scale) return;
-    // Zoom toward cursor position
-    _view.dx = mx + (_view.dx - mx) * (newScale / _view.scale);
-    _view.dy = my + (_view.dy - my) * (newScale / _view.scale);
+    _view.dx    = mx + (_view.dx - mx) * (newScale / _view.scale);
+    _view.dy    = my + (_view.dy - my) * (newScale / _view.scale);
     _view.scale = newScale;
   },
 
@@ -262,39 +414,37 @@ export const PassiveTreeCanvas = {
   _onClick(e) {
     if (!_canvas) return;
     const { mx, my } = _canvasCoords(e);
-    const hit = _getNodeAt(mx, my);
-    if (!hit) return;
+    const hit = _hitTest(mx, my);
+    if (!hit) { _selectedId = null; _updateRightPanel(null); return; }
 
-    const state    = getState();
-    const passives = state.passives || {};
-    const unlocked = passives.unlocked || [];
-
-    if (unlocked.includes(hit.data.id)) return; // already unlocked
-
-    const { canUnlock, reason } = canUnlockNode(hit.data.id, unlocked, passives.leyThreads || 0);
-    if (!canUnlock) {
-      showNotification(reason || 'Cannot unlock', 'warning');
-      return;
-    }
-    _confirmUnlock(hit);
-  }
+    // Select → show in right panel
+    _selectedId = hit.data.id;
+    _updateRightPanel(hit);
+  },
 };
 
 // ---------------------------------------------------------------------------
-// Layout computation
+// Dirty-flag for on-demand redraws (non-animation frames)
+// ---------------------------------------------------------------------------
+
+let _dirty = true;
+function _scheduleRedraw() { _dirty = true; }
+
+// ---------------------------------------------------------------------------
+// Layout computation — hex-cluster constellation
 // ---------------------------------------------------------------------------
 
 /**
- * Compute pixel positions for every node.
+ * Universal cluster: top-left quadrant.
+ * 8 nodes laid out in 2 rows × 4 columns of a flat-top hex grid.
  *
- * Universal nodes: small cluster in the top-left corner, arranged in a
- * tight grid / radial scatter.
+ * Class cluster: centre of canvas.
+ * Organised as 3 hex rings:
+ *   inner (r=1): 6 starter minors (no prereqs)
+ *   mid (r=2):   remaining minors + majors
+ *   outer (r=3): keystones
  *
- * Class nodes: arranged on concentric circular arcs centred in the middle
- * of the right portion of the canvas.
- *   - Starter minors (requires:[])  → inner arc  (r = 80)
- *   - Other minors + all majors     → mid arc     (r = 180)
- *   - Keystones                     → outer arc   (r = 290)
+ * All positions snap to hex-grid centres with a constant cell gap.
  */
 function _computeLayout() {
   if (!_canvas) return;
@@ -305,89 +455,90 @@ function _computeLayout() {
   _nodes = [];
   _edges = [];
 
-  const univLMap  = {};   // id → layoutNode  (universal)
-  const classLMap = {};   // id → layoutNode  (class)
+  const allLMap = {};   // id → layoutNode
 
-  // ---- Universal cluster (top-left) ----
+  // ── Universal cluster ─────────────────────────────────────────────────────
   const univNodes = getUniversalNodes();
-  const uCX = W * UNIV_CLUSTER_X_FRAC;
-  const uCY = H * UNIV_CLUSTER_Y_FRAC;
-  const uCount = univNodes.length;
+  const uBaseX    = W * 0.10;  // cluster anchor x
+  const uBaseY    = H * 0.14;  // cluster anchor y
+  const uCellR    = 24;        // hex circumradius for univ cells
+  const uGap      = 6;         // pixel gap between cells
 
   univNodes.forEach((n, i) => {
-    // Arrange in a small radial fan, 2 rows
-    const cols   = Math.ceil(uCount / 2);
-    const col    = i % cols;
-    const row    = Math.floor(i / cols);
-    const xStep  = 52;
-    const yStep  = 48;
-    const xOff   = (col - (cols - 1) / 2) * xStep;
-    const yOff   = (row - 0.5) * yStep;
-
+    const cols = 4;
+    const col  = i % cols;
+    const row  = Math.floor(i / cols);
+    const [ox, oy] = hexToPixel(col, row, uCellR, uGap);
     const ln = {
       data:   n,
-      x:      uCX + xOff,
-      y:      uCY + yOff,
-      radius: STAR_RADIUS[n.type] || STAR_RADIUS.minor,
-      color:  CLASS_COLORS.universal,
-      state:  'locked'   // resolved each frame in _drawFrame
+      x:      uBaseX + ox,
+      y:      uBaseY + oy,
+      radius: HEX_R.minor,   // universal nodes are all minor-sized
+      color:  C.universal,
+      state:  'locked',
     };
     _nodes.push(ln);
-    univLMap[n.id] = ln;
+    allLMap[n.id] = ln;
   });
 
-  // ---- Class nodes (concentric arcs) ----
+  // ── Class cluster ─────────────────────────────────────────────────────────
   const state     = getState();
   const classType = state.classType || null;
 
   if (classType) {
     const classNodes = getClassNodes(classType);
-    const color      = CLASS_COLORS[classType] || CLASS_COLORS.universal;
+    const accent     = classColor(classType);
 
-    // Arc centre — horizontally centred in the right 75% of the canvas
-    const cx = W * 0.55;
+    // Cluster centre — offset slightly right of canvas centre
+    const cx = W * 0.56;
     const cy = H * 0.52;
 
-    // Split nodes into layout tiers
+    // Ring radii in pixels
+    const RING = { inner: 90, mid: 175, outer: 285 };
+
+    // Partition nodes into rings
     const starterMinors = classNodes.filter(n => n.type === 'minor' && n.requires.length === 0);
     const otherMinors   = classNodes.filter(n => n.type === 'minor' && n.requires.length > 0);
     const majors        = classNodes.filter(n => n.type === 'major');
     const keystones     = classNodes.filter(n => n.type === 'keystone');
 
-    // Mid arc holds other minors + majors together, sorted so minors come first
+    // Mid ring = remaining minors first, then majors (for visual grouping)
     const midNodes = [...otherMinors, ...majors];
 
-    const placeOnArc = (arr, arcR, startAngle) => {
-      const count = arr.length;
+    // Place an array of nodes evenly around a ring, snapped to nearest hex-grid angle
+    function placeRing(arr, ringR) {
+      const count  = arr.length;
       if (count === 0) return;
-      const span  = count === 1 ? 0 : CLASS_ARC_SPAN;
-      const step  = count === 1 ? 0 : span / (count - 1);
+      // Angular step — spread 330° so no full wrap
+      const spanRad = count === 1 ? 0 : (330 / 180) * Math.PI;
+      const stepRad = count === 1 ? 0 : spanRad / (count - 1);
+      // Start from top-left (−90° − half-span)
+      const startA  = -Math.PI / 2 - spanRad / 2;
+
       arr.forEach((n, i) => {
-        const angle = startAngle + i * step;
+        const angle = startA + i * stepRad;
+        // Snap angle to nearest 30° (π/6) to honour hex grid
+        const snapAngle = Math.round(angle / (Math.PI / 6)) * (Math.PI / 6);
         const ln = {
           data:   n,
-          x:      cx + arcR * Math.cos(angle),
-          y:      cy + arcR * Math.sin(angle),
-          radius: STAR_RADIUS[n.type] || STAR_RADIUS.minor,
-          color,
-          state:  'locked'
+          x:      cx + ringR * Math.cos(snapAngle),
+          y:      cy + ringR * Math.sin(snapAngle),
+          radius: HEX_R[n.type] || HEX_R.minor,
+          color:  accent,
+          state:  'locked',
         };
         _nodes.push(ln);
-        classLMap[n.id] = ln;
+        allLMap[n.id] = ln;
       });
-    };
+    }
 
-    // Arc start angle: rotated so the arc fans downward-ish (top = −90° offset)
-    const BASE_ANGLE = -Math.PI / 2 - CLASS_ARC_SPAN / 2;
+    placeRing(starterMinors, RING.inner);
+    placeRing(midNodes,      RING.mid);
+    placeRing(keystones,     RING.outer);
 
-    placeOnArc(starterMinors, ARC_RADIUS.innerMinor, BASE_ANGLE);
-    placeOnArc(midNodes,      ARC_RADIUS.mid,        BASE_ANGLE);
-    placeOnArc(keystones,     ARC_RADIUS.outer,      BASE_ANGLE);
-
-    // Build edges from requires[] relationships
-    const allLMap = { ...univLMap, ...classLMap };
+    // Build edges from requires[] fields
     for (const n of classNodes) {
-      const toLn = classLMap[n.id];
+      const toLn = allLMap[n.id];
       if (!toLn) continue;
       for (const reqId of n.requires) {
         const fromLn = allLMap[reqId];
@@ -395,28 +546,14 @@ function _computeLayout() {
       }
     }
   }
-}
 
-// ---------------------------------------------------------------------------
-// Particle system
-// ---------------------------------------------------------------------------
-
-function _rebuildParticles() {
-  _particles = [];
-  const unlocked = (getState().passives?.unlocked) || [];
-
-  for (const edge of _edges) {
-    const bothUnlocked =
-      unlocked.includes(edge.from.data.id) &&
-      unlocked.includes(edge.to.data.id);
-    if (!bothUnlocked) continue;
-
-    for (let i = 0; i < PARTICLES_PER_EDGE; i++) {
-      _particles.push({
-        edge,
-        t:     i / PARTICLES_PER_EDGE,
-        speed: 0.0025 + Math.random() * 0.0015
-      });
+  // Build universal edges
+  for (const n of univNodes) {
+    const toLn = allLMap[n.id];
+    if (!toLn) continue;
+    for (const reqId of n.requires) {
+      const fromLn = allLMap[reqId];
+      if (fromLn) _edges.push({ from: fromLn, to: toLn });
     }
   }
 }
@@ -428,21 +565,12 @@ function _rebuildParticles() {
 function _drawFrame(ts) {
   if (!_ctx || !_canvas) return;
 
-  const dt = Math.min((ts - _lastTs) / 1000, 0.05); // seconds, capped at 50ms
-  _lastTs  = ts;
-
-  // Smooth parallax follow — lerp factor 0.08 per frame (independent of dt for feel)
-  _mx += (_targetMX - _mx) * 0.08;
-  _my += (_targetMY - _my) * 0.08;
-
-  const W       = _canvas.width;
-  const H       = _canvas.height;
-  const state   = getState();
-  const unlocked = (state.passives?.unlocked) || [];
-  // leyThreads field kept for save compat; displayed as "Sigils"
+  // Node states change only when unlock/respec occur, but pulse needs every frame.
+  // Resolve states every frame (cheap array lookup).
+  const state    = getState();
+  const unlocked = state.passives?.unlocked || [];
   const threads  = state.passives?.leyThreads || 0;
 
-  // Resolve node states (unlocked / available / locked)
   for (const ln of _nodes) {
     if (unlocked.includes(ln.data.id)) {
       ln.state = 'unlocked';
@@ -452,869 +580,401 @@ function _drawFrame(ts) {
     }
   }
 
-  // ---- Clear ----
+  const W = _canvas.width;
+  const H = _canvas.height;
+
   _ctx.clearRect(0, 0, W, H);
 
-  // ---- Cosmic background ----
-  _ctx.fillStyle = '#030508';
-  _ctx.fillRect(0, 0, W, H);
+  // ── Background: crypt stone + faint runes ─────────────────────────────────
+  _drawBackground(W, H, ts);
 
-  // Nebula cloud layer drawn first, under stars
-  _drawNebula(W, H, ts);
-  _drawStars(W, H, ts);
-
-  // Decorative magic circle — very faint arcane substrate
-  _drawMagicCircle(W, H, state.classType);
-
-  // Falling gold sparks (not affected by zoom/pan)
-  _updateAndDrawSparks(dt, W, H, ts);
-
-  // Graph parallax offset (reduced when zoomed in)
-  const parallaxFactor = Math.max(0, 1 - (_view.scale - 1) * 0.5);
-  const gOX = _mx * 12 * parallaxFactor + _view.dx;
-  const gOY = _my * 12 * parallaxFactor + _view.dy;
-
-  // Apply view transform to graph layer
+  // ── Graph layer (with zoom/pan transform) ─────────────────────────────────
   _ctx.save();
   _ctx.translate(_view.dx, _view.dy);
   _ctx.scale(_view.scale, _view.scale);
-  const invScale = 1 / _view.scale;
 
-  // Compute graph-local offsets (parallax only, no pan — pan is in ctx transform)
-  const pOX = _mx * 12 * parallaxFactor;
-  const pOY = _my * 12 * parallaxFactor;
-
-  // ---- Universal cluster label ----
-  _ctx.font      = `${10 * invScale}px "Cinzel", serif`;
-  _ctx.fillStyle = 'rgba(255, 213, 79, 0.4)';
-  _ctx.textAlign = 'center';
-  _ctx.fillText('UNIVERSAL', W * UNIV_CLUSTER_X_FRAC + pOX, H * UNIV_CLUSTER_Y_FRAC - 58 + pOY);
-
-  // ---- Class label ----
-  if (state.classType) {
-    _ctx.font      = `${11 * invScale}px "Cinzel", serif`;
-    _ctx.fillStyle = `${_colorWithAlpha(CLASS_COLORS[state.classType] || '#ffffff', 0.35)}`;
-    _ctx.textAlign = 'center';
-    _ctx.fillText(state.classType.toUpperCase(), W * 0.55 + pOX, H * 0.52 - ARC_RADIUS.outer - 22 + pOY);
-  }
-
-  // ---- Edges ----
-  for (const edge of _edges) {
-    const fromU = unlocked.includes(edge.from.data.id);
-    const toU   = unlocked.includes(edge.to.data.id);
-    _drawEdge(edge.from, edge.to, fromU && toU, pOX, pOY, ts);
-  }
-
-  // ---- Particles ----
-  for (const p of _particles) {
-    p.t += p.speed;
-    if (p.t > 1) p.t -= 1;
-    _drawParticle(p, ts, pOX, pOY);
-  }
-
-  // ---- Cursor beams ----
-  // Convert raw mouse to graph space for beam origin check
-  const gMouseX = (_rawMouseX - _view.dx) * invScale;
-  const gMouseY = (_rawMouseY - _view.dy) * invScale;
-  _drawCursorBeams(unlocked, pOX, pOY, gMouseX, gMouseY);
-
-  // ---- Nodes ----
-  for (const ln of _nodes) {
-    _drawNode(ln, ts, pOX, pOY);
-  }
+  _drawEdges(unlocked, ts);
+  _drawNodes(ts);
 
   _ctx.restore();
 
-  // ---- Zoom hint (fade in when zoomed, then fade) ----
-  if (_view.scale !== 1 || (_view.dx !== 0 || _view.dy !== 0)) {
+  // ── Zoom hint (bottom-right, always in screen space) ──────────────────────
+  if (_view.scale !== 1 || _view.dx !== 0 || _view.dy !== 0) {
     _ctx.save();
-    _ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    _ctx.fillStyle = 'rgba(216,210,192,0.25)';
     _ctx.font = '10px monospace';
     _ctx.textAlign = 'right';
     _ctx.fillText(`${(_view.scale * 100) | 0}%  scroll=zoom  drag=pan`, W - 8, H - 8);
     _ctx.restore();
   }
+
+  _lastTs  = ts;
+  _dirty   = false;
 }
 
 // ---------------------------------------------------------------------------
-// Falling gold sparks (SHOULD 6)
+// Background: crypt stone + faint rune symbols
 // ---------------------------------------------------------------------------
 
 /**
- * Seed the _sparks array with randomised starting positions spread across
- * the full canvas height so sparks don't all spawn at once on init.
+ * Build a cache of runic background glyphs — placed randomly, drawn at ~0.07 alpha.
+ * Very cheap to render (just strokes). Re-seeded on canvas resize.
  */
-function _initSparks() {
-  _sparks = [];
-  const W = _canvas ? _canvas.width  : 800;
-  const H = _canvas ? _canvas.height : 600;
-  for (let i = 0; i < SPARK_COUNT; i++) {
-    _sparks.push(_makeSpark(W, H, /* randomY */ true));
-  }
-}
-
-/**
- * Create a single spark with randomised properties.
- * @param {number} W - canvas width
- * @param {number} H - canvas height
- * @param {boolean} randomY - if true, start at random Y (for init); else spawn at top
- */
-function _makeSpark(W, H, randomY = false) {
-  return {
-    x:     Math.random() * W,
-    y:     randomY ? Math.random() * H : -4,
-    vy:    8 + Math.random() * 12,          // fall speed px/sec (8–20)
-    vxAmp: 10 + Math.random() * 20,         // sinusoidal X drift amplitude
-    phase: Math.random() * Math.PI * 2,     // random phase offset
-    freq:  0.4 + Math.random() * 0.8,       // oscillation frequency
-    alpha: 0.3 + Math.random() * 0.3,       // base alpha 0.3–0.6
-    r:     1,                               // radius 1px per spec
-  };
-}
-
-/**
- * Advance each spark by dt seconds and draw. Wraps sparks that fall off the bottom.
- */
-function _updateAndDrawSparks(dt, W, H, ts) {
-  const t = ts / 1000;
-  _ctx.save();
-  _ctx.fillStyle = 'rgba(201,168,76,1)';  // gold
-
-  for (const sp of _sparks) {
-    // Advance position
-    sp.y += sp.vy * dt;
-    // Sinusoidal X drift
-    const driftX = Math.sin(t * sp.freq + sp.phase) * sp.vxAmp;
-    const drawX  = sp.x + driftX;
-
-    // Wrap when off the bottom
-    if (sp.y > H + 4) {
-      sp.y = -4;
-      sp.x = Math.random() * W;
-    }
-
-    // Draw
-    _ctx.globalAlpha = sp.alpha;
-    _ctx.beginPath();
-    _ctx.arc(drawX, sp.y, sp.r, 0, Math.PI * 2);
-    _ctx.fill();
-  }
-
-  _ctx.restore();
-}
-
-// ---------------------------------------------------------------------------
-// Drawing: background stars
-// ---------------------------------------------------------------------------
-
-/**
- * Draws real-looking space nebulae using layered elliptical gradients.
- * Inspired by emission nebulae (Orion, Eagle, Lagoon) — warm reds/oranges,
- * cool blues/teals, bright star clusters embedded in dense regions.
- * Uses a slow breathing animation for a living-cosmos feel.
- */
-function _drawNebula(W, H, ts) {
-  const t = ts / 1000;
-
-  // ── Layer 1: large diffuse background clouds ──────────────────────────────
-  const bgClouds = [
-    // [cxF, cyF, rx, ry, rot, r, g, b, alpha0, alpha1]
-    // Large emission cloud (red hydrogen, Orion-like)
-    [ 0.55, 0.50, 340, 240, 0.2,  210, 55, 40,  0.00, 0.16 ],
-    // Outer purple/blue haze
-    [ 0.50, 0.48, 380, 280, -0.1, 60,  35, 140, 0.00, 0.10 ],
-    // Right-side teal reflection
-    [ 0.72, 0.55, 240, 160, 0.4,  30, 110, 180, 0.00, 0.09 ],
-    // Left cluster — blue stellar nursery
-    [ 0.32, 0.52, 200, 160, -0.3, 40,  80, 200, 0.00, 0.08 ],
-  ];
-
-  for (const [cxF, cyF, rx, ry, rot, r, g, b, a0, a1] of bgClouds) {
-    const cx = W * cxF;
-    const cy = H * cyF;
-    _ctx.save();
-    _ctx.translate(cx, cy);
-    _ctx.rotate(rot);
-    _ctx.scale(1, ry / rx);
-    const grad = _ctx.createRadialGradient(0, 0, rx * a0, 0, 0, rx);
-    grad.addColorStop(0,   `rgba(${r},${g},${b},${a1})`);
-    grad.addColorStop(0.45, `rgba(${r},${g},${b},${(a1 * 0.5).toFixed(3)})`);
-    grad.addColorStop(1,   'rgba(0,0,0,0)');
-    _ctx.fillStyle = grad;
-    _ctx.beginPath();
-    _ctx.arc(0, 0, rx, 0, Math.PI * 2);
-    _ctx.fill();
-    _ctx.restore();
-  }
-
-  // ── Layer 2: bright inner nebula cores (hot spots) ────────────────────────
-  const hotSpots = [
-    // Bright emission core — red/orange, like Trapezium in Orion
-    [ 0.60, 0.46, 120,  80, 0.3,  240, 100, 50, 0.22 ],
-    // Oxygen region — teal/green
-    [ 0.64, 0.52,  90,  60, 0.6,  60, 200, 170, 0.18 ],
-    // Golden star-forming region
-    [ 0.55, 0.42,  80,  55, -0.2, 255, 200, 80, 0.15 ],
-    // Purple Herbig-Haro jets
-    [ 0.48, 0.58, 100,  50, 0.8,  140, 50, 200, 0.14 ],
-    // Secondary orange hot spot
-    [ 0.70, 0.44,  70,  50, -0.4, 255, 140, 30, 0.16 ],
-    // Blue reflection nebula patch
-    [ 0.42, 0.40,  85,  60,  0.5,  80, 160, 240, 0.13 ],
-  ];
-
-  const breathe = 1 + 0.04 * Math.sin(t * 0.3);
-  for (const [cxF, cyF, rx, ry, rot, r, g, b, alpha] of hotSpots) {
-    const cx = W * cxF;
-    const cy = H * cyF;
-    const a  = alpha * breathe;
-    _ctx.save();
-    _ctx.translate(cx, cy);
-    _ctx.rotate(rot);
-    _ctx.scale(1, ry / rx);
-    const grad = _ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-    grad.addColorStop(0,    `rgba(${r},${g},${b},${a.toFixed(3)})`);
-    grad.addColorStop(0.35, `rgba(${r},${g},${b},${(a * 0.55).toFixed(3)})`);
-    grad.addColorStop(0.7,  `rgba(${r},${g},${b},${(a * 0.15).toFixed(3)})`);
-    grad.addColorStop(1,    'rgba(0,0,0,0)');
-    _ctx.fillStyle = grad;
-    _ctx.beginPath();
-    _ctx.arc(0, 0, rx, 0, Math.PI * 2);
-    _ctx.fill();
-    _ctx.restore();
-  }
-
-  // ── Layer 3: bright star clusters embedded in nebulae ────────────────────
-  _drawNebulaStarClusters(W, H, ts);
-}
-
-/**
- * Colored star clusters within bright nebula regions.
- * Stars have tinted colors based on the nebula region (O-type blue-white,
- * M-type orange-red, young T Tauri yellow-white).
- */
-function _drawNebulaStarClusters(W, H, ts) {
-  const t = ts / 1000;
-
-  // Seeded deterministic RNG for consistent clusters each session
-  let rng = 77431;
+function _buildRuneCache(W, H) {
+  let rng = 99371;
   const rand = () => { rng = (rng * 16807) % 2147483647; return (rng - 1) / 2147483646; };
 
-  const clusters = [
-    { cx: 0.60, cy: 0.46, r: 55, count: 55, R: 255, G: 180, B: 140 }, // orange-red stars
-    { cx: 0.64, cy: 0.52, r: 45, count: 40, R: 160, G: 230, B: 220 }, // teal-white stars
-    { cx: 0.55, cy: 0.42, r: 50, count: 50, R: 255, G: 245, B: 200 }, // yellow-white
-    { cx: 0.70, cy: 0.44, r: 40, count: 35, R: 255, G: 200, B: 100 }, // orange hot stars
-    { cx: 0.42, cy: 0.40, r: 40, count: 30, R: 160, G: 190, B: 255 }, // blue-white O-type
-    { cx: 0.48, cy: 0.58, r: 35, count: 25, R: 200, G: 140, B: 255 }, // purple young stars
-  ];
-
-  for (const cl of clusters) {
-    const cx = W * cl.cx;
-    const cy = H * cl.cy;
-    for (let i = 0; i < cl.count; i++) {
-      const angle = rand() * Math.PI * 2;
-      const dist  = Math.pow(rand(), 0.6) * cl.r; // bias toward center
-      const sx    = cx + Math.cos(angle) * dist;
-      const sy    = cy + Math.sin(angle) * dist;
-      // Star brightness: core cluster brighter
-      const brightness = 0.3 + rand() * 0.55;
-      const twinkle    = rand() > 0.65 ? 0.15 * Math.sin(t * (1 + rand() * 3) + rand() * 6) : 0;
-      const alpha      = Math.max(0, Math.min(1, brightness + twinkle));
-      const sr         = rand() * 1.4 + 0.3;
-
-      _ctx.beginPath();
-      _ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-      _ctx.fillStyle = `rgba(${cl.R},${cl.G},${cl.B},${alpha.toFixed(2)})`;
-      _ctx.fill();
-
-      // Occasional "bright star" with a small cross glow
-      if (rand() > 0.92) {
-        _ctx.save();
-        _ctx.globalAlpha = alpha * 0.4;
-        _ctx.strokeStyle = `rgba(${cl.R},${cl.G},${cl.B},1)`;
-        _ctx.lineWidth = 0.5;
-        const gl = sr * 4;
-        _ctx.beginPath(); _ctx.moveTo(sx - gl, sy); _ctx.lineTo(sx + gl, sy); _ctx.stroke();
-        _ctx.beginPath(); _ctx.moveTo(sx, sy - gl); _ctx.lineTo(sx, sy + gl); _ctx.stroke();
-        _ctx.restore();
-      }
-    }
+  const RUNE_KEYS = ['triple-stroke', 'cross', 'square', 'triangle-up', 'diamond', 'circle', 'arrow-up'];
+  const COUNT = 40;
+  const runes = [];
+  for (let i = 0; i < COUNT; i++) {
+    runes.push({
+      x:     rand() * W,
+      y:     rand() * H,
+      r:     18 + rand() * 28,
+      key:   RUNE_KEYS[Math.floor(rand() * RUNE_KEYS.length)],
+      alpha: 0.03 + rand() * 0.05,
+      // slight breathe offset so they don't all pulse in sync
+      phase: rand() * Math.PI * 2,
+    });
   }
+  return runes;
 }
 
-function _drawStars(W, H, ts) {
-  // Rebuild cache when canvas size changes (already invalidated in _resize)
-  if (!_starCache || _starCache.w !== W || _starCache.h !== H) {
-    const stars = [];
-    let rng = 12345;
-    const rand = () => {
-      rng = (rng * 16807) % 2147483647;
-      return (rng - 1) / 2147483646;
-    };
-    for (let i = 0; i < BG_STAR_COUNT; i++) {
-      // Classify as near (large, bright) or far (small, dim) for parallax
-      const isFar = i < BG_STAR_COUNT * 0.7;
-      stars.push({
-        x:       rand() * W,
-        y:       rand() * H,
-        r:       isFar ? rand() * 0.9 + 0.3 : rand() * 1.2 + 0.8,
-        baseA:   isFar ? rand() * 0.25 + 0.04 : rand() * 0.35 + 0.15,
-        // Some stars twinkle: give them a random phase + speed
-        twinkle: rand() > 0.7,
-        phase:   rand() * Math.PI * 2,
-        freq:    rand() * 1.5 + 0.5,
-        far:     isFar
-      });
-    }
-    _starCache = { w: W, h: H, stars };
-  }
+function _drawBackground(W, H, ts) {
+  // Base fill — Shadow Ink
+  _ctx.fillStyle = C.bg;
+  _ctx.fillRect(0, 0, W, H);
 
-  const tsS = ts / 1000;
-  for (const s of _starCache.stars) {
-    const alpha = s.twinkle
-      ? s.baseA * (0.6 + 0.4 * Math.sin(tsS * s.freq + s.phase))
-      : s.baseA;
-
-    // Parallax offset: far stars move less, near stars more
-    const offX = s.far ? _mx * 8 : _mx * 20;
-    const offY = s.far ? _my * 8 : _my * 20;
-
+  // Very faint tile grid suggestion — a few subtle horizontal lines
+  _ctx.save();
+  _ctx.strokeStyle = rgba(C.tileGrid, 0.06);
+  _ctx.lineWidth = 1;
+  const gridStep = 48;
+  for (let y = gridStep; y < H; y += gridStep) {
     _ctx.beginPath();
-    _ctx.arc(s.x + offX, s.y + offY, s.r, 0, Math.PI * 2);
-    _ctx.fillStyle = `rgba(210,225,255,${alpha.toFixed(3)})`;
-    _ctx.fill();
+    _ctx.moveTo(0, y);
+    _ctx.lineTo(W, y);
+    _ctx.stroke();
   }
+  for (let x = gridStep; x < W; x += gridStep) {
+    _ctx.beginPath();
+    _ctx.moveTo(x, 0);
+    _ctx.lineTo(x, H);
+    _ctx.stroke();
+  }
+  _ctx.restore();
+
+  // Faint runic glyphs — "engravings in stone"
+  if (!_runeCache) _runeCache = _buildRuneCache(W, H);
+
+  const t = ts / 1000;
+  _ctx.save();
+  _ctx.strokeStyle = C.textDim;
+  _ctx.lineWidth = 1;
+  for (const ru of _runeCache) {
+    // Very slow breathing — period ~8s, amplitude ±0.02 alpha
+    const breathe = ru.alpha + 0.02 * Math.sin(t * 0.4 + ru.phase);
+    _ctx.globalAlpha = Math.max(0, breathe);
+    drawGlyph(_ctx, ru.key, ru.x, ru.y, ru.r);
+    _ctx.stroke();
+  }
+  _ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// Drawing: magic circle (decorative arcane substrate under the node graph)
+// Edge rendering — quadratic Bezier curves
 // ---------------------------------------------------------------------------
 
 /**
- * Renders 3 faint concentric rings and 6 hexagram spokes centred on the class
- * tree origin (W*0.55, H*0.52).  Everything is drawn at very low opacity so
- * the design reads as an atmospheric suggestion rather than a solid UI element.
- *
- * @param {number} W          canvas pixel width
- * @param {number} H          canvas pixel height
- * @param {string|null} classType  used to tint the rings with the class colour
+ * For each edge, draw a quadratic Bezier with the control point offset
+ * perpendicular to the edge by 15% of the edge length.
+ * Active edges (both nodes unlocked): warm gold gradient, thicker.
+ * Inactive edges: dim #3a3a4a at 25% alpha.
  */
-function _drawMagicCircle(W, H, classType) {
-  const cx = W * 0.55;
-  const cy = H * 0.52;
+function _drawEdges(unlocked, ts) {
+  for (const edge of _edges) {
+    const { from, to } = edge;
+    const bothUnlocked = unlocked.includes(from.data.id) && unlocked.includes(to.data.id);
 
-  // Resolve tint from class colour, falling back to gold
-  const baseColor = CLASS_COLORS[classType] || CLASS_COLORS.universal;
-  // Parse hex to rgb for rgba() strings
-  const r = parseInt(baseColor.slice(1, 3), 16);
-  const g = parseInt(baseColor.slice(3, 5), 16);
-  const b = parseInt(baseColor.slice(5, 7), 16);
-
-  _ctx.save();
-
-  // --- Concentric rings ---
-  const rings = [
-    { radius: 90,  alpha: 0.07 },
-    { radius: 185, alpha: 0.05 },
-    { radius: 295, alpha: 0.04 },
-  ];
-
-  for (const { radius, alpha } of rings) {
-    _ctx.beginPath();
-    _ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    _ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
-    _ctx.lineWidth   = 1;
-    _ctx.stroke();
-  }
-
-  // --- Hexagram spokes (6 lines from centre, every 60°) ---
-  const SPOKE_REACH = 310; // px from centre to tip
-  const SPOKE_ALPHA = 0.05;
-  _ctx.strokeStyle = `rgba(${r},${g},${b},${SPOKE_ALPHA})`;
-  _ctx.lineWidth   = 0.75;
-
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * Math.PI * 2;
-    _ctx.beginPath();
-    _ctx.moveTo(cx, cy);
-    _ctx.lineTo(cx + SPOKE_REACH * Math.cos(angle), cy + SPOKE_REACH * Math.sin(angle));
-    _ctx.stroke();
-  }
-
-  // --- Central rotating runic sigil ---
-  // Advances _sigilRot by 0.002 rad per call (~60fps ≈ 7°/sec, full rotation ≈ 50s)
-  _sigilRot += 0.002;
-
-  _ctx.save();
-  _ctx.translate(cx, cy);
-  _ctx.rotate(_sigilRot);
-
-  // Draw the sigil as text centred at origin; alpha 0.14
-  const sigilAlpha = 0.14 + 0.04 * Math.sin(_sigilRot * 3); // gentle alpha breathe
-  _ctx.globalAlpha = sigilAlpha;
-  _ctx.shadowColor = baseColor;
-  _ctx.shadowBlur  = 24;
-  _ctx.font        = '64px serif';
-  _ctx.fillStyle   = baseColor;
-  _ctx.textAlign   = 'center';
-  _ctx.textBaseline = 'middle';
-  _ctx.fillText('⛤', 0, 0);
-
-  _ctx.restore();
-
-  _ctx.restore();
-}
-
-// ---------------------------------------------------------------------------
-// Drawing: edges
-// ---------------------------------------------------------------------------
-
-function _drawEdge(n1, n2, bothUnlocked, oX = 0, oY = 0, ts = 0) {
-  _ctx.save();
-  if (bothUnlocked) {
-    // SHOULD 4: living ley-line — 3 sinusoidal passes at different alphas
-    const color = n1.color;
-    const x1 = n1.x + oX;
-    const y1 = n1.y + oY;
-    const x2 = n2.x + oX;
-    const y2 = n2.y + oY;
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    const x1 = from.x, y1 = from.y;
+    const x2 = to.x,   y2 = to.y;
+    const dx = x2 - x1, dy = y2 - y1;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    // Perpendicular unit vector for wave displacement
-    const nx = -dy / len;
-    const ny =  dx / len;
-    const t = ts / 1000; // seconds
 
-    // Draw 3 passes: bright core, mid glow, outer haze
-    const passes = [
-      { alpha: 0.85, lineWidth: 2, shadowBlur: 12 },
-      { alpha: 0.4,  lineWidth: 3, shadowBlur: 8  },
-      { alpha: 0.2,  lineWidth: 4, shadowBlur: 4  },
-    ];
+    // Perpendicular offset for Bezier control point (15% of edge length)
+    const perp  = len * 0.15;
+    const nx    = -dy / len;
+    const ny    =  dx / len;
+    const cpX   = (x1 + x2) / 2 + nx * perp;
+    const cpY   = (y1 + y2) / 2 + ny * perp;
 
-    for (const pass of passes) {
-      _ctx.globalAlpha = pass.alpha;
-      _ctx.strokeStyle = color;
-      _ctx.lineWidth   = pass.lineWidth;
-      _ctx.shadowColor = color;
-      _ctx.shadowBlur  = pass.shadowBlur;
-      _ctx.setLineDash([]);
-      _ctx.beginPath();
-
-      // Build wavy path: sample 24 segments, sine wave perpendicular to edge
-      const STEPS = 24;
-      for (let i = 0; i <= STEPS; i++) {
-        const frac = i / STEPS;
-        const px = x1 + dx * frac;
-        const py = y1 + dy * frac;
-        // Wave: amplitude 2px, frequency driven by time + position
-        const wave = Math.sin(t * 2 + frac * Math.PI * 4) * 2;
-        const wx = px + nx * wave;
-        const wy = py + ny * wave;
-        if (i === 0) _ctx.moveTo(wx, wy);
-        else         _ctx.lineTo(wx, wy);
-      }
-      _ctx.stroke();
-    }
-  } else {
-    // Dim dashed line for inactive edges
-    _ctx.strokeStyle = 'rgba(100,120,160,0.25)';
-    _ctx.lineWidth   = 1;
-    _ctx.setLineDash([4, 7]);
-    _ctx.globalAlpha = 1;
+    _ctx.save();
     _ctx.beginPath();
-    _ctx.moveTo(n1.x + oX, n1.y + oY);
-    _ctx.lineTo(n2.x + oX, n2.y + oY);
+    _ctx.moveTo(x1, y1);
+    _ctx.quadraticCurveTo(cpX, cpY, x2, y2);
+
+    if (bothUnlocked) {
+      // Active edge: gradient from class accent → ember gold
+      const accent  = from.color;
+      const grad    = _ctx.createLinearGradient(x1, y1, x2, y2);
+      grad.addColorStop(0, rgba(accent, 0.85));
+      grad.addColorStop(1, rgba(C.available, 0.85));
+      _ctx.strokeStyle = grad;
+      _ctx.lineWidth   = 2;
+      _ctx.shadowColor = accent;
+      _ctx.shadowBlur  = 6;
+    } else {
+      _ctx.strokeStyle = rgba(C.edgeLocked, 0.25);
+      _ctx.lineWidth   = 1;
+      _ctx.shadowBlur  = 0;
+    }
     _ctx.stroke();
-    _ctx.setLineDash([]);
+    _ctx.restore();
+
+    // Active edges: 2 slow drift sparks along the Bezier
+    if (bothUnlocked) {
+      _drawEdgeSparks(edge, cpX, cpY, ts);
+    }
   }
-  _ctx.restore();
 }
-
-// ---------------------------------------------------------------------------
-// Drawing: particles along active edges
-// ---------------------------------------------------------------------------
-
-function _drawParticle(p, ts, oX = 0, oY = 0) {
-  const { from, to } = p.edge;
-  const x     = from.x + (to.x - from.x) * p.t + oX;
-  const y     = from.y + (to.y - from.y) * p.t + oY;
-  const alpha = 0.6 + 0.4 * Math.sin(ts / 300 + p.t * Math.PI * 4);
-
-  _ctx.save();
-  _ctx.globalAlpha = alpha;
-  _ctx.shadowColor = from.color;
-  _ctx.shadowBlur  = 10;
-  _ctx.beginPath();
-  _ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-  _ctx.fillStyle = '#ffffff';
-  _ctx.fill();
-  _ctx.restore();
-}
-
-// ---------------------------------------------------------------------------
-// Drawing: cursor proximity beams
-// ---------------------------------------------------------------------------
 
 /**
- * For each node within 60px of the cursor, draw a thin glowing line from the
- * node centre toward the cursor. Opacity falls off with distance so the beam
- * fades as the cursor moves away.
- *
- * @param {string[]} unlocked  Array of unlocked node IDs
- * @param {number}   oX        Graph parallax X offset
- * @param {number}   oY        Graph parallax Y offset
+ * Draw 2 sparks drifting along the quadratic Bezier of an active edge.
+ * Speed: 0.0015/frame (very slow, per ТЗ §5).
  */
-function _drawCursorBeams(unlocked, oX, oY, mouseX, mouseY) {
-  const BEAM_RADIUS = 60;
-  const mx = mouseX !== undefined ? mouseX : _rawMouseX;
-  const my = mouseY !== undefined ? mouseY : _rawMouseY;
+function _drawEdgeSparks(edge, cpX, cpY, ts) {
+  const { from, to } = edge;
+  // Two sparks offset by 0.5 so they're on opposite halves
+  const tOffsets = [((ts * 0.0015) % 1), ((ts * 0.0015 + 0.5) % 1)];
+  for (const t of tOffsets) {
+    // Quadratic Bezier point: B(t) = (1-t)²·P0 + 2(1-t)t·CP + t²·P1
+    const it = 1 - t;
+    const sx = it * it * from.x + 2 * it * t * cpX + t * t * to.x;
+    const sy = it * it * from.y + 2 * it * t * cpY + t * t * to.y;
+
+    _ctx.save();
+    _ctx.globalAlpha = 0.7 + 0.3 * Math.sin(ts / 400 + t * Math.PI * 2);
+    _ctx.shadowColor = from.color;
+    _ctx.shadowBlur  = 8;
+    _ctx.fillStyle   = C.available;
+    _ctx.beginPath();
+    _ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+    _ctx.fill();
+    _ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Node rendering
+// ---------------------------------------------------------------------------
+
+function _drawNodes(ts) {
+  const tsS = ts / 1000;
 
   for (const ln of _nodes) {
-    const nx = ln.x + oX;
-    const ny = ln.y + oY;
-    const dx = mx - nx;
-    const dy = my - ny;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const { data, x, y, radius, color, state } = ln;
+    const isUnlocked  = state === 'unlocked';
+    const isAvailable = state === 'available';
+    const isHovered   = _hoveredId === data.id;
+    const isSelected  = _selectedId === data.id;
 
-    if (dist > BEAM_RADIUS || dist < 1) continue;
-
-    // Closer = more opaque; linear falloff from 1.0 at dist=0 to 0 at BEAM_RADIUS
-    const opacity = (1 - dist / BEAM_RADIUS) * 0.7;
+    // Pulse sin for available nodes — period 1.6s (ω = 2π/1.6 ≈ 3.93)
+    const pulse   = isAvailable ? (Math.sin(tsS * 3.93) * 0.5 + 0.5) : 0;
+    // Quieter pulse for unlocked glow — period 3s
+    const gPulse  = isUnlocked  ? (Math.sin(tsS * 2.09) * 0.5 + 0.5) : 0;
 
     _ctx.save();
-    _ctx.globalAlpha  = opacity;
-    _ctx.strokeStyle  = ln.color;
-    _ctx.lineWidth    = 1;
-    _ctx.shadowColor  = ln.color;
-    _ctx.shadowBlur   = 8;
-    _ctx.beginPath();
-    _ctx.moveTo(nx, ny);
-    _ctx.lineTo(mx, my);
+
+    // ── Outer glow / pulse ring ───────────────────────────────────────────
+    if (isAvailable) {
+      // Pulsing outer ring: alpha 0.5↔1.0 (ТЗ §4)
+      const ringAlpha = 0.5 + pulse * 0.5;
+      _ctx.save();
+      _ctx.shadowColor = color;
+      _ctx.shadowBlur  = 8;
+      hexPath(_ctx, x, y, radius + 4);
+      _ctx.strokeStyle = rgba(color, ringAlpha);
+      _ctx.lineWidth   = 1.5;
+      _ctx.stroke();
+      _ctx.restore();
+    }
+    if (isUnlocked) {
+      // Static halo with quiet pulse — 12px blur, class-accent 40% → 30%↔50%
+      const haloAlpha = 0.30 + gPulse * 0.20;
+      _ctx.save();
+      _ctx.shadowColor = color;
+      _ctx.shadowBlur  = 12;
+      hexPath(_ctx, x, y, radius + 6);
+      _ctx.strokeStyle = rgba(color, haloAlpha);
+      _ctx.lineWidth   = 1.5;
+      _ctx.stroke();
+      _ctx.restore();
+    }
+
+    // ── Hex fill ──────────────────────────────────────────────────────────
+    hexPath(_ctx, x, y, radius);
+    if (isUnlocked) {
+      // Warm gradient: centre #3a2418 → rim #1a1a24
+      const grad = _ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0,   '#3a2418');
+      grad.addColorStop(1,   C.tileGrid);
+      _ctx.fillStyle = grad;
+    } else {
+      _ctx.fillStyle = C.tileGrid;
+    }
+    _ctx.fill();
+
+    // ── Hex border ────────────────────────────────────────────────────────
+    hexPath(_ctx, x, y, radius);
+    if (isUnlocked) {
+      _ctx.strokeStyle = color;
+      _ctx.lineWidth   = 1.5;
+    } else if (isAvailable) {
+      _ctx.strokeStyle = C.available;
+      _ctx.lineWidth   = 1;
+    } else {
+      _ctx.strokeStyle = rgba(C.locked, 0.5);
+      _ctx.lineWidth   = 1;
+    }
     _ctx.stroke();
+
+    // ── Hover inset: 2px inner hex ring ───────────────────────────────────
+    if (isHovered || isSelected) {
+      hexPath(_ctx, x, y, radius - 3);
+      _ctx.strokeStyle = rgba(C.available, 0.6);
+      _ctx.lineWidth   = 1;
+      _ctx.stroke();
+    }
+
+    // ── Runic glyph inside hex ────────────────────────────────────────────
+    const gKey      = glyphForNode(data);
+    const innerR    = radius * 0.55;
+    const glyphAlpha = isUnlocked ? 1.0 : isAvailable ? 0.70 : 0.30;
+    const glyphColor = isUnlocked ? lighten(color, 0.15)
+                     : isAvailable ? C.available
+                     : C.locked;
+    _ctx.save();
+    _ctx.globalAlpha = glyphAlpha;
+    _ctx.strokeStyle = glyphColor;
+    _ctx.lineWidth   = 1.2;
+    _ctx.shadowColor = isUnlocked ? color : 'transparent';
+    _ctx.shadowBlur  = isUnlocked ? 4 : 0;
+    drawGlyph(_ctx, gKey, x, y, innerR);
+    _ctx.stroke();
+    _ctx.restore();
+
+    // ── Keystone unlocked: rotating 6-dot halo ────────────────────────────
+    if (data.type === 'keystone' && isUnlocked) {
+      const dotR   = radius * 1.5;
+      // 60-second full rotation (ω = 2π/60 ≈ 0.1047)
+      const rot    = _lastTs / 1000 * 0.1047;
+      _ctx.save();
+      _ctx.fillStyle = rgba(color, 0.6);
+      for (let d = 0; d < 6; d++) {
+        const a  = rot + (d / 6) * Math.PI * 2;
+        const dx = x + dotR * Math.cos(a);
+        const dy = y + dotR * Math.sin(a);
+        _ctx.beginPath();
+        _ctx.arc(dx, dy, 1.5, 0, Math.PI * 2);
+        _ctx.fill();
+      }
+      _ctx.restore();
+    }
+
+    // ── Label below hex ───────────────────────────────────────────────────
+    const labelAlpha = isUnlocked ? 0.9 : isAvailable ? 0.65 : 0.3;
+    _ctx.globalAlpha  = labelAlpha;
+    _ctx.fillStyle    = isUnlocked ? C.textPrimary : isAvailable ? C.textPrimary : C.textDim;
+    _ctx.font         = `11px "Cinzel", Georgia, serif`;
+    _ctx.textAlign    = 'center';
+    _ctx.textBaseline = 'top';
+    _ctx.shadowColor  = 'rgba(0,0,0,0.9)';
+    _ctx.shadowBlur   = 3;
+
+    const labelLines = _wrapLabel(data.name, radius);
+    const labelY     = y + radius + 5;
+    labelLines.forEach((line, i) => {
+      _ctx.fillText(line, x, labelY + i * 13);
+    });
+
     _ctx.restore();
   }
 }
 
 // ---------------------------------------------------------------------------
-// Drawing: nodes (stars)
+// Right panel updates
 // ---------------------------------------------------------------------------
-
-function _drawNode(ln, ts, oX = 0, oY = 0) {
-  const { data, radius, color, state } = ln;
-  const x = ln.x + oX;
-  const y = ln.y + oY;
-  const isUnlocked  = state === 'unlocked';
-  const isAvailable = state === 'available';
-  const isHovered   = _hoveredId === data.id;
-  const tsS         = ts / 1000;
-
-  // Pulse factor (0..1) for available nodes — time-based sin for smooth animation
-  const pulse = isAvailable ? (Math.sin(tsS * 2.0) * 0.5 + 0.5) : 0;
-  // Scale for available nodes: oscillates 0.95↔1.05
-  const availableScale = isAvailable ? (0.95 + 0.10 * pulse) : 1.0;
-
-  // Effective alpha
-  // locked: 0.14 (desaturated); available: mid-range with pulse; unlocked: full
-  let alpha;
-  if (isUnlocked)       alpha = 1.0;
-  else if (isAvailable) alpha = 0.55 + pulse * 0.35;
-  else                  alpha = 0.14;  // MUST 3: locked nodes very dim
-
-  _ctx.save();
-  _ctx.globalAlpha = alpha;
-
-  // --- Outer aura / glow gradient ---
-  if (isUnlocked) {
-    // MUST 3 unlocked: constant double radial halo  (inner color@0.8 → outer color@0 at 4×radius)
-    const innerR = radius * 1.5;
-    const outerR = radius * 4.0;
-    const grad1 = _ctx.createRadialGradient(x, y, 0, x, y, innerR);
-    grad1.addColorStop(0, _colorWithAlpha(color, 0.8));
-    grad1.addColorStop(1, _colorWithAlpha(color, 0.15));
-    _ctx.beginPath();
-    _ctx.arc(x, y, innerR, 0, Math.PI * 2);
-    _ctx.fillStyle = grad1;
-    _ctx.fill();
-
-    const grad2 = _ctx.createRadialGradient(x, y, innerR * 0.8, x, y, outerR);
-    grad2.addColorStop(0, _colorWithAlpha(color, 0.15));
-    grad2.addColorStop(1, 'rgba(0,0,0,0)');
-    _ctx.beginPath();
-    _ctx.arc(x, y, outerR, 0, Math.PI * 2);
-    _ctx.fillStyle = grad2;
-    _ctx.fill();
-  } else if (isAvailable) {
-    // Standard pulsing aura for available nodes
-    const auraR = radius * (2.4 + pulse * 0.8);
-    const auraA = 0.12 + pulse * 0.15;
-    const grad  = _ctx.createRadialGradient(x, y, radius * 0.5, x, y, auraR);
-    grad.addColorStop(0, _colorWithAlpha(color, auraA));
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    _ctx.beginPath();
-    _ctx.arc(x, y, auraR, 0, Math.PI * 2);
-    _ctx.fillStyle = grad;
-    _ctx.fill();
-  }
-
-  // Available: dashed pulsing ring just outside the hex
-  if (isAvailable) {
-    const dashRingR = radius * 1.55 * availableScale;
-    _ctx.save();
-    _ctx.globalAlpha = 0.5 + pulse * 0.3;
-    _ctx.strokeStyle = _colorWithAlpha(color, 0.7);
-    _ctx.lineWidth   = 1;
-    _ctx.setLineDash([2, 4]);
-    _ctx.shadowColor = color;
-    _ctx.shadowBlur  = 4;
-    _ctx.beginPath();
-    _ctx.arc(x, y, dashRingR, 0, Math.PI * 2);
-    _ctx.stroke();
-    _ctx.setLineDash([]);
-    _ctx.restore();
-  }
-
-  // --- Keystone pulsing ring ---
-  if (data.type === 'keystone' && isUnlocked) {
-    const ringAlpha  = 0.25 + 0.2 * Math.sin(tsS * 1.5);
-    const ringRadius = radius + 10 + 4 * Math.sin(tsS * 1.5);
-    _ctx.beginPath();
-    _ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
-    _ctx.strokeStyle = _colorWithAlpha(color, ringAlpha);
-    _ctx.lineWidth   = 1.5;
-    _ctx.stroke();
-  }
-
-  // --- Star shape ---
-  const drawRadius = isAvailable ? radius + pulse * 2 : radius;
-  const shadowStr  = isUnlocked  ? (data.type === 'keystone' ? 28 : 18)
-                   : isAvailable ? (8 + pulse * 8)
-                   : 0;
-
-  _ctx.shadowColor = color;
-  _ctx.shadowBlur  = isHovered ? shadowStr + 12 : shadowStr;
-
-  _drawStar(x, y, drawRadius, color, isUnlocked, isAvailable);
-
-  // --- Hover ring ---
-  if (isHovered) {
-    _ctx.beginPath();
-    _ctx.arc(x, y, drawRadius + 5, 0, Math.PI * 2);
-    _ctx.strokeStyle = _colorWithAlpha(color, 0.7);
-    _ctx.lineWidth   = 1.5;
-    _ctx.stroke();
-  }
-
-  _ctx.shadowBlur  = 0;
-  _ctx.shadowColor = 'transparent';
-
-  // --- Label below star ---
-  _ctx.globalAlpha = isUnlocked ? 0.9 : (isAvailable ? 0.65 + pulse * 0.25 : 0.3);
-  _ctx.textAlign   = 'center';
-  _ctx.textBaseline = 'top';
-
-  const labelLines = _wrapLabel(data.name, drawRadius);
-  const fontSize   = 10;
-  _ctx.font        = `${fontSize}px "Cinzel", serif`;
-  _ctx.fillStyle   = '#ffffff';
-
-  // Subtle text shadow for legibility on the star field
-  _ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  _ctx.shadowBlur  = 4;
-
-  const labelY = y + drawRadius + 5;
-  labelLines.forEach((line, i) => {
-    _ctx.fillText(line, x, labelY + i * (fontSize + 2));
-  });
-
-  _ctx.restore();
-}
 
 /**
- * Draw a hexagonal rune-cell node (PoE/Diablo-style) centred at (cx, cy).
- * Shape: flat-top hexagon with an inner circle for unlocked nodes.
- *
- * @param {number}  cx, cy   Centre
- * @param {number}  r        Outer hex circumradius
- * @param {string}  color    Accent colour (hex)
- * @param {boolean} unlocked
- * @param {boolean} available
+ * Update the `.sigil-panel` DOM element with info from the selected node.
+ * Called on canvas click; also called with null to clear the panel.
  */
-function _drawStar(cx, cy, r, color, unlocked, available) {
-  // ── Hex path (flat-top orientation) ──────────────────────────────────────
-  function hexPath(radius) {
-    _ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
-      const px = cx + radius * Math.cos(a);
-      const py = cy + radius * Math.sin(a);
-      if (i === 0) _ctx.moveTo(px, py);
-      else         _ctx.lineTo(px, py);
-    }
-    _ctx.closePath();
+function _updateRightPanel(ln) {
+  const panel = document.getElementById('sigil-panel');
+  if (!panel) return;
+
+  if (!ln) {
+    panel.innerHTML = _emptyPanelHTML();
+    return;
   }
-
-  // ── Background plate ─────────────────────────────────────────────────────
-  if (unlocked) {
-    const grad = _ctx.createRadialGradient(cx, cy - r * 0.25, r * 0.1, cx, cy, r * 1.1);
-    grad.addColorStop(0, _lighten(color, 0.25));
-    grad.addColorStop(0.55, _darken(color, 0.25));
-    grad.addColorStop(1,   _darken(color, 0.55));
-    hexPath(r);
-    _ctx.fillStyle = grad;
-    _ctx.fill();
-  } else if (available) {
-    hexPath(r);
-    _ctx.fillStyle = '#141824';
-    _ctx.fill();
-  } else {
-    hexPath(r);
-    _ctx.fillStyle = '#0c0e14';
-    _ctx.fill();
-  }
-
-  // ── Outer hex border ─────────────────────────────────────────────────────
-  hexPath(r);
-  _ctx.strokeStyle = unlocked  ? color
-                   : available ? _darken(color, 0.15)
-                   : 'rgba(55,65,90,0.45)';
-  _ctx.lineWidth   = unlocked ? 1.5 : 1;
-  _ctx.stroke();
-
-  // ── Inner ring (inset by 3px) for visual depth ───────────────────────────
-  if (r > 14) {
-    hexPath(r - 3);
-    _ctx.strokeStyle = unlocked  ? _lighten(color, 0.35)
-                     : available ? _darken(color, 0.3)
-                     : 'rgba(40,50,75,0.35)';
-    _ctx.lineWidth = 0.75;
-    _ctx.stroke();
-  }
-
-  // ── Bright inner circle for unlocked nodes (rune glow core) ──────────────
-  if (unlocked) {
-    const coreR = r * 0.38;
-    const cGrad = _ctx.createRadialGradient(cx, cy - coreR * 0.3, coreR * 0.1, cx, cy, coreR);
-    cGrad.addColorStop(0, '#ffffff');
-    cGrad.addColorStop(0.4, _lighten(color, 0.7));
-    cGrad.addColorStop(1, color);
-    _ctx.beginPath();
-    _ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
-    _ctx.fillStyle = cGrad;
-    _ctx.fill();
-  } else if (available) {
-    // Pulsing dim core dot
-    _ctx.beginPath();
-    _ctx.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
-    _ctx.fillStyle = _darken(color, 0.4);
-    _ctx.fill();
-    // Bright rim on the inner dot
-    _ctx.strokeStyle = _darken(color, 0.1);
-    _ctx.lineWidth = 1;
-    _ctx.stroke();
-  } else {
-    // Locked: tiny dark circle, nearly invisible
-    _ctx.beginPath();
-    _ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2);
-    _ctx.fillStyle = 'rgba(30,38,60,0.7)';
-    _ctx.fill();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tooltip
-// ---------------------------------------------------------------------------
-
-function _showTooltip(ln, canvasX, canvasY) {
-  if (!_tooltip || !_container) return;
 
   const state    = getState();
-  const unlocked = (state.passives?.unlocked) || [];
+  const unlocked = state.passives?.unlocked || [];
   const threads  = state.passives?.leyThreads || 0;
   const node     = ln.data;
 
   const isUnlocked = unlocked.includes(node.id);
   const { canUnlock, reason } = canUnlockNode(node.id, unlocked, threads);
 
-  let statusHtml;
-  if (isUnlocked) {
-    statusHtml = '<span class="ptc-tt-status ptc-tt-unlocked">Unlocked</span>';
-  } else if (canUnlock) {
-    statusHtml = `<span class="ptc-tt-status ptc-tt-available">Click to unlock (${node.cost} Sigil${node.cost > 1 ? 's' : ''})</span>`;
-  } else {
-    statusHtml = `<span class="ptc-tt-status ptc-tt-locked">${reason || 'Locked'}</span>`;
-  }
+  const typeBadge = {
+    minor:    'MINOR',
+    major:    'MAJOR',
+    keystone: 'KEYSTONE',
+  }[node.type] || node.type.toUpperCase();
 
   const reqNames = node.requires
     .map(id => PASSIVE_NODES_MAP[id]?.name || id)
     .join(', ');
 
-  _tooltip.innerHTML = `
-    <div class="ptc-tt-name">${node.name}</div>
-    <div class="ptc-tt-type">${_capitalize(node.type)}</div>
-    <div class="ptc-tt-desc">${node.description}</div>
-    ${reqNames ? `<div class="ptc-tt-req">Requires: ${reqNames}</div>` : ''}
-    ${statusHtml}
+  const accent = ln.color;
+
+  let actionHTML;
+  if (isUnlocked) {
+    actionHTML = `<div class="sp-status sp-status-unlocked">Unlocked</div>`;
+  } else if (canUnlock) {
+    actionHTML = `<button class="sp-unlock-btn" id="sp-unlock-btn">Unlock &mdash; ${node.cost} Sigil${node.cost > 1 ? 's' : ''}</button>`;
+  } else {
+    actionHTML = `<div class="sp-status sp-status-locked">${reason || 'Locked'}</div>`;
+  }
+
+  panel.innerHTML = `
+    <div class="sp-node-name" style="color:${C.available}">${node.name.toUpperCase()}</div>
+    <div class="sp-type-badge">${typeBadge} &bull; ${node.cost} Sigil${node.cost > 1 ? 's' : ''}</div>
+    <div class="sp-divider"></div>
+    <div class="sp-desc">${node.description}</div>
+    ${reqNames ? `<div class="sp-req">Requires: ${reqNames}</div>` : ''}
+    <div class="sp-spacer"></div>
+    ${actionHTML}
   `;
 
-  const TT_W = 220;
-  const TT_H = 130;
-  const cW   = _container.getBoundingClientRect().width;
-  const cH   = _container.getBoundingClientRect().height;
-
-  let tx = canvasX + 18;
-  let ty = canvasY - TT_H / 2;
-  if (tx + TT_W > cW - 8)  tx = canvasX - TT_W - 18;
-  if (ty < 4)               ty = 4;
-  if (ty + TT_H > cH - 4)  ty = cH - TT_H - 4;
-
-  _tooltip.style.display = 'block';
-  _tooltip.style.left    = `${tx}px`;
-  _tooltip.style.top     = `${ty}px`;
+  const unlockBtn = document.getElementById('sp-unlock-btn');
+  if (unlockBtn) {
+    unlockBtn.addEventListener('click', () => {
+      _doUnlock(node.id);
+      // Re-render panel after unlock
+      _updateRightPanel(_nodes.find(n => n.data.id === node.id) || null);
+    });
+  }
 }
 
-function _hideTooltip() {
-  if (_tooltip)  _tooltip.style.display = 'none';
-  _hoveredId = null;
-  if (_canvas) _canvas.style.cursor = 'default';
+function _emptyPanelHTML() {
+  return `<div class="sp-empty">Select a node to view details</div>`;
 }
 
 // ---------------------------------------------------------------------------
-// Unlock confirm overlay
+// Unlock
 // ---------------------------------------------------------------------------
-
-function _confirmUnlock(ln) {
-  const node = ln.data;
-
-  const existing = document.getElementById('ptc-confirm-overlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.id        = 'ptc-confirm-overlay';
-  overlay.className = 'ptc-confirm-overlay';
-  overlay.innerHTML = `
-    <div class="ptc-confirm-box">
-      <div class="ptc-confirm-title">${node.name}</div>
-      <div class="ptc-confirm-desc">${node.description}</div>
-      <div class="ptc-confirm-cost">Cost: ${node.cost} Sigil${node.cost > 1 ? 's' : ''}</div>
-      <div class="ptc-confirm-btns">
-        <button class="ptc-btn-yes">Unlock</button>
-        <button class="ptc-btn-no">Cancel</button>
-      </div>
-    </div>
-  `;
-
-  _container.appendChild(overlay);
-
-  overlay.querySelector('.ptc-btn-yes').addEventListener('click', () => {
-    overlay.remove();
-    _doUnlock(node.id);
-  });
-  overlay.querySelector('.ptc-btn-no').addEventListener('click', () => overlay.remove());
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-}
 
 function _doUnlock(nodeId) {
   const state    = getState();
@@ -1336,10 +996,14 @@ function _doUnlock(nodeId) {
 
   showNotification(`Unlocked: ${node.name}`, 'success');
   PassiveTreeCanvas.refresh();
-  _refreshLeftPanel(passives);
+  _refreshCounters(passives);
+
+  // Re-select to update panel action button
+  const selectedLn = _nodes.find(n => n.data.id === nodeId);
+  if (selectedLn) _updateRightPanel(selectedLn);
 }
 
-function _refreshLeftPanel(passives) {
+function _refreshCounters(passives) {
   const el1 = document.getElementById('passives-threads-value');
   const el2 = document.getElementById('passives-header-threads');
   if (el1) el1.textContent = passives.leyThreads;
@@ -1347,107 +1011,53 @@ function _refreshLeftPanel(passives) {
 }
 
 // ---------------------------------------------------------------------------
-// Hit-test
+// Hit-test: return layout node under canvas coords, or null
 // ---------------------------------------------------------------------------
 
-/**
- * Return the layout node under canvas coordinates (mx, my), or null.
- * Stars use a circular hit zone slightly larger than the visual radius.
- */
-function _getNodeAt(mx, my) {
-  // Convert canvas coords → graph-local coords (accounting for zoom/pan + parallax)
-  const invScale = 1 / _view.scale;
-  const gx = (mx - _view.dx) * invScale;
-  const gy = (my - _view.dy) * invScale;
-  const parallaxFactor = Math.max(0, 1 - (_view.scale - 1) * 0.5);
-  const oX = _mx * 12 * parallaxFactor;
-  const oY = _my * 12 * parallaxFactor;
+function _hitTest(mx, my) {
+  // Convert canvas coords to graph-local coords (zoom+pan transform)
+  const inv = 1 / _view.scale;
+  const gx  = (mx - _view.dx) * inv;
+  const gy  = (my - _view.dy) * inv;
+
   for (let i = _nodes.length - 1; i >= 0; i--) {
-    const ln = _nodes[i];
-    const dx = gx - (ln.x + oX);
-    const dy = gy - (ln.y + oY);
+    const ln   = _nodes[i];
+    const dx   = gx - ln.x;
+    const dy   = gy - ln.y;
     const hitR = ln.radius + 6;
     if (dx * dx + dy * dy <= hitR * hitR) return ln;
   }
   return null;
 }
 
-/** Convert a MouseEvent to pixel coordinates on the canvas. */
 function _canvasCoords(e) {
-  const rect  = _canvas.getBoundingClientRect();
+  const rect   = _canvas.getBoundingClientRect();
   const scaleX = _canvas.width  / rect.width;
   const scaleY = _canvas.height / rect.height;
   return {
     mx: (e.clientX - rect.left) * scaleX,
-    my: (e.clientY - rect.top)  * scaleY
+    my: (e.clientY - rect.top)  * scaleY,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Label wrapping
+// Label wrapping: max 2 lines
 // ---------------------------------------------------------------------------
 
-/**
- * Split a node name into at most 2 lines that fit beneath the star.
- * Tries to break on whitespace; always returns 1–2 strings.
- */
 function _wrapLabel(name, radius) {
-  // Rough char limit based on star size
-  const maxChars = Math.max(8, Math.floor(radius * 1.4));
+  const maxChars = Math.max(8, Math.floor(radius * 1.6));
   if (name.length <= maxChars) return [name];
 
   const words = name.split(' ');
   if (words.length === 1) return [name.slice(0, maxChars - 1) + '…'];
 
-  // Try to fit into two lines
-  let line1 = '';
-  let line2 = '';
-  let splitIdx = words.length; // index of first word that goes to line2
+  let line1 = '', line2 = '';
   for (let wi = 0; wi < words.length; wi++) {
     const w = words[wi];
-    if (line1.length === 0)                       line1 = w;
+    if (!line1)                              line1 = w;
     else if ((line1 + ' ' + w).length <= maxChars) line1 += ' ' + w;
-    else { splitIdx = wi; line2 = words.slice(wi).join(' '); break; }
+    else { line2 = words.slice(wi).join(' '); break; }
   }
   if (line2.length > maxChars) line2 = line2.slice(0, maxChars - 1) + '…';
   return line2 ? [line1, line2] : [line1];
-}
-
-// ---------------------------------------------------------------------------
-// Colour helpers
-// ---------------------------------------------------------------------------
-
-function _hexToRgb(hex) {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16)
-  ];
-}
-
-function _colorWithAlpha(hex, alpha) {
-  const [r, g, b] = _hexToRgb(hex);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-/**
- * Lighten (factor > 0) or darken (factor < 0) a hex colour.
- * Factor range: -1..1
- */
-function _lighten(hex, factor) {
-  const [r, g, b] = _hexToRgb(hex);
-  if (factor >= 0) {
-    return `rgb(${Math.min(255, (r + (255 - r) * factor) | 0)},${Math.min(255, (g + (255 - g) * factor) | 0)},${Math.min(255, (b + (255 - b) * factor) | 0)})`;
-  }
-  const f = 1 + factor;
-  return `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
-}
-
-function _darken(hex, factor) {
-  return _lighten(hex, -factor);
-}
-
-function _capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

@@ -501,9 +501,14 @@ function renderInvBuffs() {
     pill.style.borderColor = buff.color;
     // Convert hex to rgba for background
     pill.style.background = hexToRgba(buff.color, 0.15);
-    pill.innerHTML = `<span class="buff-pill-label" style="color:${buff.color}">${buff.symbol}</span>` +
+    // Render pixel icon if available, fall back to symbol text for unknown buffs
+    const iconHtml = buff.iconPath
+      ? `<img src="${buff.iconPath}" class="buff-pill-icon" alt="${buff.label}">`
+      : `<span class="buff-pill-label" style="color:${buff.color}">${buff.symbol}</span>`;
+    pill.innerHTML = iconHtml +
       `<span class="buff-pill-text">${buff.label}</span>` +
       `<span class="buff-pill-count">${buff.combatsLeft}</span>`;
+    pill.title = `${buff.label} — ${buff.combatsLeft} combats left`;
     container.appendChild(pill);
   }
 }

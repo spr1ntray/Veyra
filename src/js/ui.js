@@ -90,8 +90,14 @@ export function renderHudBuffs() {
     const g = parseInt(buff.color.slice(3, 5), 16);
     const b = parseInt(buff.color.slice(5, 7), 16);
     pill.style.background = `rgba(${r}, ${g}, ${b}, 0.2)`;
-    pill.style.color = buff.color;
-    pill.textContent = buff.symbol;
+    // Render pixel icon if available, fall back to symbol for unknown buffs
+    if (buff.iconPath) {
+      pill.innerHTML = `<img src="${buff.iconPath}" class="buff-pill-icon" alt="${buff.label}">` +
+        `<span class="buff-pill-counter">${buff.combatsLeft}</span>`;
+    } else {
+      pill.style.color = buff.color;
+      pill.textContent = buff.symbol;
+    }
     pill.title = `${buff.label} — ${buff.combatsLeft} combats left`;
     container.appendChild(pill);
   }

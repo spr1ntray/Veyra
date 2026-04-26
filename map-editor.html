@@ -245,6 +245,7 @@
 
     <h3>Save / Load</h3>
     <button id="btn-send-game" class="go" style="width:100%;margin-bottom:6px;background:linear-gradient(180deg,#1a3a1a,#0a1e0a);border-color:#5a9a5a;color:#b8e8b8">▶ Send to Game</button>
+    <button id="btn-save-active" class="go" style="width:100%;margin-bottom:6px;background:linear-gradient(180deg,#1a2a3a,#0a1420);border-color:#4a8ab8;color:#a8d8f8">⤓ Save as active.json</button>
     <button id="btn-save" class="go" style="width:100%;margin-bottom:4px">⤓ Download JSON</button>
     <button id="btn-load" style="width:100%;margin-bottom:4px">⤒ Load JSON…</button>
     <button id="btn-save-local" style="width:100%;margin-bottom:4px">💾 Save to Browser</button>
@@ -1068,6 +1069,26 @@ document.getElementById('btn-send-game').onclick = () => {
   const json = buildJSON();
   localStorage.setItem('veyra:loadMap', JSON.stringify(json));
   window.open('index.html', '_blank');
+};
+
+// ─── Save as active.json ───────────────────────────────────────────────────
+// Downloads the current map as `active.json` — ready to drop into assets/maps/.
+document.getElementById('btn-save-active').onclick = () => {
+  const starts = markers.filter(m => m.type === 'start');
+  const exits  = markers.filter(m => m.type === 'exit');
+  const issues = [];
+  if (starts.length !== 1) issues.push(`need exactly 1 Player Start (have ${starts.length})`);
+  if (exits.length  !== 1) issues.push(`need exactly 1 Exit Portal (have ${exits.length})`);
+  if (issues.length) {
+    alert('Map not ready:\n• ' + issues.join('\n• '));
+    return;
+  }
+  const blob = new Blob([JSON.stringify(buildJSON(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'active.json';
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 document.getElementById('btn-save').onclick = () => {

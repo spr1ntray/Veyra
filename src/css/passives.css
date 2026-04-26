@@ -1,165 +1,174 @@
-/* ===== PASSIVES SCREEN — Sigil Tree ===== */
+/* ===== SIGIL TREE — v2 crypt-altar aesthetic ===== */
+/*
+ * Palette (cute-minimalism + tide blue extension):
+ *   #0e0e18  Shadow Ink       — canvas BG
+ *   #1a1a24  Crypt Stone      — panel/tile grid
+ *   #3a3a4a  Moss Grey        — locked, borders
+ *   #e8b44a  Ember Gold       — available, header title, right-panel name
+ *   #ff7a1a  Fire Orange      — unlocked (Pyromancer accent)
+ *   #d8d2c0  Bone             — primary text
+ *   #05050a  Deep Void        — header bg
+ *
+ * NO: #0d1130, #080c1e, #9db8d4, navy/purple from old spec.
+ * NO: box-shadow blur > 8px on UI chrome (canvas is fine).
+ */
+
+/* ── Screen root ─────────────────────────────────────────────────────────── */
 
 #screen-passives.active {
-  background: #080c1e;
+  background: #0e0e18;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  color: #c9b99a;
-  font-family: 'Crimson Text', Georgia, serif;
+  color: #d8d2c0;
+  font-family: 'Cinzel', Georgia, serif;
 }
 
-/* --- Header --- */
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
 .passives-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 20px;
-  border-bottom: 1px solid #2a2e4a;
-  background: #0d1130;
+  padding: 0 20px;
+  height: 56px;
   flex-shrink: 0;
+  background: #05050a;
+  border-bottom: 1px solid #e8b44a;
 }
 
 .passives-back-btn {
   background: none;
-  border: 1px solid #3a3e5e;
-  color: #c9b99a;
+  border: 1px solid #3a3a4a;
+  color: #d8d2c0;
   padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-family: 'Crimson Text', serif;
-  font-size: 14px;
-  transition: border-color 0.2s, color 0.2s;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 13px;
+  transition: border-color 0.15s, color 0.15s;
 }
 .passives-back-btn:hover {
-  border-color: #c9a84c;
-  color: #c9a84c;
+  border-color: #e8b44a;
+  color: #e8b44a;
 }
 
 .passives-header-title {
-  font-family: 'Cinzel', serif;
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 22px;
-  color: #c9a84c;
+  color: #e8b44a;
   letter-spacing: 0.28em;
   text-transform: uppercase;
   flex: 1;
 }
 
 .passives-threads-display {
-  font-size: 15px;
-  color: #9db8d4;
+  font-size: 14px;
+  color: #d8d2c0;
+  font-family: 'Cinzel', Georgia, serif;
 }
 
 .passives-threads-count {
-  color: #c9a84c;
-  font-weight: 600;
+  color: #e8b44a;
+  font-weight: 700;
 }
 
-/* --- Layout --- */
+/* ── Main layout ─────────────────────────────────────────────────────────── */
+
 .passives-layout {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* --- Left panel --- */
+/* ── Left (char card) panel ─────────────────────────────────────────────── */
+
 .passives-left {
   width: 220px;
   flex-shrink: 0;
-  border-right: 1px solid #2a2e4a;
-  border-left: 2px solid rgba(201, 168, 76, 0.4);
-  background: linear-gradient(180deg, #0d0a1a 0%, #080510 100%);
+  background: #1a1a24;
+  border-right: 1px solid #3a3a4a;
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Sigil Tree panel title — engraved gold text effect (SHOULD 5) */
-
 .passives-panel-title {
-  font-family: 'Cinzel', serif;
-  font-size: 1.4rem;
-  /* Engraved effect: transparent fill with gold outline stroke */
-  color: transparent;
-  -webkit-text-stroke: 0.5px rgba(201, 168, 76, 0.7);
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 13px;
+  color: #e8b44a;
   letter-spacing: 0.15em;
+  text-transform: uppercase;
   text-align: center;
+  opacity: 0.8;
 }
 
-/* Decorative gold section divider */
 .passives-panel-divider {
   height: 1px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(201, 168, 76, 0.3) 30%,
-    rgba(201, 168, 76, 0.3) 70%,
-    transparent 100%
-  );
-  margin: 2px 0;
+  background: #3a3a4a;
   flex-shrink: 0;
 }
 
 .passives-char-name {
-  font-family: 'Cinzel', serif;
-  font-size: 16px;
-  color: #e8d8b0;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 15px;
+  color: #d8d2c0;
 }
 
 .passives-char-class {
-  font-size: 15px;
-  font-family: 'Cinzel', serif;
-  color: #8899aa;
-  margin-top: -4px;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 13px;
+  color: #3a3a4a;
   letter-spacing: 0.08em;
-  transition: color 0.3s, text-shadow 0.3s;
+  margin-top: -6px;
+  transition: color 0.2s;
 }
 
-/* Per-class accent colour applied via data-player-class on .passives-left */
-[data-player-class="pyromancer"]  #passives-char-class { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,0.45); }
-[data-player-class="stormcaller"] #passives-char-class { color: #64b5f6; text-shadow: 0 0 8px rgba(100,181,246,0.45); }
-[data-player-class="tidecaster"]  #passives-char-class { color: #26c6da; text-shadow: 0 0 8px rgba(38,198,218,0.45); }
-[data-player-class="geomancer"]   #passives-char-class { color: #a5d6a7; text-shadow: 0 0 8px rgba(165,214,167,0.45); }
+/* Per-class accent on class label */
+[data-player-class="pyromancer"]  #passives-char-class { color: #ff7a1a; }
+[data-player-class="stormcaller"] #passives-char-class { color: #8b5cd6; }
+[data-player-class="tidecaster"]  #passives-char-class { color: #5c9fd6; }
+[data-player-class="geomancer"]   #passives-char-class { color: #5cd66b; }
 
 .passives-threads-box {
-  background: #151830;
-  border: 1px solid #2a2e4a;
-  border-radius: 6px;
+  background: #0e0e18;
+  border: 1px solid #3a3a4a;
+  border-radius: 4px;
   padding: 10px 12px;
 }
 
 .passives-threads-label {
   font-size: 11px;
-  color: #9aabcc;
+  color: #3a3a4a;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-family: 'Cinzel', serif;
+  font-family: 'Cinzel', Georgia, serif;
 }
 
 .passives-threads-value {
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 28px;
-  color: #c9a84c;
+  color: #e8b44a;
   font-weight: 700;
   margin-top: 2px;
-  letter-spacing: 0.05em;
-  text-shadow: 0 0 10px rgba(201, 168, 76, 0.5);
 }
 
 .passives-threads-total {
-  font-size: 12px;
-  color: #6677aa;
+  font-size: 11px;
+  color: #3a3a4a;
   margin-top: 4px;
-  letter-spacing: 0.03em;
 }
 
+/* Legend */
 .passives-legend {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .passives-legend-title {
-  font-size: 12px;
-  color: #7788aa;
+  font-size: 11px;
+  color: #3a3a4a;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 8px;
@@ -170,306 +179,196 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 12px;
+  color: #d8d2c0;
 }
 
-.legend-dot {
+/* Replace old star legend dots with simple coloured squares */
+.legend-star {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.legend-dot-minor    { background: #5a7a9a; }
-.legend-dot-major    { background: #8050c0; }
-.legend-dot-keystone { background: #c9a84c; }
-
-/* Star icons in legend */
-.legend-star {
   flex-shrink: 0;
   display: inline-block;
-  line-height: 1;
 }
-.legend-star-minor    { color: #5a9ad0; font-size: 11px; text-shadow: 0 0 4px rgba(90,154,208,0.6); }
-.legend-star-major    { color: #a070e0; font-size: 14px; text-shadow: 0 0 5px rgba(160,112,224,0.6); }
-.legend-star-keystone { color: #c9a84c; font-size: 17px; text-shadow: 0 0 6px rgba(201,168,76,0.7); }
+.legend-star-minor    { background: #3a3a4a; border-radius: 2px; }
+.legend-star-major    { background: #e8b44a; border-radius: 2px; }
+.legend-star-keystone { background: #ff7a1a; border-radius: 2px; }
 
+/* Respec button — at bottom of left panel */
 .passives-respec-btn {
   margin-top: auto;
-  background: #150808;
-  border: 1px solid rgba(180, 60, 60, 0.5);
-  color: #c07070;
-  padding: 10px 14px;
-  border-radius: 5px;
+  background: none;
+  border: 1px solid rgba(180, 60, 60, 0.4);
+  color: rgba(200, 100, 100, 0.7);
+  padding: 9px 12px;
+  border-radius: 4px;
   cursor: pointer;
-  font-family: 'Cinzel', serif;
-  font-size: 12px;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.15s, color 0.15s;
   text-align: center;
 }
 .passives-respec-btn:hover:not(:disabled) {
-  background: #2a0e0e;
-  border-color: rgba(220, 80, 80, 0.8);
+  border-color: rgba(220, 80, 80, 0.7);
   color: #e08888;
-  box-shadow: 0 0 12px rgba(200, 60, 60, 0.25), inset 0 0 8px rgba(200, 50, 50, 0.08);
 }
 .passives-respec-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
-/* --- Right panel (canvas area — no scroll) --- */
+/* ── Centre: canvas area ─────────────────────────────────────────────────── */
+
 .passives-right {
   flex: 1;
   overflow: hidden;
-  padding: 0;
-  position: relative; /* anchor for respec dialog and canvas overlays */
-  background: #050810; /* matches canvas cosmic background */
+  position: relative;
+  /* No padding — canvas fills edge to edge */
 }
 
-/* Canvas wrapper fills the entire right panel — gothic stained-glass triple frame */
+/* Canvas wrapper: thin gold border only — no gothic ornaments */
 .passives-canvas-wrap {
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
-  background: #050810;
-  /* Triple border: outer gold 2px | 4px gap (via outline) | inner hairline */
-  border: 2px solid rgba(201, 168, 76, 0.85);
-  outline: 4px solid transparent;
-  outline-offset: -6px;
   box-sizing: border-box;
-  box-shadow:
-    inset 0 0 120px rgba(0, 0, 0, 0.9),
-    0 0 20px rgba(201, 168, 76, 0.1),
-    inset 0 0 0 6px rgba(0, 0, 0, 0),
-    inset 6px 6px 0 0 rgba(201, 168, 76, 0.2),
-    inset -6px -6px 0 0 rgba(201, 168, 76, 0.2),
-    inset 6px -6px 0 0 rgba(201, 168, 76, 0.2),
-    inset -6px 6px 0 0 rgba(201, 168, 76, 0.2);
+  border: 1px solid rgba(232, 180, 74, 0.30);  /* gold 30% alpha per ТЗ §1 */
 }
 
-/* Gothic pointed arch decoration — SVG-based top ornament */
-.passives-canvas-wrap::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 8px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(201, 168, 76, 0.6) 20%,
-    rgba(201, 168, 76, 0.9) 50%,
-    rgba(201, 168, 76, 0.6) 80%,
-    transparent 100%
-  );
-  z-index: 20;
-  pointer-events: none;
-  clip-path: polygon(0% 100%, 10% 0%, 50% 40%, 90% 0%, 100% 100%);
-}
+/* ── Right: node detail panel ─────────────────────────────────────────────
+   .passives-right holds both the canvas and the sigil panel in a row.
+   See index.html — #passives-right-panel has display:flex.
+   ─────────────────────────────────────────────────────────────────────── */
 
-/* Corner ornaments — L-shaped gold strokes via absolutely positioned divs */
-.passives-corner {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  z-index: 10;
-  pointer-events: none;
-}
-.passives-corner-tl {
-  top: 6px; left: 6px;
-  border-top:  2px solid #c9a84c;
-  border-left: 2px solid #c9a84c;
-}
-.passives-corner-tr {
-  top: 6px; right: 6px;
-  border-top:   2px solid #c9a84c;
-  border-right: 2px solid #c9a84c;
-}
-.passives-corner-bl {
-  bottom: 6px; left: 6px;
-  border-bottom: 2px solid #c9a84c;
-  border-left:   2px solid #c9a84c;
-}
-.passives-corner-br {
-  bottom: 6px; right: 6px;
-  border-bottom: 2px solid #c9a84c;
-  border-right:  2px solid #c9a84c;
-}
-
-/* --- Section headers --- */
-.passives-section {
-  margin-bottom: 28px;
-}
-
-.passives-section-title {
-  font-family: 'Cinzel', serif;
-  font-size: 15px;
-  color: #c9a84c;
-  letter-spacing: 0.06em;
-  border-bottom: 1px solid #2a2e4a;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-}
-
-.passives-type-group {
-  margin-bottom: 16px;
-}
-
-.passives-type-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #7788aa;
-  margin-bottom: 8px;
-}
-
-/* --- Node grid --- */
-.passives-nodes-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* --- Node card --- */
-.passive-node {
-  width: 180px;
-  background: #111428;
-  border: 1px solid #2a2e4a;
-  border-radius: 6px;
-  padding: 10px 12px;
+.sigil-panel {
+  width: 260px;
+  flex-shrink: 0;
+  background: #1a1a24;
+  border-left: 1px solid #3a3a4a;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  transition: border-color 0.2s, background 0.2s;
+  gap: 10px;
+  overflow-y: auto;
+  font-family: 'Cinzel', Georgia, serif;
 }
 
-/* Unlocked state */
-.passive-node.node-unlocked {
-  background: #151d30;
-  border-color: #4a6a9a;
-  box-shadow: 0 0 8px rgba(74, 106, 154, 0.25);
-}
-.passive-node.node-unlocked .passive-node-name {
-  color: #9dc8f0;
-}
-
-/* Available state (can unlock) */
-.passive-node.node-available {
-  border-color: #3a4e6a;
-  cursor: default;
-}
-
-/* Locked state (prereq not met) */
-.passive-node.node-locked {
-  opacity: 0.55;
-}
-
-/* Type color accents */
-.passive-node[data-type="minor"]    { border-left: 3px solid #5a7a9a; }
-.passive-node[data-type="major"]    { border-left: 3px solid #8050c0; }
-.passive-node[data-type="keystone"] { border-left: 3px solid #c9a84c; }
-
-.passive-node.node-unlocked[data-type="minor"]    { border-left-color: #7aaad0; }
-.passive-node.node-unlocked[data-type="major"]    { border-left-color: #b080f0; }
-.passive-node.node-unlocked[data-type="keystone"] { border-left-color: #f0c86a; }
-
-/* Node content */
-.passive-node-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-.passive-node-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #c9b99a;
+/* Node name — gold, uppercase */
+.sp-node-name {
+  font-size: 18px;
+  color: #e8b44a;
+  letter-spacing: 0.05em;
   line-height: 1.2;
+  word-break: break-word;
 }
 
-.passive-node-cost {
+/* Type badge + cost — small caps */
+.sp-type-badge {
   font-size: 11px;
-  color: #c9a84c;
-  white-space: nowrap;
+  color: #3a3a4a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sp-divider {
+  height: 1px;
+  background: #3a3a4a;
   flex-shrink: 0;
 }
 
-.passive-node-desc {
+/* Description — Crimson Text italic, bone colour */
+.sp-desc {
+  font-family: 'Crimson Text', Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  color: #d8d2c0;
+  line-height: 1.5;
+}
+
+/* Prerequisite note */
+.sp-req {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 11px;
+  color: #e8b44a;
+  opacity: 0.6;
+  letter-spacing: 0.04em;
+}
+
+/* Pushes action button to bottom */
+.sp-spacer { flex: 1; }
+
+/* Empty state */
+.sp-empty {
+  font-family: 'Crimson Text', Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #3a3a4a;
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* Status labels */
+.sp-status {
   font-size: 12px;
-  color: #8899aa;
-  line-height: 1.4;
+  font-family: 'Cinzel', Georgia, serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
+.sp-status-unlocked { color: #5cd66b; }
+.sp-status-locked   { color: rgba(200, 80, 80, 0.7); }
 
-.passive-node-req {
-  font-size: 11px;
-  color: #7a5030;
-  margin-top: 2px;
-}
-
-.passive-node-status {
-  font-size: 11px;
-  font-weight: 600;
-  color: #4a8a4a;
-  margin-top: 2px;
-}
-
-.passive-unlock-btn {
-  margin-top: 6px;
-  background: #1a2840;
-  border: 1px solid #3a5a7a;
-  color: #9dc8f0;
-  padding: 5px 8px;
+/* Unlock button */
+.sp-unlock-btn {
+  background: #0e0e18;
+  border: 1px solid #e8b44a;
+  color: #e8b44a;
+  padding: 10px 14px;
   border-radius: 4px;
   cursor: pointer;
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 12px;
-  font-family: 'Crimson Text', serif;
-  transition: background 0.15s, border-color 0.15s;
-  align-self: flex-start;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
+  text-align: center;
+  width: 100%;
 }
-.passive-unlock-btn:hover:not(:disabled) {
-  background: #1e3450;
-  border-color: #5a8aaa;
+.sp-unlock-btn:hover {
+  background: #e8b44a;
+  color: #0e0e18;
 }
-.passive-unlock-btn:disabled {
-  opacity: 0.4;
+.sp-unlock-btn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-/* Unlocked badge (replaces button) */
-.passive-unlocked-badge {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #4a8a4a;
-  font-style: italic;
-}
+/* ── Respec confirm dialog (absolute over right panel) ─────────────────── */
 
-/* --- Respec confirm dialog --- */
 .passives-respec-confirm {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 400;
-  background: #0d1130;
-  border: 1px solid #5a3030;
-  border-radius: 8px;
+  background: #1a1a24;
+  border: 1px solid #3a3a4a;
+  border-radius: 6px;
   padding: 20px 24px;
-  max-width: 360px;
+  max-width: 340px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8);
 }
 
 .passives-respec-confirm p {
-  color: #c9b99a;
-  font-size: 15px;
-  margin-bottom: 16px;
+  color: #d8d2c0;
+  font-size: 14px;
+  font-family: 'Crimson Text', Georgia, serif;
   line-height: 1.5;
+  margin-bottom: 16px;
 }
 
 .passives-respec-confirm-btns {
@@ -482,173 +381,56 @@
   padding: 8px 20px;
   border-radius: 4px;
   cursor: pointer;
-  font-family: 'Crimson Text', serif;
-  font-size: 14px;
-  border: 1px solid;
-}
-
-.btn-respec-confirm {
-  background: #2a0a0a;
-  border-color: #cc4444 !important;
-  color: #ee8888;
-}
-.btn-respec-confirm:hover {
-  background: #3a1010;
-}
-
-.btn-respec-cancel {
-  background: #151830;
-  border-color: #3a3e5e !important;
-  color: #c9b99a;
-}
-.btn-respec-cancel:hover {
-  background: #1c2240;
-}
-
-/* Empty state (kept for legacy; canvas handles the no-class case internally) */
-.passives-no-class {
-  color: #7788aa;
-  font-style: italic;
-  font-size: 14px;
-  padding: 8px 0;
-}
-
-/* ===== CANVAS TOOLTIP — scroll parchment style (NICE 7) ===== */
-.ptc-tooltip {
-  position: absolute;
-  z-index: 200;
-  width: 220px;
-  /* Parchment gradient background */
-  background: linear-gradient(160deg, #1a1408, #0d0a05);
-  /* Clipped corners — octagon-like bevel effect */
-  clip-path: polygon(
-    12px 0%, calc(100% - 12px) 0%,
-    100% 12px, 100% calc(100% - 12px),
-    calc(100% - 12px) 100%, 12px 100%,
-    0% calc(100% - 12px), 0% 12px
-  );
-  /* Double gold border via box-shadow (clip-path hides normal border) */
-  box-shadow:
-    0 0 0 1px rgba(201, 168, 76, 0.7),
-    0 0 0 3px rgba(0, 0, 0, 0.8),
-    0 0 0 4px rgba(201, 168, 76, 0.3),
-    0 4px 24px rgba(0, 0, 0, 0.8),
-    0 0 12px rgba(50, 60, 120, 0.3);
-  padding: 12px 14px;
-  pointer-events: none;
-  backdrop-filter: blur(4px);
-}
-
-.ptc-tt-name {
-  font-family: 'Cinzel', serif;
-  font-size: 14px;
-  color: #e8d8b0;
-  margin-bottom: 2px;
-}
-
-.ptc-tt-desc {
-  font-family: 'Crimson Text', Georgia, serif;
-  font-style: italic;
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 12px;
-  color: #c9b99a;
-  line-height: 1.45;
-  margin-bottom: 6px;
-}
-
-.ptc-tt-type {
-  font-size: 11px;
-  color: #7788aa;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 6px;
-}
-
-.ptc-tt-req {
-  font-size: 11px;
-  color: #8a6040;
-  margin-bottom: 6px;
-}
-
-.ptc-tt-status {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
   letter-spacing: 0.04em;
-}
-
-.ptc-tt-unlocked { color: #5aaa5a; }
-.ptc-tt-available { color: #c9a84c; }
-.ptc-tt-locked    { color: #9a4444; }
-
-/* ===== CANVAS CONFIRM OVERLAY ===== */
-.ptc-confirm-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(5, 6, 15, 0.75);
-  backdrop-filter: blur(3px);
-}
-
-.ptc-confirm-box {
-  background: #0d1130;
-  border: 1px solid #3a3e60;
-  border-radius: 10px;
-  padding: 24px 28px;
-  max-width: 320px;
-  text-align: center;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 24px rgba(80,100,200,0.15);
-}
-
-.ptc-confirm-title {
-  font-family: 'Cinzel', serif;
-  font-size: 16px;
-  color: #c9a84c;
-  margin-bottom: 8px;
-}
-
-.ptc-confirm-desc {
-  font-size: 13px;
-  color: #c9b99a;
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-.ptc-confirm-cost {
-  font-size: 13px;
-  color: #9dc8f0;
-  margin-bottom: 18px;
-}
-
-.ptc-confirm-btns {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.ptc-btn-yes,
-.ptc-btn-no {
-  padding: 8px 22px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-family: 'Crimson Text', serif;
-  font-size: 14px;
   border: 1px solid;
   transition: background 0.15s;
 }
 
-.ptc-btn-yes {
-  background: #1a2840;
-  border-color: #3a7aaa;
-  color: #9dc8f0;
+.btn-respec-confirm {
+  background: none;
+  border-color: rgba(220, 80, 80, 0.6) !important;
+  color: #e08888;
 }
-.ptc-btn-yes:hover { background: #1e3450; border-color: #5a9acc; }
+.btn-respec-confirm:hover { background: rgba(200, 50, 50, 0.12); }
 
-.ptc-btn-no {
-  background: #151820;
-  border-color: #3a3e5e;
-  color: #c9b99a;
+.btn-respec-cancel {
+  background: none;
+  border-color: #3a3a4a !important;
+  color: #d8d2c0;
 }
-.ptc-btn-no:hover { background: #1c2240; }
+.btn-respec-cancel:hover { background: rgba(255,255,255,0.04); }
+
+/* ── Tooltip: hover on node (name + type only, no description) ────────── */
+
+.ptc-tooltip {
+  position: absolute;
+  z-index: 200;
+  width: 140px;
+  background: #1a1a24;
+  border: 1px solid rgba(232, 180, 74, 0.4);
+  border-radius: 3px;
+  padding: 8px 10px;
+  pointer-events: none;
+}
+
+.ptc-tt-name {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 13px;
+  color: #d8d2c0;
+  line-height: 1.2;
+}
+
+.ptc-tt-type {
+  font-size: 10px;
+  color: #3a3a4a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 3px;
+}
+
+/* Hide old desc/req/status in minimal tooltip */
+.ptc-tt-desc,
+.ptc-tt-req,
+.ptc-tt-status { display: none; }

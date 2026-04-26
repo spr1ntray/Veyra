@@ -7,178 +7,204 @@
 export const PASSIVE_NODES = [
 
   // ===== UNIVERSAL (8 nodes, available to all classes) =====
+  // IDs: U_M01–U_M04 (minor), U_J01–U_J03 (major), U_KS (keystone)
+  // actionEffect: pivot-engine multipliers consumed by passive_runtime.js
+  // effect: legacy autocast-engine fields (kept for state.js aggregation compat)
 
   {
-    id: 'U1', name: 'Resilient Body',
+    id: 'U_M01', name: 'Vital Bloom',
     type: 'minor', cost: 1, classRestriction: null, requires: [],
-    effect: { maxHpPercent: 0.10 },
-    description: '+10% Max HP'
+    effect: { maxHpPercent: 0.12 },
+    actionEffect: { maxHpMul: 1.12 },
+    description: '+12% Max HP'
   },
   {
-    id: 'U2', name: 'Quick Study',
+    id: 'U_M02', name: "Hunter's Pace",
     type: 'minor', cost: 1, classRestriction: null, requires: [],
-    effect: { xpBonus: 0.08 },
-    description: '+8% XP from combat'
+    effect: {},
+    actionEffect: { moveSpeedMul: 1.08 },
+    description: '+8% movement speed'
   },
   {
-    id: 'U3', name: 'Fortune Seeker',
+    id: 'U_M03', name: 'Sigil Conductor',
     type: 'minor', cost: 1, classRestriction: null, requires: [],
-    effect: { goldBonus: 0.12 },
-    description: '+12% gold from combat'
+    effect: { fireDamageBonus: 0.10 },
+    actionEffect: { spellDmgMul: 1.10 },
+    description: '+10% spell damage'
   },
   {
-    id: 'U4', name: 'Arcane Efficiency',
-    type: 'minor', cost: 2, classRestriction: null, requires: [],
-    effect: { castTimeFlat: -0.1 },
-    description: '-0.1s cast time on all spells'
+    id: 'U_M04', name: "Hawk's Eye",
+    type: 'minor', cost: 1, classRestriction: null, requires: [],
+    effect: {},
+    actionEffect: { spellRangeMul: 1.15 },
+    description: '+15% cast range'
   },
   {
-    id: 'U5', name: 'Battle Hardened',
-    type: 'minor', cost: 2, classRestriction: null, requires: [],
-    effect: { damageReduction: 0.05 },
-    description: '+5% damage reduction'
+    id: 'U_J01', name: 'Stone Lung',
+    type: 'major', cost: 2, classRestriction: null, requires: ['U_M01'],
+    effect: { maxHpPercent: 0.18, damageReduction: 0.05 },
+    actionEffect: { maxHpMul: 1.18, dmgTakenMul: 0.95 },
+    description: '+18% Max HP, +5% damage reduction'
   },
   {
-    id: 'U6', name: 'Mana Overflow',
+    id: 'U_J02', name: "Glassblower's Focus",
+    type: 'major', cost: 2, classRestriction: null, requires: ['U_M03'],
+    effect: { fireDamageBonus: 0.15 },
+    actionEffect: { spellDmgMul: 1.15, dmgTakenMul: 1.12 },
+    description: '+15% spell damage, +12% damage taken (trade-off)'
+  },
+  {
+    id: 'U_J03', name: 'Wayfarer',
     type: 'major', cost: 2, classRestriction: null, requires: [],
-    effect: { shieldBurstDamage: 0.30 },
-    description: 'When shield is destroyed: deal 30% of shield HP as arcane damage to enemy'
+    effect: { goldBonus: 0.12, xpBonus: 0.12 },
+    actionEffect: { goldMul: 1.12, xpMul: 1.12 },
+    description: '+12% gold, +12% XP'
   },
   {
-    id: 'U7', name: 'Second Wind',
-    type: 'major', cost: 2, classRestriction: null, requires: [],
-    effect: { secondWind: true },
-    description: 'Once per battle: when HP drops below 15%, heal 20% max HP'
-  },
-  {
-    id: 'U8', name: 'Executioner',
-    type: 'minor', cost: 1, classRestriction: null, requires: [],
-    effect: { executioner: 0.15 },
-    description: '+15% damage vs enemies below 25% HP'
+    id: 'U_KS', name: 'Crimson Veil',
+    type: 'keystone', cost: 3, classRestriction: null, requires: ['U_J01', 'U_J02'],
+    effect: { fireDamageBonus: 0.30, maxHpPercent: -0.20 },
+    actionEffect: { spellDmgMul: 1.30, maxHpMul: 0.80 },
+    description: '+30% spell damage, -20% Max HP (glass cannon)'
   },
 
-  // ===== PYROMANCER (18 nodes: 10 minor + 6 major + 2 keystone) =====
+  // ===== PYROMANCER (18 nodes: 12 minor + 4 major + 2 keystone) =====
+  // All nodes work in pivot action-engine via actionEffect.
+  // TODO: Stormcaller / Tidecaster / Geomancer nodes below do NOT work in
+  //       pivot action-engine yet — they only affect legacy autocast combat.
+  //       A separate rework ТЗ is pending for S/T/G action-engine integration.
 
   // --- Minor ---
   {
-    id: 'P1', name: 'Searing Touch',
+    id: 'pyro_M01', name: 'Ember Wick',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { fireDamageBonus: 0.05 },
-    description: '+5% fire damage'
+    effect: { fireDamageBonus: 0.12 },
+    actionEffect: { spellDmgMul: 1.12 },
+    description: '+12% Fireball damage'
   },
   {
-    id: 'P2', name: 'Pyromaniac',
+    id: 'pyro_M02', name: 'Quicklight',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { dotDamageBonus: 0.08 },
-    description: '+8% DoT damage'
+    effect: {},
+    actionEffect: { spellCdMul: 0.90 },
+    description: '-10% Fireball cooldown'
   },
   {
-    id: 'P3', name: 'Heat Wave',
+    id: 'pyro_M03', name: 'Heatseeker',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { igniteSpeedBonus: 0.10 },
-    description: 'Ignite ticks 10% faster'
+    effect: {},
+    actionEffect: { projRadiusMul: 1.20 },
+    description: '+20% projectile size (easier to hit moving targets)'
   },
   {
-    id: 'P4', name: 'Burning Blood',
+    id: 'pyro_M04', name: 'Searing Reach',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { maxHpPercent: 0.05, fireDamageBonus: 0.03 },
-    description: '+5% max HP, +3% fire damage'
+    effect: {},
+    actionEffect: { spellRangeMul: 1.12 },
+    description: '+12% cast range'
   },
   {
-    id: 'P5', name: 'Volatile Embers',
+    id: 'pyro_M05', name: 'Cinder Veil',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { emberDuration: 2 },
-    description: 'Ember stacks last +2s'
+    effect: { damageReduction: 0.08 },
+    actionEffect: { dmgTakenMul: 0.92 },
+    description: '-8% damage taken'
   },
   {
-    id: 'P6', name: 'Kindling',
+    id: 'pyro_M06', name: 'Furnace Heart',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { firstSpellBonus: 0.10 },
-    description: '+10% damage on the first spell cast in battle'
+    effect: { maxHpPercent: 0.10 },
+    actionEffect: { maxHpMul: 1.10 },
+    description: '+10% Max HP'
   },
   {
-    id: 'P7', name: 'Crucible',
+    id: 'pyro_M07', name: 'Ash Walker',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { igniteStackBonus: 0.04 },
-    description: '+4% damage per Ignite stack on enemy (max 12%)'
+    effect: {},
+    actionEffect: { moveSpeedMul: 1.06 },
+    description: '+6% movement speed (better kiting)'
   },
   {
-    id: 'P8', name: 'Flash Point',
+    id: 'pyro_M08', name: 'Firetongue',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { scorchCastTime: -0.2 },
-    description: 'Scorch cast time -0.2s'
+    effect: {},
+    actionEffect: { critChance: 0.05 },
+    description: '+5% crit chance on Fireball'
   },
   {
-    id: 'P9', name: 'Fire Eater',
+    id: 'pyro_M09', name: 'Sparkfall',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { igniteHeal: 2 },
-    description: 'Heal 2 HP per Ignite tick'
+    effect: {},
+    actionEffect: { projSpeedMul: 1.12 },
+    description: '+12% projectile speed (less leading shot required)'
   },
   {
-    id: 'P10', name: 'Smoke Screen',
+    id: 'pyro_M10', name: 'Slow Burn',
     type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
-    effect: { postFireDodge: 0.08 },
-    description: '8% dodge for 2s after casting a fire spell'
+    effect: { fireDamageBonus: 0.08 },
+    actionEffect: { spellDmgMul: 1.08, projSpeedMul: 0.97 },
+    description: '+8% Fireball damage, -3% projectile speed (micro trade-off)'
+  },
+  {
+    id: 'pyro_M11', name: 'Reignition',
+    type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
+    effect: {},
+    actionEffect: { hpRegenPerSec: 0.4 },
+    description: 'Regenerate 0.4 HP per second'
+  },
+  {
+    id: 'pyro_M12', name: "Mage's Stride",
+    type: 'minor', cost: 1, classRestriction: 'pyromancer', requires: [],
+    effect: {},
+    actionEffect: { moveSpeedMul: 1.06, spellRangeMul: 1.06 },
+    description: '+6% movement speed, +6% cast range'
   },
 
   // --- Major ---
-  // P11 requires P1 (Searing Touch) + P4 (Burning Blood) — two minor nodes on fire-damage branch
   {
-    id: 'P11', name: 'Infernal Momentum',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P1', 'P4'],
-    effect: { infernalMomentum: true },
-    description: 'Each fire cast grants +5% to the next (max 25%); resets on non-fire spell'
+    id: 'pyro_J01', name: 'Crucible Strike',
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['pyro_M01'],
+    effect: { fireDamageBonus: 0.18 },
+    actionEffect: { spellDmgMul: 1.18, critChance: 0.05 },
+    description: '+18% spell damage, +5% crit chance'
   },
-  // P12 requires P2 (Pyromaniac) + P7 (Crucible) — two minor nodes on DoT/Ignite branch
   {
-    id: 'P12', name: 'Living Furnace',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2', 'P7'],
-    effect: { igniteMaxStacks: 5 },
-    description: 'Ignite max stacks increased from 3 to 5'
+    id: 'pyro_J02', name: 'Blastwave',
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['pyro_M03'],
+    effect: {},
+    actionEffect: { aoeRadius: 48 },
+    description: 'Fireball explodes on impact — AoE 48px radius, 70% damage to nearby enemies'
   },
-  // P13 requires P1 (Searing Touch) + P6 (Kindling) — fire damage + first-strike branch
   {
-    id: 'P13', name: 'Meltdown',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P1', 'P6'],
-    effect: { meltdown: 0.20 },
-    description: '+20% fire damage vs enemies below 30% HP'
+    id: 'pyro_J03', name: 'Pyre Vigil',
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['pyro_M06'],
+    effect: { maxHpPercent: 0.20, damageReduction: 0.05 },
+    actionEffect: { maxHpMul: 1.20, dmgTakenMul: 0.95, hpRegenPerSec: 0.3 },
+    description: '+20% Max HP, +5% damage reduction, +0.3 HP/sec regen'
   },
-  // P14 requires P2 (Pyromaniac) + P3 (Heat Wave) — DoT synergy branch
   {
-    id: 'P14', name: 'Backdraft',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2', 'P3'],
-    effect: { backdraft: 0.50 },
-    description: 'When Ignite expires: final explosion for 50% of total DoT dealt'
-  },
-  // P15 requires P4 (Burning Blood) + P8 (Flash Point) — sustain/survivability branch
-  {
-    id: 'P15', name: 'Forge Shield',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P4', 'P8'],
-    effect: { forgeShield: 0.15 },
-    description: 'Every 4th fire cast: gain shield equal to 15% of damage dealt'
-  },
-  // P16 requires P2 (Pyromaniac) + P5 (Volatile Embers) — ember/DoT explosion branch
-  {
-    id: 'P16', name: 'Chain Reaction',
-    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['P2', 'P5'],
-    effect: { chainReaction: 0.30 },
-    description: 'Living Bomb explosion: 30% chance to apply 1 Ignite stack'
+    id: 'pyro_J04', name: 'Inferno Conduit',
+    type: 'major', cost: 2, classRestriction: 'pyromancer', requires: ['pyro_M02'],
+    effect: { fireDamageBonus: 0.08 },
+    actionEffect: { spellCdMul: 0.85, spellDmgMul: 1.08 },
+    description: '-15% Fireball cooldown, +8% spell damage'
   },
 
   // --- Keystone ---
-  // Path to P-K1: P1 → P4 → P11 (Major) + P6 → P13 (Major) + P9 (extra minor) = 5 nodes, ~9 threads
   {
-    id: 'P-K1', name: 'Conflagration',
-    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['P11', 'P9'],
-    effect: { conflagration: true },
-    description: '+20% Ignite chance, Ignite damage +30%, direct fire damage -10%'
+    id: 'pyro_KS01', name: 'Eternal Pyre',
+    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['pyro_J01', 'pyro_J04'],
+    effect: { fireDamageBonus: 0.40 },
+    actionEffect: { spellDmgMul: 1.40, spellRangeMul: 1.20, moveSpeedMul: 0.75, maxHpMul: 0.85 },
+    description: '+40% spell damage, +20% range, -25% movement speed, -15% Max HP (stationary turret build)'
   },
-  // Path to P-K2: P2 → P7 → P12 (Major) + P9 (Fire Eater) as extra minor = 4 nodes, ~8 threads
   {
-    id: 'P-K2', name: 'Phoenix Protocol',
-    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['P12', 'P10'],
-    effect: { phoenixProtocol: true, maxHpPercent: -0.15 },
-    description: 'Once per battle: resurrect with 30% HP. -15% max HP.'
+    id: 'pyro_KS02', name: 'Wreath of Cinders',
+    type: 'keystone', cost: 3, classRestriction: 'pyromancer', requires: ['pyro_J02'],
+    effect: { fireDamageBonus: -0.25 },
+    // aoeRadiusMul applied on top of existing aoeRadius from pyro_J02 if both taken
+    actionEffect: { pierceCount: 2, aoeRadiusMul: 1.10, spellDmgMul: 0.75, projSpeedMul: 0.90 },
+    description: 'Fireball pierces 2 enemies, +10% AoE radius, -25% damage, -10% projectile speed (crowd-control build)'
   },
 
   // ===== STORMCALLER (18 nodes: 10 minor + 6 major + 2 keystone) =====

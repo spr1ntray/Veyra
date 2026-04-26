@@ -480,21 +480,21 @@
   <!-- ===== PASSIVES SCREEN — Sigil Tree ===== -->
   <div id="screen-passives" class="screen">
 
-    <!-- Header -->
+    <!-- Header: flat bar, gold 1px bottom border -->
     <div class="passives-header">
       <button class="passives-back-btn" id="btn-passives-back">← Back</button>
-      <div class="passives-header-title">❖ The Sigil Tree ❖</div>
+      <div class="passives-header-title">SIGIL TREE</div>
       <div class="passives-threads-display">
         Sigils: <span class="passives-threads-count" id="passives-header-threads">0</span>
       </div>
     </div>
 
-    <!-- Main layout -->
+    <!-- Main layout: left char card | centre canvas | right node panel -->
     <div class="passives-layout">
 
-      <!-- Left panel: character info + sigils + respec -->
+      <!-- Left panel: character card + sigils balance + legend + respec -->
       <div class="passives-left">
-        <div class="passives-panel-title">The Sigil Tree</div>
+        <div class="passives-panel-title">Sigil Tree</div>
         <div class="passives-panel-divider"></div>
 
         <div class="passives-char-name" id="passives-char-name">Mage</div>
@@ -513,30 +513,30 @@
         <div class="passives-legend">
           <div class="passives-legend-title">Node Types</div>
           <div class="passives-legend-item">
-            <span class="legend-star legend-star-minor">&#9733;</span> Minor (1 Sigil)
+            <span class="legend-star legend-star-minor"></span> Minor (1 Sigil)
           </div>
           <div class="passives-legend-item">
-            <span class="legend-star legend-star-major">&#9733;</span> Major (2 Sigils)
+            <span class="legend-star legend-star-major"></span> Major (2 Sigils)
           </div>
           <div class="passives-legend-item">
-            <span class="legend-star legend-star-keystone">&#10022;</span> Keystone (3 Sigils)
+            <span class="legend-star legend-star-keystone"></span> Keystone (3 Sigils)
           </div>
         </div>
 
-        <button class="passives-respec-btn" id="btn-passives-respec" disabled>&#8635; Respec All (0g)</button>
+        <button class="passives-respec-btn" id="btn-passives-respec" disabled>Respec All (0g)</button>
       </div>
 
-      <!-- Right panel: constellation canvas -->
-      <div class="passives-right" id="passives-right-panel">
-        <!-- Canvas container — PassiveTreeCanvas.init() attaches <canvas> here -->
-        <div id="passives-canvas-container" class="passives-canvas-wrap">
-          <!-- Decorative L-shaped corner ornaments -->
-          <div class="passives-corner passives-corner-tl"></div>
-          <div class="passives-corner passives-corner-tr"></div>
-          <div class="passives-corner passives-corner-bl"></div>
-          <div class="passives-corner passives-corner-br"></div>
+      <!-- Centre: canvas viewport -->
+      <div class="passives-right" id="passives-right-panel" style="display:flex;flex-direction:row;">
+        <!-- Canvas — PassiveTreeCanvas.init() appends <canvas> here -->
+        <div id="passives-canvas-container" class="passives-canvas-wrap" style="flex:1;"></div>
+
+        <!-- Right node-detail panel (sigil-panel) -->
+        <div class="sigil-panel" id="sigil-panel">
+          <div class="sp-empty">Select a node to view details</div>
         </div>
       </div>
+
     </div>
 
   </div>
@@ -584,12 +584,7 @@
         <button class="lobby-btn lobby-btn-enter" id="lobby-btn-enter">Enter the Tower ⚔</button>
       </div>
 
-      <!-- Custom map loader — file input triggers run with editor-made map -->
-      <div class="lobby-custom-map">
-        <button class="lobby-btn lobby-btn-custom" id="lobby-btn-load-map">Load Custom Map</button>
-        <input type="file" id="lobby-map-file-input" accept=".json" style="display:none">
-        <div class="lobby-custom-hint">Draw a map in the <a href="map-editor.html" target="_blank">Map Editor</a>, then load it here</div>
-      </div>
+
     </div>
   </div>
 

@@ -1318,6 +1318,44 @@ export function loadState() {
         _state.version = 4;
       }
 
+      // v4→v5 migration: Sigil Tree rework — old Universal (U1-U8) and Pyromancer
+      // (P1-P16, P-K1, P-K2) node IDs replaced with new action-engine IDs.
+      // Strategy: remove old IDs from unlocked[], refund spent sigil costs back to
+      // leyThreads so the player can re-spec immediately. Stormcaller/Tide/Geo unchanged.
+      if (!_state.version || _state.version < 5) {
+        // Old IDs that no longer exist in PASSIVE_NODES
+        const OLD_UNIVERSAL_IDS  = new Set(['U1','U2','U3','U4','U5','U6','U7','U8']);
+        const OLD_PYROMANCER_IDS = new Set([
+          'P1','P2','P3','P4','P5','P6','P7','P8','P9','P10',
+          'P11','P12','P13','P14','P15','P16','P-K1','P-K2'
+        ]);
+        // Old node costs (cost per id — mirror of old node definitions)
+        const OLD_NODE_COSTS = {
+          U1:1, U2:1, U3:1, U4:2, U5:2, U6:2, U7:2, U8:1,
+          P1:1, P2:1, P3:1, P4:1, P5:1, P6:1, P7:1, P8:1, P9:1, P10:1,
+          P11:2, P12:2, P13:2, P14:2, P15:2, P16:2,
+          'P-K1':3, 'P-K2':3,
+        };
+
+        if (_state.passives && Array.isArray(_state.passives.unlocked)) {
+          let refunded = 0;
+          const kept = [];
+          for (const id of _state.passives.unlocked) {
+            if (OLD_UNIVERSAL_IDS.has(id) || OLD_PYROMANCER_IDS.has(id)) {
+              refunded += OLD_NODE_COSTS[id] || 1;
+            } else {
+              kept.push(id);
+            }
+          }
+          _state.passives.unlocked = kept;
+          if (refunded > 0) {
+            _state.passives.leyThreads = (_state.passives.leyThreads || 0) + refunded;
+            console.log(`[state] v5 migration: refunded ${refunded} sigils from old Pyromancer/Universal nodes`);
+          }
+        }
+        _state.version = 5;
+      }
+
       saveState();
     } else {
       _state = getDefaultState();
@@ -1770,10 +1808,10 @@ export function saveGrimoire(slots) {
 
 /** Metadata for each buff type */
 const BUFF_META = {
-  mana_surge:       { label: 'Mana Surge',      color: '#4a90d9', symbol: 'M' },
-  crystal_fortune:  { label: 'Crystal Fortune', color: '#9b59b6', symbol: 'C' },
-  iron_flask_buff:  { label: 'Iron Flask',       color: '#c0392b', symbol: '🛡' },
-  shadow_dust_buff: { label: 'Shadow Dust',      color: '#8e44ad', symbol: '✨' }
+  mana_surge:       { label: 'Mana Surge',      color: '#4a90d9', symbol: 'M',  iconPath: 'assets/generated/pixel/buff_mana_surge.png' },
+  crystal_fortune:  { label: 'Crystal Fortune', color: '#8b5cd6', symbol: 'C',  iconPath: 'assets/generated/pixel/buff_crystal_fortune.png' },
+  iron_flask_buff:  { label: 'Iron Flask',       color: '#e8b44a', symbol: '🛡', iconPath: 'assets/generated/pixel/buff_iron_armor.png' },
+  shadow_dust_buff: { label: 'Shadow Dust',      color: '#8b5cd6', symbol: '✨', iconPath: 'assets/generated/pixel/buff_shadow_step.png' }
 };
 
 /**
@@ -1872,7 +1910,7 @@ export function discardItem(itemId) {
 
 /**
  * Returns array of currently active buffs for UI rendering.
- * Each entry: { buffId, combatsLeft, label, color, symbol }
+ * Each entry: { buffId, combatsLeft, label, color, symbol, iconPath }
  */
 export function getActiveBuffs() {
   const state = getState();
@@ -1884,9 +1922,10 @@ export function getActiveBuffs() {
     result.push({
       buffId,
       combatsLeft: buff.combatsLeft,
-      label: meta ? meta.label : buffId,
-      color: meta ? meta.color : '#888',
-      symbol: meta ? meta.symbol : '?'
+      label:    meta ? meta.label    : buffId,
+      color:    meta ? meta.color    : '#888',
+      symbol:   meta ? meta.symbol   : '?',
+      iconPath: meta ? meta.iconPath : null
     });
   }
 
