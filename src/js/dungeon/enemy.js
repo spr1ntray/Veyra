@@ -24,21 +24,27 @@ export class EnemyActor extends Actor {
    * @param {number} opts.xpDrop        — xp granted on kill
    */
   constructor(opts) {
-    super({ x: opts.x, y: opts.y, radius: opts.radius || 16, hp: opts.hp || 30, team: 'enemy' });
+    super({ x: opts.x, y: opts.y, radius: opts.radius || 14, hp: opts.hp || 30, team: 'enemy' });
 
     this.damage      = opts.damage     || 10;
-    this.moveSpeed   = opts.moveSpeed  || 1.8;  // tiles/sec
+    this.moveSpeed   = opts.moveSpeed  || 2.4;  // tiles/sec
     this.aggroRange  = opts.aggroRange || (8 * 32);  // pixels
-    this.attackRange = opts.attackRange || 36;         // pixels (~1 tile + radius)
+    this.attackRange = opts.attackRange || 28;         // pixels — combat hit radius (kept separate from collision)
     this.color       = opts.color      || '#44cc44';
     this.goldDrop    = opts.goldDrop   || 5;
     this.xpDrop      = opts.xpDrop    || 10;
+
+    // AABB half-size used exclusively for movement collision resolution.
+    // Kept separate from Actor.radius so that adjusting attack/hit range
+    // doesn't accidentally change how enemies navigate through corridors.
+    // Normal zombie: 20×20px box (half=10). Elite: 28×28px box (half=14).
+    this.collisionHalf = opts.collisionHalf || 10;
 
     // AI FSM state — read/written by engine/ai.js
     this.aiState = 'idle';
 
     // Internal AI timers (in ticks) — set by ai.js
-    this._lastAttackTick = 0;
+    this._lastAttackTick = null;
     this._pathTick       = 0;
     this._path           = [];
 
@@ -48,7 +54,8 @@ export class EnemyActor extends Actor {
 
   update(dt, world) {
     if (this.state !== ActorState.DEAD) {
-      world.tilemap.resolveMove(this, { x: this.vx, y: this.vy }, this.radius);
+      // Use AABB collisionHalf for movement (not combat radius Actor.radius)
+      world.tilemap.resolveMove(this, { x: this.vx, y: this.vy }, this.collisionHalf);
     }
 
     // ── Animation state machine ───────────────────────────────────────
@@ -69,13 +76,21 @@ export class EnemyActor extends Actor {
       case 'chase': {
         const speed = this.vx * this.vx + this.vy * this.vy;
         if (speed > 0.001) {
+          this._stoppedSince = null;
           this.setAnimState('walk', world);
         } else {
-          this.setAnimState('idle', world);
+          // Debounce idle: only switch after 8 ticks of zero velocity
+          // to prevent rapid walk↔idle flipping that resets animEnterTick
+          if (this._stoppedSince === null || this._stoppedSince === undefined) {
+            this._stoppedSince = world.tick;
+          } else if (world.tick - this._stoppedSince >= 8) {
+            this.setAnimState('idle', world);
+          }
         }
         break;
       }
       default:
+        this._stoppedSince = null;
         this.setAnimState('idle', world);
     }
   }

@@ -2,13 +2,12 @@
  * dungeon/hud.js — DOM overlay HUD for the action combat screen
  *
  * Elements are read from existing DOM nodes injected in index.html.
- * This module only reads + writes values — it does not create elements.
- *
- * updateHUD(world) is called from the render loop every frame,
- * but DOM writes are throttled to every 6 ticks to avoid layout thrashing.
+ * This module only reads + writes values — it does not create elements,
+ * except for the hotbar slots which are built dynamically from player.skills.
  */
 
 import { TILE_SIZE, VIEWPORT_W, VIEWPORT_H } from '../engine/config.js';
+import { getState } from '../state.js';
 
 // Canvas reference for mini-map drawing
 let _minimapCanvas = null;
@@ -33,6 +32,18 @@ export function initHUD(world) {
   // Show the HUD container
   const hud = document.getElementById('action-hud');
   if (hud) hud.style.display = 'flex';
+
+  // Set character name
+  const nameEl = document.getElementById('action-char-name');
+  if (nameEl) {
+    const state = getState();
+    nameEl.textContent = state.heroName || 'Wizard';
+  }
+
+  // Build hotbar slots from player skills
+  if (world.player) {
+    _buildHotbar(world.player);
+  }
 }
 
 /**
@@ -54,7 +65,6 @@ export function destroyHUD() {
  */
 export function updateHUD(world) {
   if (!world) return;
-  // Throttle: update every 4 ticks
   if (world.tick - _lastHudTick < 4) return;
   _lastHudTick = world.tick;
 
@@ -69,22 +79,22 @@ export function updateHUD(world) {
     hpText.textContent = `${Math.max(0, player.hp)} / ${player.hpMax}`;
   }
 
-  // --- Gold display ---
-  const goldEl = document.getElementById('action-gold');
-  if (player && goldEl) {
-    goldEl.textContent = `Gold: ${player.goldCollected}`;
+  // --- Gold display (icon drawn in initHUD; just update the number) ---
+  const goldNumEl = document.getElementById('action-gold-number');
+  if (player && goldNumEl) {
+    goldNumEl.textContent = player.goldCollected;
   }
 
   // --- Run timer ---
   const timerEl = document.getElementById('action-timer');
   if (timerEl) {
-    const secs  = Math.floor(world.tick / 60);
-    const mm    = String(Math.floor(secs / 60)).padStart(2, '0');
-    const ss    = String(secs % 60).padStart(2, '0');
+    const secs = Math.floor(world.tick / 60);
+    const mm   = String(Math.floor(secs / 60)).padStart(2, '0');
+    const ss   = String(secs % 60).padStart(2, '0');
     timerEl.textContent = `${mm}:${ss}`;
   }
 
-  // --- Hotbar cooldown overlay (slot 1 = Fireball) ---
+  // --- Hotbar cooldown overlays ---
   _updateHotbar(player, world);
 
   // --- Mini-map ---
@@ -95,27 +105,93 @@ export function updateHUD(world) {
 // Hotbar
 // ─────────────────────────────────────────────
 
+/**
+ * Builds hotbar DOM from player.skills — only filled slots are shown.
+ * Each slot gets a small canvas with a drawn skill icon.
+ */
+function _buildHotbar(player) {
+  const hotbar = document.getElementById('action-hotbar');
+  if (!hotbar || !player || !player.skills) return;
+  hotbar.innerHTML = '';
+
+  player.skills.forEach((skill, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'hotbar-slot';
+    slot.id = `hotbar-slot-${i + 1}`;
+
+    const keySpan = document.createElement('span');
+    keySpan.className = 'hotbar-key';
+    keySpan.textContent = String(i + 1);
+    slot.appendChild(keySpan);
+
+    const iconCanvas = document.createElement('canvas');
+    iconCanvas.className = 'hotbar-icon-canvas';
+    iconCanvas.width  = 40;
+    iconCanvas.height = 40;
+    slot.appendChild(iconCanvas);
+    _drawSkillIcon(iconCanvas, skill);
+
+    const cdOverlay = document.createElement('div');
+    cdOverlay.className = 'hotbar-cd-overlay';
+    cdOverlay.style.display = 'none';
+    slot.appendChild(cdOverlay);
+
+    hotbar.appendChild(slot);
+  });
+}
+
+/** Draws a skill icon onto a small canvas element. */
+function _drawSkillIcon(canvas, skill) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2;
+
+  if (skill.icon === 'fire' || skill.id === 'fireball') {
+    // Outer glow
+    const grd = ctx.createRadialGradient(cx, cy + 2, 2, cx, cy, 16);
+    grd.addColorStop(0, '#ffee80');
+    grd.addColorStop(0.5, '#ff6a00');
+    grd.addColorStop(1, 'rgba(180,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 17, 0, Math.PI * 2);
+    ctx.fill();
+    // Flame body
+    ctx.fillStyle = '#ff8c20';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 14);
+    ctx.bezierCurveTo(cx + 9, cy - 8, cx + 8, cy + 4, cx + 5, cy + 10);
+    ctx.bezierCurveTo(cx + 2, cy + 15, cx - 2, cy + 15, cx - 5, cy + 10);
+    ctx.bezierCurveTo(cx - 8, cy + 4, cx - 9, cy - 8, cx, cy - 14);
+    ctx.fill();
+    // Hot core
+    ctx.fillStyle = '#fff8a0';
+    ctx.beginPath();
+    ctx.arc(cx, cy + 4, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function _updateHotbar(player, world) {
-  if (!player) return;
-  const slot1 = document.getElementById('hotbar-slot-1');
-  if (!slot1) return;
+  if (!player || !player.skills) return;
 
-  const CD_TICKS    = Math.round(1.2 * 60);
-  const lastFire    = player.fireballLastTick || 0;
-  const ticksSince  = world.tick - lastFire;
-  const overlay     = slot1.querySelector('.hotbar-cd-overlay');
+  player.skills.forEach((skill, i) => {
+    const slot = document.getElementById(`hotbar-slot-${i + 1}`);
+    if (!slot) return;
+    const overlay = slot.querySelector('.hotbar-cd-overlay');
+    if (!overlay) return;
 
-  if (overlay) {
-    const remaining = Math.max(0, CD_TICKS - ticksSince);
-    const fraction  = remaining / CD_TICKS; // 0 = ready, 1 = just fired
+    const remaining = Math.max(0, skill.cdTicks - (world.tick - skill.lastUsedTick));
+    const fraction  = remaining / skill.cdTicks;
     if (fraction > 0) {
       overlay.style.display = 'block';
-      // Radial sweep using conic-gradient
       overlay.style.background = `conic-gradient(rgba(0,0,0,0.65) ${fraction * 360}deg, transparent 0deg)`;
     } else {
       overlay.style.display = 'none';
     }
-  }
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -130,11 +206,9 @@ function _drawMinimap(world) {
   const scaleX = mw / world.tilemap.pixelW;
   const scaleY = mh / world.tilemap.pixelH;
 
-  // Background
   ctx.fillStyle = '#111118';
   ctx.fillRect(0, 0, mw, mh);
 
-  // Tiles
   for (let r = 0; r < world.tilemap.rows; r++) {
     for (let c = 0; c < world.tilemap.cols; c++) {
       if (!world.tilemap.isWall(c, r)) {
@@ -149,7 +223,6 @@ function _drawMinimap(world) {
     }
   }
 
-  // Gold pickups
   for (const p of world.pickups) {
     if (!p.alive) continue;
     ctx.fillStyle = '#ffd700';
@@ -158,7 +231,6 @@ function _drawMinimap(world) {
     ctx.fillRect(Math.round(px - 1), Math.round(py - 1), 3, 3);
   }
 
-  // Exit portal
   if (world.exitPortal) {
     ctx.fillStyle = '#ffd700';
     const px = world.exitPortal.x * scaleX;
@@ -168,7 +240,6 @@ function _drawMinimap(world) {
     ctx.fill();
   }
 
-  // Enemies (red dots)
   ctx.fillStyle = '#ff3333';
   for (const e of world.entities) {
     if (!e.alive || e.team !== 'enemy') continue;
@@ -179,7 +250,6 @@ function _drawMinimap(world) {
     ctx.fill();
   }
 
-  // Player (blue dot)
   if (world.player && world.player.alive) {
     ctx.fillStyle = '#4488ff';
     const px = world.player.x * scaleX;
@@ -189,7 +259,6 @@ function _drawMinimap(world) {
     ctx.fill();
   }
 
-  // Border
   ctx.strokeStyle = '#c9a84c';
   ctx.lineWidth   = 1;
   ctx.strokeRect(0, 0, mw, mh);

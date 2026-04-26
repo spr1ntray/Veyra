@@ -34,20 +34,20 @@ const CLASS_COLORS = {
 };
 
 /**
- * Visual radius of the star shape (hit-radius is slightly larger for ease of clicking).
- * Minor = small star, Keystone = bright pulsing star.
+ * Node hex-cell outer radius (circumradius of the hexagon).
+ * Minor = small hex, Keystone = large glowing hex.
  */
 const STAR_RADIUS = {
-  minor:    12,
-  major:    18,
-  keystone: 26
+  minor:    14,
+  major:    21,
+  keystone: 32
 };
 
 /** Number of constellation particles per active (both-unlocked) edge */
 const PARTICLES_PER_EDGE = 4;
 
 /** Total background stars to scatter across the canvas */
-const BG_STAR_COUNT = 650;
+const BG_STAR_COUNT = 320;
 
 // Constellation arc layout parameters (radii from the class tree centre)
 const ARC_RADIUS = {
@@ -104,6 +104,16 @@ let _targetMY = 0;
 let _rawMouseX = 0;
 let _rawMouseY = 0;
 
+// ── Zoom / pan view transform ─────────────────────────────────────────────
+// Applied to the graph layer only (nodes, edges, particles).
+// Background (stars, nebulae) stays fixed.
+const MIN_SCALE = 0.35;
+const MAX_SCALE = 3.5;
+let _view = { scale: 1, dx: 0, dy: 0 };
+
+// Drag state (null when not dragging)
+let _drag = null; // { startX, startY, startDx, startDy }
+
 /**
  * Falling gold sparks — SHOULD 6
  * Each spark: { x, y, vx, vy, alpha, r }
@@ -147,9 +157,12 @@ export const PassiveTreeCanvas = {
     _initSparks();
 
     // Input
-    _canvas.addEventListener('mousemove', e => this._onMouseMove(e));
-    _canvas.addEventListener('mouseleave', () => _hideTooltip());
-    _canvas.addEventListener('click',     e => this._onClick(e));
+    _canvas.addEventListener('mousemove',  e => this._onMouseMove(e));
+    _canvas.addEventListener('mouseleave', () => { _hideTooltip(); _drag = null; });
+    _canvas.addEventListener('click',      e => this._onClick(e));
+    _canvas.addEventListener('wheel',      e => this._onWheel(e), { passive: false });
+    _canvas.addEventListener('mousedown',  e => this._onMouseDown(e));
+    _canvas.addEventListener('mouseup',    () => { _drag = null; _canvas.style.cursor = _hoveredId ? 'pointer' : 'default'; });
 
     this.refresh();
     this._startLoop();
@@ -169,6 +182,8 @@ export const PassiveTreeCanvas = {
     if (_tooltip)  _tooltip.remove();
     _canvas = _ctx = _container = _tooltip = _roHandle = null;
     _nodes = _edges = _particles = [];
+    _view = { scale: 1, dx: 0, dy: 0 };
+    _drag = null;
   },
 
   // ---- internal helpers ----
@@ -195,6 +210,14 @@ export const PassiveTreeCanvas = {
     if (!_canvas) return;
     const { mx, my } = _canvasCoords(e);
 
+    // Drag-to-pan
+    if (_drag) {
+      _view.dx = _drag.startDx + (mx - _drag.startX);
+      _view.dy = _drag.startDy + (my - _drag.startY);
+      _canvas.style.cursor = 'grabbing';
+      return; // skip tooltip while dragging
+    }
+
     // Update raw mouse for cursor-beam effect
     _rawMouseX = mx;
     _rawMouseY = my;
@@ -214,6 +237,26 @@ export const PassiveTreeCanvas = {
       _hoveredId = null;
       _hideTooltip();
     }
+  },
+
+  _onWheel(e) {
+    e.preventDefault();
+    if (!_canvas) return;
+    const { mx, my } = _canvasCoords(e);
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, _view.scale * factor));
+    if (newScale === _view.scale) return;
+    // Zoom toward cursor position
+    _view.dx = mx + (_view.dx - mx) * (newScale / _view.scale);
+    _view.dy = my + (_view.dy - my) * (newScale / _view.scale);
+    _view.scale = newScale;
+  },
+
+  _onMouseDown(e) {
+    if (e.button !== 0) return;
+    const { mx, my } = _canvasCoords(e);
+    _drag = { startX: mx, startY: my, startDx: _view.dx, startDy: _view.dy };
+    _canvas.style.cursor = 'grabbing';
   },
 
   _onClick(e) {
@@ -413,59 +456,83 @@ function _drawFrame(ts) {
   _ctx.clearRect(0, 0, W, H);
 
   // ---- Cosmic background ----
-  _ctx.fillStyle = '#050810';
+  _ctx.fillStyle = '#030508';
   _ctx.fillRect(0, 0, W, H);
 
   // Nebula cloud layer drawn first, under stars
-  _drawNebula(W, H);
+  _drawNebula(W, H, ts);
   _drawStars(W, H, ts);
 
-  // Decorative magic circle — very faint arcane substrate beneath the node graph
+  // Decorative magic circle — very faint arcane substrate
   _drawMagicCircle(W, H, state.classType);
 
-  // Graph parallax offset — slightly less than near stars for depth illusion
-  const gOX = _mx * 12;
-  const gOY = _my * 12;
+  // Falling gold sparks (not affected by zoom/pan)
+  _updateAndDrawSparks(dt, W, H, ts);
+
+  // Graph parallax offset (reduced when zoomed in)
+  const parallaxFactor = Math.max(0, 1 - (_view.scale - 1) * 0.5);
+  const gOX = _mx * 12 * parallaxFactor + _view.dx;
+  const gOY = _my * 12 * parallaxFactor + _view.dy;
+
+  // Apply view transform to graph layer
+  _ctx.save();
+  _ctx.translate(_view.dx, _view.dy);
+  _ctx.scale(_view.scale, _view.scale);
+  const invScale = 1 / _view.scale;
+
+  // Compute graph-local offsets (parallax only, no pan — pan is in ctx transform)
+  const pOX = _mx * 12 * parallaxFactor;
+  const pOY = _my * 12 * parallaxFactor;
 
   // ---- Universal cluster label ----
-  _ctx.font      = '10px "Cinzel", serif';
+  _ctx.font      = `${10 * invScale}px "Cinzel", serif`;
   _ctx.fillStyle = 'rgba(255, 213, 79, 0.4)';
   _ctx.textAlign = 'center';
-  const uLabelX = W * UNIV_CLUSTER_X_FRAC + gOX;
-  const uLabelY = H * UNIV_CLUSTER_Y_FRAC - 58 + gOY;
-  _ctx.fillText('UNIVERSAL', uLabelX, uLabelY);
+  _ctx.fillText('UNIVERSAL', W * UNIV_CLUSTER_X_FRAC + pOX, H * UNIV_CLUSTER_Y_FRAC - 58 + pOY);
 
   // ---- Class label ----
   if (state.classType) {
-    _ctx.font      = '11px "Cinzel", serif';
+    _ctx.font      = `${11 * invScale}px "Cinzel", serif`;
     _ctx.fillStyle = `${_colorWithAlpha(CLASS_COLORS[state.classType] || '#ffffff', 0.35)}`;
     _ctx.textAlign = 'center';
-    _ctx.fillText(state.classType.toUpperCase(), W * 0.55 + gOX, H * 0.52 - ARC_RADIUS.outer - 22 + gOY);
+    _ctx.fillText(state.classType.toUpperCase(), W * 0.55 + pOX, H * 0.52 - ARC_RADIUS.outer - 22 + pOY);
   }
 
-  // ---- Edges (offset by graph parallax) ----
+  // ---- Edges ----
   for (const edge of _edges) {
     const fromU = unlocked.includes(edge.from.data.id);
     const toU   = unlocked.includes(edge.to.data.id);
-    _drawEdge(edge.from, edge.to, fromU && toU, gOX, gOY, ts);
+    _drawEdge(edge.from, edge.to, fromU && toU, pOX, pOY, ts);
   }
 
-  // ---- Particles (advance + draw) ----
+  // ---- Particles ----
   for (const p of _particles) {
     p.t += p.speed;
     if (p.t > 1) p.t -= 1;
-    _drawParticle(p, ts, gOX, gOY);
+    _drawParticle(p, ts, pOX, pOY);
   }
 
-  // ---- Cursor beams (drawn beneath nodes so nodes render on top) ----
-  _drawCursorBeams(unlocked, gOX, gOY);
-
-  // ---- Falling gold sparks (SHOULD 6) ----
-  _updateAndDrawSparks(dt, W, H, ts);
+  // ---- Cursor beams ----
+  // Convert raw mouse to graph space for beam origin check
+  const gMouseX = (_rawMouseX - _view.dx) * invScale;
+  const gMouseY = (_rawMouseY - _view.dy) * invScale;
+  _drawCursorBeams(unlocked, pOX, pOY, gMouseX, gMouseY);
 
   // ---- Nodes ----
   for (const ln of _nodes) {
-    _drawNode(ln, ts, gOX, gOY);
+    _drawNode(ln, ts, pOX, pOY);
+  }
+
+  _ctx.restore();
+
+  // ---- Zoom hint (fade in when zoomed, then fade) ----
+  if (_view.scale !== 1 || (_view.dx !== 0 || _view.dy !== 0)) {
+    _ctx.save();
+    _ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    _ctx.font = '10px monospace';
+    _ctx.textAlign = 'right';
+    _ctx.fillText(`${(_view.scale * 100) | 0}%  scroll=zoom  drag=pan`, W - 8, H - 8);
+    _ctx.restore();
   }
 }
 
@@ -541,33 +608,138 @@ function _updateAndDrawSparks(dt, W, H, ts) {
 // ---------------------------------------------------------------------------
 
 /**
- * Draw blurred nebula patches behind the star field.
- * Uses radial gradients with very low opacity so they read as subtle colour
- * variation rather than bright blobs. Positions are static (do not parallax).
+ * Draws real-looking space nebulae using layered elliptical gradients.
+ * Inspired by emission nebulae (Orion, Eagle, Lagoon) — warm reds/oranges,
+ * cool blues/teals, bright star clusters embedded in dense regions.
+ * Uses a slow breathing animation for a living-cosmos feel.
  */
-function _drawNebula(W, H) {
-  const patches = [
-    // [cx_frac, cy_frac, radius, r, g, b, opacity]
-    [ 0.62, 0.45, 320, 61, 26, 110, 0.10 ],   // purple centre
-    [ 0.25, 0.65, 260, 10, 26,  61, 0.09 ],   // deep blue lower-left
-    [ 0.78, 0.72, 220, 61, 15,  15, 0.07 ],   // faint red lower-right
-    [ 0.42, 0.22, 200, 20, 40,  90, 0.08 ],   // cold blue upper
+function _drawNebula(W, H, ts) {
+  const t = ts / 1000;
+
+  // ── Layer 1: large diffuse background clouds ──────────────────────────────
+  const bgClouds = [
+    // [cxF, cyF, rx, ry, rot, r, g, b, alpha0, alpha1]
+    // Large emission cloud (red hydrogen, Orion-like)
+    [ 0.55, 0.50, 340, 240, 0.2,  210, 55, 40,  0.00, 0.16 ],
+    // Outer purple/blue haze
+    [ 0.50, 0.48, 380, 280, -0.1, 60,  35, 140, 0.00, 0.10 ],
+    // Right-side teal reflection
+    [ 0.72, 0.55, 240, 160, 0.4,  30, 110, 180, 0.00, 0.09 ],
+    // Left cluster — blue stellar nursery
+    [ 0.32, 0.52, 200, 160, -0.3, 40,  80, 200, 0.00, 0.08 ],
   ];
 
-  for (const [cxF, cyF, radius, r, g, b, alpha] of patches) {
+  for (const [cxF, cyF, rx, ry, rot, r, g, b, a0, a1] of bgClouds) {
     const cx = W * cxF;
     const cy = H * cyF;
-    const grad = _ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    grad.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-
     _ctx.save();
-    _ctx.globalAlpha = 1;
-    _ctx.beginPath();
-    _ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    _ctx.translate(cx, cy);
+    _ctx.rotate(rot);
+    _ctx.scale(1, ry / rx);
+    const grad = _ctx.createRadialGradient(0, 0, rx * a0, 0, 0, rx);
+    grad.addColorStop(0,   `rgba(${r},${g},${b},${a1})`);
+    grad.addColorStop(0.45, `rgba(${r},${g},${b},${(a1 * 0.5).toFixed(3)})`);
+    grad.addColorStop(1,   'rgba(0,0,0,0)');
     _ctx.fillStyle = grad;
+    _ctx.beginPath();
+    _ctx.arc(0, 0, rx, 0, Math.PI * 2);
     _ctx.fill();
     _ctx.restore();
+  }
+
+  // ── Layer 2: bright inner nebula cores (hot spots) ────────────────────────
+  const hotSpots = [
+    // Bright emission core — red/orange, like Trapezium in Orion
+    [ 0.60, 0.46, 120,  80, 0.3,  240, 100, 50, 0.22 ],
+    // Oxygen region — teal/green
+    [ 0.64, 0.52,  90,  60, 0.6,  60, 200, 170, 0.18 ],
+    // Golden star-forming region
+    [ 0.55, 0.42,  80,  55, -0.2, 255, 200, 80, 0.15 ],
+    // Purple Herbig-Haro jets
+    [ 0.48, 0.58, 100,  50, 0.8,  140, 50, 200, 0.14 ],
+    // Secondary orange hot spot
+    [ 0.70, 0.44,  70,  50, -0.4, 255, 140, 30, 0.16 ],
+    // Blue reflection nebula patch
+    [ 0.42, 0.40,  85,  60,  0.5,  80, 160, 240, 0.13 ],
+  ];
+
+  const breathe = 1 + 0.04 * Math.sin(t * 0.3);
+  for (const [cxF, cyF, rx, ry, rot, r, g, b, alpha] of hotSpots) {
+    const cx = W * cxF;
+    const cy = H * cyF;
+    const a  = alpha * breathe;
+    _ctx.save();
+    _ctx.translate(cx, cy);
+    _ctx.rotate(rot);
+    _ctx.scale(1, ry / rx);
+    const grad = _ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    grad.addColorStop(0,    `rgba(${r},${g},${b},${a.toFixed(3)})`);
+    grad.addColorStop(0.35, `rgba(${r},${g},${b},${(a * 0.55).toFixed(3)})`);
+    grad.addColorStop(0.7,  `rgba(${r},${g},${b},${(a * 0.15).toFixed(3)})`);
+    grad.addColorStop(1,    'rgba(0,0,0,0)');
+    _ctx.fillStyle = grad;
+    _ctx.beginPath();
+    _ctx.arc(0, 0, rx, 0, Math.PI * 2);
+    _ctx.fill();
+    _ctx.restore();
+  }
+
+  // ── Layer 3: bright star clusters embedded in nebulae ────────────────────
+  _drawNebulaStarClusters(W, H, ts);
+}
+
+/**
+ * Colored star clusters within bright nebula regions.
+ * Stars have tinted colors based on the nebula region (O-type blue-white,
+ * M-type orange-red, young T Tauri yellow-white).
+ */
+function _drawNebulaStarClusters(W, H, ts) {
+  const t = ts / 1000;
+
+  // Seeded deterministic RNG for consistent clusters each session
+  let rng = 77431;
+  const rand = () => { rng = (rng * 16807) % 2147483647; return (rng - 1) / 2147483646; };
+
+  const clusters = [
+    { cx: 0.60, cy: 0.46, r: 55, count: 55, R: 255, G: 180, B: 140 }, // orange-red stars
+    { cx: 0.64, cy: 0.52, r: 45, count: 40, R: 160, G: 230, B: 220 }, // teal-white stars
+    { cx: 0.55, cy: 0.42, r: 50, count: 50, R: 255, G: 245, B: 200 }, // yellow-white
+    { cx: 0.70, cy: 0.44, r: 40, count: 35, R: 255, G: 200, B: 100 }, // orange hot stars
+    { cx: 0.42, cy: 0.40, r: 40, count: 30, R: 160, G: 190, B: 255 }, // blue-white O-type
+    { cx: 0.48, cy: 0.58, r: 35, count: 25, R: 200, G: 140, B: 255 }, // purple young stars
+  ];
+
+  for (const cl of clusters) {
+    const cx = W * cl.cx;
+    const cy = H * cl.cy;
+    for (let i = 0; i < cl.count; i++) {
+      const angle = rand() * Math.PI * 2;
+      const dist  = Math.pow(rand(), 0.6) * cl.r; // bias toward center
+      const sx    = cx + Math.cos(angle) * dist;
+      const sy    = cy + Math.sin(angle) * dist;
+      // Star brightness: core cluster brighter
+      const brightness = 0.3 + rand() * 0.55;
+      const twinkle    = rand() > 0.65 ? 0.15 * Math.sin(t * (1 + rand() * 3) + rand() * 6) : 0;
+      const alpha      = Math.max(0, Math.min(1, brightness + twinkle));
+      const sr         = rand() * 1.4 + 0.3;
+
+      _ctx.beginPath();
+      _ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      _ctx.fillStyle = `rgba(${cl.R},${cl.G},${cl.B},${alpha.toFixed(2)})`;
+      _ctx.fill();
+
+      // Occasional "bright star" with a small cross glow
+      if (rand() > 0.92) {
+        _ctx.save();
+        _ctx.globalAlpha = alpha * 0.4;
+        _ctx.strokeStyle = `rgba(${cl.R},${cl.G},${cl.B},1)`;
+        _ctx.lineWidth = 0.5;
+        const gl = sr * 4;
+        _ctx.beginPath(); _ctx.moveTo(sx - gl, sy); _ctx.lineTo(sx + gl, sy); _ctx.stroke();
+        _ctx.beginPath(); _ctx.moveTo(sx, sy - gl); _ctx.lineTo(sx, sy + gl); _ctx.stroke();
+        _ctx.restore();
+      }
+    }
   }
 }
 
@@ -795,14 +967,16 @@ function _drawParticle(p, ts, oX = 0, oY = 0) {
  * @param {number}   oX        Graph parallax X offset
  * @param {number}   oY        Graph parallax Y offset
  */
-function _drawCursorBeams(unlocked, oX, oY) {
-  const BEAM_RADIUS = 60; // pixels — activation distance
+function _drawCursorBeams(unlocked, oX, oY, mouseX, mouseY) {
+  const BEAM_RADIUS = 60;
+  const mx = mouseX !== undefined ? mouseX : _rawMouseX;
+  const my = mouseY !== undefined ? mouseY : _rawMouseY;
 
   for (const ln of _nodes) {
     const nx = ln.x + oX;
     const ny = ln.y + oY;
-    const dx = _rawMouseX - nx;
-    const dy = _rawMouseY - ny;
+    const dx = mx - nx;
+    const dy = my - ny;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist > BEAM_RADIUS || dist < 1) continue;
@@ -818,7 +992,7 @@ function _drawCursorBeams(unlocked, oX, oY) {
     _ctx.shadowBlur   = 8;
     _ctx.beginPath();
     _ctx.moveTo(nx, ny);
-    _ctx.lineTo(_rawMouseX, _rawMouseY);
+    _ctx.lineTo(mx, my);
     _ctx.stroke();
     _ctx.restore();
   }
@@ -885,9 +1059,9 @@ function _drawNode(ln, ts, oX = 0, oY = 0) {
     _ctx.fill();
   }
 
-  // MUST 3 available: outer dashed pulsing ring at radius*2
+  // Available: dashed pulsing ring just outside the hex
   if (isAvailable) {
-    const dashRingR = radius * 2 * availableScale;
+    const dashRingR = radius * 1.55 * availableScale;
     _ctx.save();
     _ctx.globalAlpha = 0.5 + pulse * 0.3;
     _ctx.strokeStyle = _colorWithAlpha(color, 0.7);
@@ -942,7 +1116,7 @@ function _drawNode(ln, ts, oX = 0, oY = 0) {
   _ctx.textBaseline = 'top';
 
   const labelLines = _wrapLabel(data.name, drawRadius);
-  const fontSize   = 9;
+  const fontSize   = 10;
   _ctx.font        = `${fontSize}px "Cinzel", serif`;
   _ctx.fillStyle   = '#ffffff';
 
@@ -959,52 +1133,94 @@ function _drawNode(ln, ts, oX = 0, oY = 0) {
 }
 
 /**
- * Draw a 5-pointed star centred at (cx, cy) with outer radius `r`.
- * Colours and fill differ by node state.
+ * Draw a hexagonal rune-cell node (PoE/Diablo-style) centred at (cx, cy).
+ * Shape: flat-top hexagon with an inner circle for unlocked nodes.
  *
  * @param {number}  cx, cy   Centre
- * @param {number}  r        Outer radius
+ * @param {number}  r        Outer hex circumradius
  * @param {string}  color    Accent colour (hex)
  * @param {boolean} unlocked
  * @param {boolean} available
  */
 function _drawStar(cx, cy, r, color, unlocked, available) {
-  const points = 5;
-  const inner  = r * 0.42;   // inner radius of the star notch
-  const rot    = -Math.PI / 2; // point upward
-
-  _ctx.beginPath();
-  for (let i = 0; i < points * 2; i++) {
-    const angle = rot + (i * Math.PI) / points;
-    const radius = i % 2 === 0 ? r : inner;
-    const px = cx + radius * Math.cos(angle);
-    const py = cy + radius * Math.sin(angle);
-    if (i === 0) _ctx.moveTo(px, py);
-    else         _ctx.lineTo(px, py);
+  // ── Hex path (flat-top orientation) ──────────────────────────────────────
+  function hexPath(radius) {
+    _ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+      const px = cx + radius * Math.cos(a);
+      const py = cy + radius * Math.sin(a);
+      if (i === 0) _ctx.moveTo(px, py);
+      else         _ctx.lineTo(px, py);
+    }
+    _ctx.closePath();
   }
-  _ctx.closePath();
 
-  // Fill
+  // ── Background plate ─────────────────────────────────────────────────────
   if (unlocked) {
-    // Bright core with lighter tint
-    const grad = _ctx.createRadialGradient(cx, cy - r * 0.3, r * 0.1, cx, cy, r);
-    grad.addColorStop(0, _lighten(color, 0.55));
-    grad.addColorStop(1, color);
+    const grad = _ctx.createRadialGradient(cx, cy - r * 0.25, r * 0.1, cx, cy, r * 1.1);
+    grad.addColorStop(0, _lighten(color, 0.25));
+    grad.addColorStop(0.55, _darken(color, 0.25));
+    grad.addColorStop(1,   _darken(color, 0.55));
+    hexPath(r);
     _ctx.fillStyle = grad;
+    _ctx.fill();
   } else if (available) {
-    _ctx.fillStyle = _darken(color, 0.55);
+    hexPath(r);
+    _ctx.fillStyle = '#141824';
+    _ctx.fill();
   } else {
-    // MUST 3 locked: desaturated dark blue-grey, NO class colour
-    _ctx.fillStyle = '#2a3040';
+    hexPath(r);
+    _ctx.fillStyle = '#0c0e14';
+    _ctx.fill();
   }
-  _ctx.fill();
 
-  // Stroke / rim
-  _ctx.strokeStyle = unlocked ? color
-                   : available ? _darken(color, 0.2)
-                   : 'rgba(50,60,80,0.5)';  // MUST 3 locked: no class colour on rim
+  // ── Outer hex border ─────────────────────────────────────────────────────
+  hexPath(r);
+  _ctx.strokeStyle = unlocked  ? color
+                   : available ? _darken(color, 0.15)
+                   : 'rgba(55,65,90,0.45)';
   _ctx.lineWidth   = unlocked ? 1.5 : 1;
   _ctx.stroke();
+
+  // ── Inner ring (inset by 3px) for visual depth ───────────────────────────
+  if (r > 14) {
+    hexPath(r - 3);
+    _ctx.strokeStyle = unlocked  ? _lighten(color, 0.35)
+                     : available ? _darken(color, 0.3)
+                     : 'rgba(40,50,75,0.35)';
+    _ctx.lineWidth = 0.75;
+    _ctx.stroke();
+  }
+
+  // ── Bright inner circle for unlocked nodes (rune glow core) ──────────────
+  if (unlocked) {
+    const coreR = r * 0.38;
+    const cGrad = _ctx.createRadialGradient(cx, cy - coreR * 0.3, coreR * 0.1, cx, cy, coreR);
+    cGrad.addColorStop(0, '#ffffff');
+    cGrad.addColorStop(0.4, _lighten(color, 0.7));
+    cGrad.addColorStop(1, color);
+    _ctx.beginPath();
+    _ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
+    _ctx.fillStyle = cGrad;
+    _ctx.fill();
+  } else if (available) {
+    // Pulsing dim core dot
+    _ctx.beginPath();
+    _ctx.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
+    _ctx.fillStyle = _darken(color, 0.4);
+    _ctx.fill();
+    // Bright rim on the inner dot
+    _ctx.strokeStyle = _darken(color, 0.1);
+    _ctx.lineWidth = 1;
+    _ctx.stroke();
+  } else {
+    // Locked: tiny dark circle, nearly invisible
+    _ctx.beginPath();
+    _ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2);
+    _ctx.fillStyle = 'rgba(30,38,60,0.7)';
+    _ctx.fill();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1139,13 +1355,17 @@ function _refreshLeftPanel(passives) {
  * Stars use a circular hit zone slightly larger than the visual radius.
  */
 function _getNodeAt(mx, my) {
-  // Account for graph parallax offset so click hits where the node is visually
-  const oX = _mx * 12;
-  const oY = _my * 12;
+  // Convert canvas coords → graph-local coords (accounting for zoom/pan + parallax)
+  const invScale = 1 / _view.scale;
+  const gx = (mx - _view.dx) * invScale;
+  const gy = (my - _view.dy) * invScale;
+  const parallaxFactor = Math.max(0, 1 - (_view.scale - 1) * 0.5);
+  const oX = _mx * 12 * parallaxFactor;
+  const oY = _my * 12 * parallaxFactor;
   for (let i = _nodes.length - 1; i >= 0; i--) {
     const ln = _nodes[i];
-    const dx = mx - (ln.x + oX);
-    const dy = my - (ln.y + oY);
+    const dx = gx - (ln.x + oX);
+    const dy = gy - (ln.y + oY);
     const hitR = ln.radius + 6;
     if (dx * dx + dy * dy <= hitR * hitR) return ln;
   }

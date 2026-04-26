@@ -9,26 +9,29 @@
  */
 
 import { mulberry32 }                from '../engine/rng.js';
-import { DT, MAX_FRAME_DELTA, TILE_SIZE, VIEWPORT_W, VIEWPORT_H } from '../engine/config.js';
+import { DT, MAX_FRAME_DELTA, TILE_SIZE, VIEWPORT_W, VIEWPORT_H, ISO_Y } from '../engine/config.js';
 import { toggleDebug }               from '../engine/config.js';
-import { buildRoomTilemap }          from '../engine/tilemap.js';
-import { initRender, draw }          from '../engine/render.js';
+import { buildRoomTilemap, buildCaveTilemap } from '../engine/tilemap.js';
+import { initRender, draw, getZoomLevel } from '../engine/render.js';
 import { loadAllSprites }            from '../engine/sprites.js';
-import { initInput, snapshotInput, clearInput } from '../engine/input.js';
+import { initInput, snapshotInput, clearInput, destroyInput } from '../engine/input.js';
 import { ObjectPool }                from '../engine/pools.js';
 import { updatePlayerAI }            from '../engine/ai.js';
 import { updateEnemyAI }             from '../engine/ai.js';
 import { PlayerActor }               from './player.js';
 import { EnemyActor }                from './enemy.js';
-import { collectPickups, createGoldPickup } from './loot.js';
+import { collectPickups, createGoldPickup, updateGoldMagnet } from './loot.js';
 import { createExitPortal, checkExtractionTrigger } from './extraction.js';
 import { updateHUD as updateDungeonHUD, initHUD, destroyHUD } from './hud.js';
+import { loadPendingCustomMap }      from './custom_map.js';
 
 // ─────────────────────────────────────────────
-// Room configuration (25×18 tiles)
+// Cave configuration
 // ─────────────────────────────────────────────
-const ROOM_COLS = 25;
-const ROOM_ROWS = 18;
+// At TILE_SIZE=32 the world pixel size is CAVE_COLS*32 × CAVE_ROWS*32.
+// 75×52 ≈ 2400×1664px — same physical area as the old 200×140 @ 12px/tile.
+const CAVE_COLS = 75;
+const CAVE_ROWS = 52;
 
 /**
  * World — holds ALL simulation state for one run.
@@ -49,6 +52,14 @@ class World {
 
     // Gold pickups
     this.pickups = [];
+
+    // Static floor decorations — purely visual, no collision, no interaction.
+    // Each: { x, y, type: 'skull'|'bones'|'rock'|'mushroom'|'crack', variant: 0..2 }
+    this.decorations = [];
+
+    // Wall decorations — torn paintings/tapestries drawn on wall front faces.
+    // Each: { x, y, variant: 0..3 }  (x,y = tile-pixel coords of the wall)
+    this.wallDecorations = [];
 
     // Object pools — pre-allocated, zero GC in hot path
     this.projectilePool = new ObjectPool(256, () => ({
@@ -77,6 +88,14 @@ class World {
 
     // Tilemap — set during init
     this.tilemap = null;
+
+    // Follow-camera offset (top-left of viewport in world-space).
+    // Updated every tick by _updateCamera() to keep player centred.
+    this.camera = { x: 0, y: 0 };
+
+    // Camera shake — decays over `ticksLeft` ticks. Peak offset = magnitude.
+    // Triggered via triggerShake() (e.g. player hit, explosion).
+    this.cameraShake = { magnitude: 0, ticksLeft: 0, totalTicks: 0 };
 
     // Input snapshot — set at start of each tick
     this.input = null;
@@ -125,6 +144,9 @@ class World {
     // Damage numbers
     this._updateDamageNumbers();
 
+    // Gold magnet — pulls coins toward player within range
+    updateGoldMagnet(this.player, this.pickups, TILE_SIZE);
+
     // Gold pickup collection
     if (this.player && this.player.alive) {
       collectPickups(this.player, this.pickups, this);
@@ -139,6 +161,68 @@ class World {
     this.entities = this.entities.filter(e => e.alive || (e._deathTick && this.tick - e._deathTick < 35));
 
     this.tick++;
+
+    // Update follow-camera to keep player centred in viewport
+    this._updateCamera();
+  }
+
+  /**
+   * Recomputes world.camera so the player stays centred, clamped to map edges.
+   * Called at the end of every update tick.
+   *
+   * With zoom, the visible area in world-space is VIEWPORT / zoom. Camera offset
+   * (camX, camY) is in pre-zoom world-space; render.js applies ctx.scale(zoom).
+   * Centre of viewport in world-space = (VIEWPORT/2) / zoom.
+   */
+  _updateCamera() {
+    if (!this.player || !this.tilemap) return;
+    const p    = this.player;
+    const t    = this.tilemap;
+    const zoom = getZoomLevel();
+
+    // Half-viewport in world-space (shrinks as zoom increases)
+    const halfW = (VIEWPORT_W / 2) / zoom;
+    const halfH = (VIEWPORT_H / 2) / zoom;
+
+    let cx = Math.round(halfW - p.x);
+    let cy = Math.round(halfH - p.y * ISO_Y);
+
+    // Effective viewport size in world-space
+    const effW = VIEWPORT_W / zoom;
+    const effH = VIEWPORT_H / zoom;
+    const mapScreenH = Math.round(t.pixelH * ISO_Y);
+
+    // Clamp so map edges don't go past viewport edges
+    cx = Math.max(effW - t.pixelW, Math.min(0, cx));
+    cy = Math.max(effH - mapScreenH, Math.min(0, cy));
+
+    // Apply decaying shake offset. Magnitude tapers linearly to 0.
+    // RNG-based direction each tick so motion reads as "impact tremor".
+    const s = this.cameraShake;
+    if (s.ticksLeft > 0) {
+      const k = s.ticksLeft / s.totalTicks; // 1 → 0 over duration
+      const amp = s.magnitude * k;
+      cx += ((this.rng() - 0.5) * 2 * amp) | 0;
+      cy += ((this.rng() - 0.5) * 2 * amp) | 0;
+      s.ticksLeft--;
+    }
+
+    this.camera.x = cx;
+    this.camera.y = cy;
+  }
+
+  /**
+   * Triggers a camera shake. Replaces any ongoing shake if the new one is stronger.
+   * @param {number} magnitude — peak offset in pixels (e.g. 8 for a hit)
+   * @param {number} ticks     — duration in ticks (e.g. 10 ≈ 167ms)
+   */
+  triggerShake(magnitude, ticks) {
+    const s = this.cameraShake;
+    if (magnitude > s.magnitude || s.ticksLeft <= 0) {
+      s.magnitude  = magnitude;
+      s.ticksLeft  = ticks;
+      s.totalTicks = ticks;
+    }
   }
 
   // ─────────────────────────────────────────────
@@ -200,7 +284,8 @@ class World {
           const died = e.takeDamage(p.dmg, this);
           this._spawnImpact(p.x, p.y);
           this._spawnImpactParticles(p.x, p.y, '#ff6a00', 8);
-          this._spawnDamageNumber(e.x, e.y - e.radius - 10, p.dmg, '#ffdd00');
+          // y-80 puts number near head in screen space (drawH=48, ISO_Y=0.6 → 48/0.6≈80)
+          this._spawnDamageNumber(e.x, e.y - 80, p.dmg, '#ffee40');
           p.alive = false;
           if (died) {
             this.killCount++;
@@ -330,7 +415,7 @@ export function setOnRunEnd(cb) {
  * Called from combat_bridge.js (which is called from main.js).
  * Async: preloads all sprite sheets before starting the game loop.
  */
-export async function startRun() {
+export async function startRun(playerConfig = {}) {
   // Pick up canvas and container references
   _canvas    = document.getElementById('action-canvas');
   _container = document.getElementById('action-combat-container');
@@ -352,65 +437,217 @@ export async function startRun() {
   const seed = Date.now() & 0xFFFFFFFF;
 
   _world = new World(seed);
-  _world.tilemap = buildRoomTilemap(ROOM_COLS, ROOM_ROWS, _world.rng);
+  _world.playerConfig = playerConfig; // { classType, spellDamageBonus }
 
-  // Offset tiles → pixel space (room is centered in viewport)
-  const roomOffX = Math.round((VIEWPORT_W - _world.tilemap.pixelW) / 2);
-  const roomOffY = Math.round((VIEWPORT_H - _world.tilemap.pixelH) / 2);
-
-  /**
-   * Converts tile (col, row) → pixel center relative to room origin.
-   * The render layer adds _camX/_camY again, so entity coords are
-   * room-relative (0..roomPixelW, 0..roomPixelH).
-   */
-  function tileToRoom(col, row) {
-    return {
-      x: col * TILE_SIZE + TILE_SIZE / 2,
-      y: row * TILE_SIZE + TILE_SIZE / 2,
-    };
+  /** Converts tile (col, row) → pixel centre (world-relative). */
+  function tileCenter(c, r) {
+    return { x: c * TILE_SIZE + TILE_SIZE / 2, y: r * TILE_SIZE + TILE_SIZE / 2 };
   }
 
-  // Spawn player at room centre
-  const centerCol = Math.floor(ROOM_COLS / 2);
-  const centerRow = Math.floor(ROOM_ROWS / 2);
-  const pPos = tileToRoom(centerCol, centerRow);
-  _world.player = new PlayerActor({ x: pPos.x, y: pPos.y });
+  // ── Tilemap: custom map OR procedural generation ───────────────────────────
+  // loadPendingCustomMap() reads localStorage['veyra:loadMap'] once and deletes it.
+  // Returns { tilemap, spawns } if a valid custom map was pending, otherwise null.
+  const customMapResult = loadPendingCustomMap();
 
-  // Spawn 3 Zombies near corners (avoiding walls)
-  const zombieSpawns = [
-    tileToRoom(2, 2),
-    tileToRoom(ROOM_COLS - 3, 2),
-    tileToRoom(2, ROOM_ROWS - 3),
-  ];
-  for (const pos of zombieSpawns) {
-    _world.entities.push(new EnemyActor({
-      x:           pos.x,
-      y:           pos.y,
-      radius:      16,
-      hp:          30,
-      damage:      10,
-      moveSpeed:   1.8,
-      aggroRange:  8 * TILE_SIZE,
-      attackRange: 36,
-      color:       '#44cc44',
-      goldDrop:    8,
-      xpDrop:      15,
-    }));
+  let reachable, sc, sr, useCustomSpawns = false, customSpawns = null;
+
+  if (customMapResult) {
+    // Custom map path — use editor-defined tilemap and marker-based spawns
+    _world.tilemap  = customMapResult.tilemap;
+    customSpawns    = customMapResult.spawns;
+    useCustomSpawns = true;
+    reachable = _world.tilemap.reachableTiles;
+    sc = customSpawns.start.c;
+    sr = customSpawns.start.r;
+    console.log('[dungeon] custom map loaded:', _world.tilemap.cols, '×', _world.tilemap.rows,
+      '| enemies:', customSpawns.enemies.length, '| loot:', customSpawns.loot.length);
+  } else {
+    // Procedural generation path (unchanged)
+    _world.tilemap = buildCaveTilemap(CAVE_COLS, CAVE_ROWS, _world.rng);
+    reachable = _world.tilemap.reachableTiles;
+    const startTile = _world.tilemap.startTile;
+    sc = startTile.c;
+    sr = startTile.r;
   }
 
-  // Exit portal at opposite corner (bottom-right interior tile)
-  const portalPos = tileToRoom(ROOM_COLS - 3, ROOM_ROWS - 3);
-  _world.exitPortal = createExitPortal(portalPos);
+  // Player at start tile
+  const pPos = tileCenter(sc, sr);
+  _world.player = new PlayerActor({ x: pPos.x, y: pPos.y, classType: playerConfig.classType || 'pyromancer' });
 
-  // A few gold piles scattered around
-  const goldPositions = [
-    tileToRoom(5, 5),
-    tileToRoom(10, 3),
-    tileToRoom(18, 9),
-    tileToRoom(8, 14),
-  ];
-  for (const pos of goldPositions) {
-    _world.pickups.push(createGoldPickup({ x: pos.x, y: pos.y, amount: 5 + Math.floor(_world.rng() * 10) }));
+  // Initial camera position — centred on player before first update tick.
+  // getZoomLevel() at this point returns 1.0 (default), but call it correctly
+  // so the formula is consistent with _updateCamera().
+  {
+    const t    = _world.tilemap;
+    const zoom = getZoomLevel();
+    const effW = VIEWPORT_W / zoom;
+    const effH = VIEWPORT_H / zoom;
+    let cx = Math.round(effW / 2 - pPos.x);
+    let cy = Math.round(effH / 2 - pPos.y * ISO_Y);
+    const mapScreenH = Math.round(t.pixelH * ISO_Y);
+    cx = Math.max(effW - t.pixelW, Math.min(0, cx));
+    cy = Math.max(effH - mapScreenH, Math.min(0, cy));
+    _world.camera = { x: cx, y: cy };
+  }
+
+  // ── Exit portal ────────────────────────────────────────────────────────────
+  if (useCustomSpawns) {
+    // Exit at the editor-placed exit marker
+    _world.exitPortal = createExitPortal(tileCenter(customSpawns.exit.c, customSpawns.exit.r));
+  } else {
+    // Procedural: furthest reachable tile from player start (end of BFS)
+    const portalTile = reachable[reachable.length - 1];
+    _world.exitPortal = createExitPortal(tileCenter(portalTile.c, portalTile.r));
+  }
+
+  // ── Enemy spawns ───────────────────────────────────────────────────────────
+  if (useCustomSpawns) {
+    // Marker-based — no BFS distribution required.
+    // Zero enemies is valid (editor can draw empty test maps).
+    for (const em of customSpawns.enemies) {
+      const pos = tileCenter(em.c, em.r);
+      _world.entities.push(new EnemyActor({
+        x:                   pos.x,
+        y:                   pos.y,
+        radius:              em.elite ? 14 : 12,
+        collisionHalf:       em.elite ? 14 : 10,
+        hp:                  em.elite ? 200 : 100,
+        damage:              em.elite ? 35 : 20,
+        moveSpeed:           em.elite ? 11.5 : 9.0,
+        aggroRange:          14 * TILE_SIZE,
+        attackRange:         28,
+        attackCooldownTicks: em.elite ? 60 : 80,
+        color:               em.elite ? '#cc2222' : '#44cc44',
+        goldDrop:            em.elite ? 22 : 12,
+        xpDrop:              em.elite ? 40 : 22,
+      }));
+    }
+  } else {
+    // Procedural: 36 enemies spread across reachable tiles
+    // Unpowered character (~INT 10) deals ~25 dmg/1.2s; enemy HP 100 needs ~5 shots.
+    // Elite HP 200 needs ~10 shots while it does 35 dmg/1.5s = ~24 dps → dies in 4s.
+    const skip = Math.floor(reachable.length * 0.20);
+    const pool = reachable.slice(skip);
+    const count = 36;
+    const step  = Math.floor(pool.length / count);
+    for (let i = 0; i < count && i * step < pool.length; i++) {
+      const { c, r } = pool[i * step];
+      const pos = tileCenter(c, r);
+      const elite = (i % 4 === 3);
+      _world.entities.push(new EnemyActor({
+        x:              pos.x,
+        y:              pos.y,
+        // radius = combat hit-detection sphere (used by projectile impact check)
+        radius:         elite ? 14 : 12,
+        // collisionHalf = AABB half-size for movement — separate from combat radius
+        collisionHalf:  elite ? 14 : 10,
+        hp:             elite ? 200 : 100,
+        damage:         elite ? 35 : 20,
+        // Player speed = 10 tiles/s. Elites > player, normals slightly slower
+        // so player can still tactically space — but no kiting forever.
+        moveSpeed:      elite ? 11.5 : 9.0,
+        aggroRange:     14 * TILE_SIZE,
+        attackRange:    28, // pixels — melee contact range (TILE_SIZE=32; ~1 tile reach)
+        attackCooldownTicks: elite ? 60 : 80,
+        color:          elite ? '#cc2222' : '#44cc44',
+        goldDrop:       elite ? 22 : 12,
+        xpDrop:         elite ? 40 : 22,
+      }));
+    }
+  }
+
+  // ── Gold pickups ───────────────────────────────────────────────────────────
+  if (useCustomSpawns) {
+    // Use loot markers from custom map
+    for (const lm of customSpawns.loot) {
+      const pos = tileCenter(lm.c, lm.r);
+      _world.pickups.push(createGoldPickup({
+        x: pos.x, y: pos.y,
+        amount: lm.amount || 20,
+      }));
+    }
+  } else {
+    // Procedural: spread 12 gold piles across reachable area
+    const goldCount = 12;
+    const skip = Math.floor(reachable.length * 0.10);
+    const pool = reachable.slice(skip);
+    const step = Math.floor(pool.length / goldCount);
+    for (let i = 0; i < goldCount && i * step < pool.length; i++) {
+      const { c, r } = pool[i * step + Math.floor(step * 0.5)];
+      const pos = tileCenter(c, r);
+      _world.pickups.push(createGoldPickup({
+        x: pos.x, y: pos.y,
+        amount: 5 + Math.floor(_world.rng() * 10),
+      }));
+    }
+  }
+
+  // Floor decorations — scatter cute-dark props (always procedural, independent of custom map)
+  // Weights: bones 25, rock 25, crack 20, skull 15, mushroom 15
+  {
+    const decorCount = Math.floor(reachable.length * 0.025);
+    const tilesUsed  = new Set();
+    let placed = 0, attempts = 0;
+    while (placed < decorCount && attempts < decorCount * 4) {
+      attempts++;
+      const t    = reachable[Math.floor(_world.rng() * reachable.length)];
+      const key  = t.r * _world.tilemap.cols + t.c;
+      if (tilesUsed.has(key)) continue;
+      tilesUsed.add(key);
+
+      const roll = _world.rng();
+      let type;
+      if      (roll < 0.25) type = 'bones';
+      else if (roll < 0.50) type = 'rock';
+      else if (roll < 0.70) type = 'crack';
+      else if (roll < 0.85) type = 'skull';
+      else                  type = 'mushroom';
+
+      _world.decorations.push({
+        x: t.c * TILE_SIZE + TILE_SIZE / 2 + (_world.rng() - 0.5) * 10,
+        y: t.r * TILE_SIZE + TILE_SIZE / 2 + (_world.rng() - 0.5) * 10,
+        type,
+        variant: Math.floor(_world.rng() * 3),
+        rot:     (_world.rng() - 0.5) * Math.PI,
+      });
+      placed++;
+    }
+  }
+
+  // Wall decorations — torn paintings/tapestries on wall faces.
+  // Pick walls that have a floor tile directly in front (south side).
+  {
+    const placed = new Set();
+    let count = 0;
+    const maxCount = 10;
+    const candidates = [];
+
+    for (const { c, r } of reachable) {
+      // Wall must exist one tile above this floor tile
+      if (_world.tilemap.isWall(c, r - 1) && !_world.tilemap.isWall(c, r)) {
+        candidates.push({ c, r: r - 1 });
+      }
+    }
+
+    // Shuffle candidates using rng, pick up to maxCount
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(_world.rng() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    for (const { c, r } of candidates) {
+      if (count >= maxCount) break;
+      const key = r * _world.tilemap.cols + c;
+      if (placed.has(key)) continue;
+      placed.add(key);
+      _world.wallDecorations.push({
+        c, r,
+        x: c * TILE_SIZE + TILE_SIZE / 2,
+        y: r * TILE_SIZE,
+        variant: Math.floor(_world.rng() * 4),
+      });
+      count++;
+    }
   }
 
   _world.runStartTick = 0;
@@ -504,13 +741,23 @@ function _processEvents(events) {
       }
 
       case 'enemy_died': {
-        // Drop gold at death location
         if (_world) {
+          // Drop gold
           _world.pickups.push(createGoldPickup({
             x:      ev.x,
             y:      ev.y,
             amount: ev.goldDrop || 5,
           }));
+          // Track kills for XP calculation in stopRun
+          _world.killCount++;
+        }
+        break;
+      }
+
+      case 'damage': {
+        // Show player damage number (red) when enemy hits player
+        if (_world && ev.team === 'player') {
+          _world._spawnDamageNumber(ev.x, ev.y - 80, ev.amount, '#ff6060');
         }
         break;
       }
@@ -619,7 +866,7 @@ export function bindPopupEvents() {
       // Re-enable auto-cast and resume
       if (_world && _world.player) {
         _world.player.autoCastEnabled = true;
-        if (_world.exitPortal) _world.exitPortal.triggered = false;
+        if (_world.exitPortal) _world.exitPortal.dismissed = true; // suppress until player leaves range
       }
       if (!_rafId && _world) {
         _lastTs = 0;

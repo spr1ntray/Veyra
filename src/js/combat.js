@@ -253,7 +253,7 @@ export function initBattle(enemyId, options = {}) {
   const rawSlots = state.grimoire.filter(id => id !== null);
   if (rawSlots.length === 0) {
     // Гримуар полностью пуст — показываем явное предупреждение, не молчим
-    showNotification('Гримуар пуст. Открой гримуар и добавь заклинания.', 'warning');
+    showNotification('Grimoire is empty. Open the grimoire and add spells.', 'warning');
     return false;
   }
 
@@ -473,8 +473,8 @@ function scheduleNextCast(skipCount = 0) {
     advanceGrimoire();
     if (skipCount + 1 >= totalSlots) {
       // Все слоты оказались пустыми — явное сообщение, не молча "проигрываем"
-      addCombatLog('Нет заклинаний в гримуаре!', '#e8a020');
-      showNotification('В гримуаре нет совместимых заклинаний — бой завершён.', 'warning');
+      addCombatLog('No spells in grimoire!', '#e8a020');
+      showNotification('No compatible spells in grimoire — battle ended.', 'warning');
       // Небольшая задержка, чтобы игрок успел прочитать уведомление
       battleState.castTimeout = _schedule(() => { endBattle('loss'); }, 1500);
       return;
@@ -494,13 +494,13 @@ function scheduleNextCast(skipCount = 0) {
 
     if (skipCount + 1 >= totalSlots) {
       // Все слоты оказались несовместимы с классом игрока — явное завершение
-      addCombatLog('Нет совместимых заклинаний!', '#e8a020');
-      showNotification('В гримуаре нет заклинаний для твоего класса. Открой гримуар и переназначь слоты.', 'warning');
+      addCombatLog('No compatible spells!', '#e8a020');
+      showNotification('No spells for your class in the grimoire. Open the grimoire and reassign slots.', 'warning');
       battleState.castTimeout = _schedule(() => { endBattle('loss'); }, 1500);
       return;
     }
 
-    addCombatLog(`${spell.name}: требует ${className}`, '#888');
+    addCombatLog(`${spell.name}: requires ${className}`, '#888');
     // Пауза CAST_GAP перед следующим слотом, чтобы лог не спамил мгновенно
     battleState.castTimeout = _schedule(() => {
       if (battleState.active) scheduleNextCast(skipCount + 1);

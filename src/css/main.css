@@ -1329,6 +1329,11 @@ body {
 }
 
 /* Class-element badge in HUD — PNG replaces old emoji */
+.hud-class-badge {
+  align-self: center;
+  font-size: 18px;
+  line-height: 1;
+}
 .hud-class-badge .hud-badge-img {
   width: 28px;
   height: 28px;

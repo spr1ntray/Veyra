@@ -22,7 +22,8 @@ export function createExitPortal({ x, y }) {
     x,
     y,
     radius: 24,
-    triggered: false, // prevent repeated triggers
+    triggered: false,  // prevent repeated triggers
+    dismissed: false,  // suppress re-trigger until player leaves range
   };
 }
 
@@ -35,14 +36,26 @@ export function createExitPortal({ x, y }) {
  * @param {Object} world
  */
 export function checkExtractionTrigger(player, portal, world) {
-  if (!portal || portal.triggered) return;
+  if (!portal) return;
   if (!player.alive) return;
 
-  const dx = player.x - portal.x;
-  const dy = player.y - portal.y;
-  const dist = Math.sqrt(dx*dx + dy*dy);
+  const dx      = player.x - portal.x;
+  const dy      = player.y - portal.y;
+  const dist    = Math.sqrt(dx*dx + dy*dy);
+  const inRange = dist < player.radius + portal.radius + TRIGGER_RANGE;
 
-  if (dist < player.radius + portal.radius + TRIGGER_RANGE) {
+  // If player dismissed the popup, wait until they leave range before allowing re-trigger
+  if (portal.dismissed) {
+    if (!inRange) {
+      portal.dismissed = false;
+      portal.triggered = false; // ready for re-entry
+    }
+    return;
+  }
+
+  if (portal.triggered) return;
+
+  if (inRange) {
     portal.triggered = true;
     world.events.push({ type: 'portal_reached' });
   }

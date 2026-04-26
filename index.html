@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="src/css/tower.css">
   <link rel="stylesheet" href="src/css/passives.css">
   <link rel="stylesheet" href="src/css/action-combat.css">
+  <link rel="stylesheet" href="src/css/lobby.css">
 </head>
 <body>
 
@@ -135,9 +136,8 @@
       <div class="map-marker-label">The Spire</div>
     </div>
 
-    <!-- TEST button: Action Dungeon prototype -->
-    <button class="map-back-btn" id="btn-test-action-dungeon"
-      style="bottom:auto;top:16px;right:16px;left:auto;background:rgba(255,106,0,0.18);border-color:#ff6a00;color:#ff6a00">
+    <!-- TEST button: hidden — use Tower marker on the map instead -->
+    <button class="map-back-btn" id="btn-test-action-dungeon" style="display:none">
       ⚔ TEST: Action Dungeon
     </button>
 
@@ -541,6 +541,58 @@
 
   </div>
 
+  <!-- ===== TOWER LOBBY (waiting room) ===== -->
+  <div id="screen-tower-lobby" class="screen">
+    <div class="lobby-bg"></div>
+    <div class="lobby-vignette"></div>
+
+    <!-- Decorative torches -->
+    <div class="lobby-torch lobby-torch-left">
+      <div class="lobby-torch-flame"></div>
+      <div class="lobby-torch-glow"></div>
+    </div>
+    <div class="lobby-torch lobby-torch-right">
+      <div class="lobby-torch-flame"></div>
+      <div class="lobby-torch-glow"></div>
+    </div>
+
+    <!-- Decorative arch + glyphs -->
+    <div class="lobby-arch"></div>
+    <div class="lobby-runes" aria-hidden="true">✦ ☽ ✦ ☽ ✦</div>
+
+    <div class="lobby-content">
+      <div class="lobby-title">Tower of Truths</div>
+      <div class="lobby-subtitle">Preparation Hall</div>
+
+      <div class="lobby-character-frame">
+        <img id="lobby-char-portrait" class="lobby-char-portrait" src="assets/generated/pixel/pivot/pyromancer_idle.png" alt="">
+      </div>
+
+      <div class="lobby-info">
+        <div class="lobby-info-row"><span class="lobby-info-label">Name:</span> <span id="lobby-name">—</span></div>
+        <div class="lobby-info-row"><span class="lobby-info-label">Level:</span> <span id="lobby-level">—</span></div>
+        <div class="lobby-info-row"><span class="lobby-info-label">Class:</span> <span id="lobby-class">—</span></div>
+        <div class="lobby-info-row"><span class="lobby-info-label">Spell Power:</span> <span id="lobby-power">—</span></div>
+      </div>
+
+      <div class="lobby-warning">
+        You may enter the dungeon — but death will cost you half your experience.
+      </div>
+
+      <div class="lobby-actions">
+        <button class="lobby-btn lobby-btn-back" id="lobby-btn-back">← Back to Town</button>
+        <button class="lobby-btn lobby-btn-enter" id="lobby-btn-enter">Enter the Tower ⚔</button>
+      </div>
+
+      <!-- Custom map loader — file input triggers run with editor-made map -->
+      <div class="lobby-custom-map">
+        <button class="lobby-btn lobby-btn-custom" id="lobby-btn-load-map">Load Custom Map</button>
+        <input type="file" id="lobby-map-file-input" accept=".json" style="display:none">
+        <div class="lobby-custom-hint">Draw a map in the <a href="map-editor.html" target="_blank">Map Editor</a>, then load it here</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== ACTION COMBAT SCREEN (new engine) ===== -->
   <!-- NOTE: Do NOT delete or modify #screen-combat above — it remains for legacy battles. -->
   <div id="screen-action-combat" class="screen">
@@ -554,45 +606,31 @@
       <!-- DOM HUD overlay — positioned absolutely over the canvas -->
       <div id="action-hud" style="display:none">
 
-        <!-- HP bar (top-left) -->
+        <!-- HP bar + character name (top-left) -->
         <div class="action-hud-hp">
+          <div class="action-hp-name" id="action-char-name">Wizard</div>
           <div class="action-hp-bar-bg">
             <div class="action-hp-bar-fill" id="action-hp-bar-fill" style="width:100%"></div>
+            <div class="action-hp-text" id="action-hp-text">100 / 100</div>
           </div>
-          <div class="action-hp-text" id="action-hp-text">100 / 100</div>
         </div>
 
         <!-- Gold display (under HP) -->
-        <div class="action-hud-gold" id="action-gold">Gold: 0</div>
+        <div class="action-hud-gold" id="action-gold">
+          <img src="assets/generated/pixel/coin_icon.png" class="coin-inline action-gold-icon" alt="">
+          <span id="action-gold-number">0</span>
+        </div>
 
         <!-- Run timer (top-center) -->
         <div class="action-hud-timer" id="action-timer">00:00</div>
 
         <!-- Mini-map (top-right) -->
         <div class="action-hud-minimap">
-          <canvas id="action-minimap" width="150" height="150"></canvas>
+          <canvas id="action-minimap" width="216" height="162"></canvas>
         </div>
 
-        <!-- Hotbar (bottom-center) — 5 slots -->
-        <div class="action-hotbar">
-          <div class="hotbar-slot" id="hotbar-slot-1">
-            <span class="hotbar-key">1</span>
-            <span class="hotbar-icon">F</span>
-            <div class="hotbar-cd-overlay" style="display:none"></div>
-          </div>
-          <div class="hotbar-slot hotbar-slot-empty">
-            <span class="hotbar-key">2</span>
-          </div>
-          <div class="hotbar-slot hotbar-slot-empty">
-            <span class="hotbar-key">3</span>
-          </div>
-          <div class="hotbar-slot hotbar-slot-empty">
-            <span class="hotbar-key">4</span>
-          </div>
-          <div class="hotbar-slot hotbar-slot-empty">
-            <span class="hotbar-key">5</span>
-          </div>
-        </div>
+        <!-- Hotbar (bottom-center) — built dynamically by hud.js from player.skills -->
+        <div class="action-hotbar" id="action-hotbar"></div>
 
       </div><!-- /#action-hud -->
 

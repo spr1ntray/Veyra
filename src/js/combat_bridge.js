@@ -9,7 +9,7 @@
  *   setOnRunEnd()  — not exposed publicly; handled internally
  */
 
-import { getState, saveState } from './state.js';
+import { getState, saveState, addXP, getStats } from './state.js';
 import { showScreen }          from './ui.js';
 import { startRun, setOnRunEnd, bindPopupEvents, resetRunFlags } from './dungeon/dungeon.js';
 
@@ -59,8 +59,13 @@ export function enterCombat() {
   // Register run-end callback
   setOnRunEnd(_handleRunEnd);
 
-  // Start the dungeon run
-  startRun();
+  // Pass player class + spell damage bonus into dungeon
+  const state = getState();
+  const stats = getStats();
+  startRun({
+    classType:        state.classType || 'pyromancer',
+    spellDamageBonus: stats.spellDamageBonus || 0,
+  });
 }
 
 /**
@@ -72,13 +77,11 @@ function _handleRunEnd(result) {
   const state = getState();
 
   if (result.outcome === 'extracted') {
-    // Full loot commit
     state.gold += result.goldEarned;
-    state.xp   += Math.floor(result.xpEarned);
+    addXP(Math.floor(result.xpEarned)); // handles level-up logic
     saveState();
   } else if (result.outcome === 'died') {
-    // 50% XP, no gold (death penalty)
-    state.xp += Math.floor(result.xpEarned); // xpEarned already halved in dungeon.js
+    addXP(Math.floor(result.xpEarned)); // already halved in dungeon.js
     saveState();
   }
   // 'aborted' → no state changes

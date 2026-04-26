@@ -53,6 +53,10 @@ export class SpriteSheet {
     this.dirsCount   = dirsCount;
     this.framesPerDir = framesPerDir;
     this.rowIsDir    = opts.rowIsDir || false;
+    // dirRemap[dirIndex] → sprite row/col index; used when sprite direction order differs from S/E/N/W
+    this.dirRemap    = opts.dirRemap || null;
+    // forceDir: when set, overrides dirIndex with a fixed sprite row (mirror still applies for West)
+    this.forceDir    = opts.forceDir !== undefined ? opts.forceDir : null;
     // Render size — can differ from frame size to scale output
     this.drawW       = opts.drawW !== undefined ? opts.drawW : frameW;
     this.drawH       = opts.drawH !== undefined ? opts.drawH : frameH;
@@ -102,8 +106,10 @@ export class SpriteSheet {
     const frame = frameIndex % this.framesPerDir;
 
     // West = mirror of East
-    const mirror  = dirIndex === DIR_INDEX.W;
-    const colIdx  = mirror ? DIR_INDEX.E : dirIndex;
+    const mirror = dirIndex === DIR_INDEX.W;
+    let colIdx   = mirror ? DIR_INDEX.E : dirIndex;
+    if (this.forceDir !== null) colIdx = this.forceDir;
+    else if (this.dirRemap) colIdx = this.dirRemap[colIdx];
 
     let sx, sy;
     if (this.rowIsDir) {
@@ -299,40 +305,40 @@ export class TileSheet {
 // ─────────────────────────────────────────────
 // Sprite definitions
 //
-// Actual frame sizes measured from real PNG dimensions:
+// Actual frame sizes measured from real PNG dimensions (cute-dark fantasy style):
 //
-//   pyromancer_idle  200×200 : 4 dirs × 2 frames → col=dir, row=frame → frame 50×100
-//   pyromancer_walk  512×192 : 4 dirs × 4 frames → col=dir, row=frame → frame 128×48
-//   pyromancer_cast  512×192 : 4 dirs × 4 frames → col=dir, row=frame → frame 128×48
-//   zombie_idle      256×256 : 4 dirs × 4 frames → col=dir, row=frame → frame 64×64
-//   zombie_walk      512×192 : 4 dirs × 4 frames → col=dir, row=frame → frame 128×48
-//   zombie_attack    512×192 : 4 dirs × 4 frames → col=dir, row=frame → frame 128×48
-//   fireball         200×200 : 6 frames, 2 cols × 4 rows (rows 0-2 fully used, row3 col0 only)
-//                              frame 100×50, strip with 2 cols
-//   fire_impact      384×64  : 6 frames in a single row → frame 64×64
+//   pyromancer_idle  201×201 : 4 dirs × 4 frames → col=dir, row=frame → frame 50×50
+//   pyromancer_walk  200×200 : 4 dirs × 6 frames → ROW=dir, col=frame → frame 33×50 (rowIsDir=true)
+//   pyromancer_cast  200×200 : 4 dirs × 4 frames → col=dir, row=frame → frame 50×50
+//   zombie_idle      200×200 : 4 dirs × 4 frames → col=dir, row=frame → frame 50×50
+//   zombie_walk      200×200 : 4 dirs × 4 frames → col=dir, row=frame → frame 50×50
+//   zombie_attack    200×200 : 4 dirs × 4 frames → col=dir, row=frame → frame 50×50
+//   fireball         200×200 : 6 frames, 2 cols × 4 rows → frame 100×50, strip with 2 cols
+//   fire_impact      202×200 : 3 cols × 2 rows → frame 67×100, 6 frames (universal hit burst)
 //   tileset_floor    256×256 : 4 tiles in 2×2 grid → tile 128×128
-//   tileset_wall     240×240 : 7 tiles, 4 cols × 2 rows (last slot empty) → tile 60×120
+//   tileset_wall     240×240 : 7 tiles, 4 cols × 2 rows → tile 60×120
 //
-// Render sizes: all character sprites drawn at 48×96 on-screen (full height ≥ 1.5× tile)
-// Tiles rendered at TILE_SIZE×TILE_SIZE (32×32).
+// All characters rendered at 48×48 on-screen regardless of source frame size —
+// keeps visual proportions stable when switching animation states.
 // ─────────────────────────────────────────────
 
 const BASE = 'assets/generated/pixel/pivot/';
 
-// Render dimensions for character sprites on-screen
-const CHAR_DRAW_W = 48;
-const CHAR_DRAW_H = 96;
+// On-screen character draw size (same for pyromancer + zombie for consistency)
+// Scaled down from 48 → 36 to match TILE_SIZE 12 (3 tiles tall)
+const CHAR_DRAW_W = 36;
+const CHAR_DRAW_H = 36;
 
 // Render size for fireball projectile on-screen
-const FB_DRAW_W = 32;
-const FB_DRAW_H = 32;
+const FB_DRAW_W = 24;
+const FB_DRAW_H = 24;
 
-// Render size for fire impact on-screen
-const IMPACT_DRAW_W = 64;
-const IMPACT_DRAW_H = 64;
+// Render size for fire impact on-screen (matches source 67:100 aspect)
+const IMPACT_DRAW_W = 48;
+const IMPACT_DRAW_H = 72;
 
-// Render size for tiles (must match TILE_SIZE from config.js — 32)
-const TILE_DRAW = 32;
+// Render size for tiles (matches new TILE_SIZE × 2 for upscaled tile art)
+const TILE_DRAW = 24;
 
 /**
  * All sprite sheets used in the dungeon scene.
@@ -340,17 +346,17 @@ const TILE_DRAW = 32;
  */
 export const sprites = {
   pyromancer: {
-    idle:   new SpriteSheet(BASE + 'pyromancer_idle.png',  50, 100, 4, 2, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
-    walk:   new SpriteSheet(BASE + 'pyromancer_walk.png', 128,  48, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
-    cast:   new SpriteSheet(BASE + 'pyromancer_cast.png', 128,  48, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
+    idle: new SpriteSheet(BASE + 'pyromancer_idle.png', 50, 50, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
+    walk: new SpriteSheet(BASE + 'pyromancer_walk.png', 33, 50, 4, 6, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H, rowIsDir: true }),
+    cast: new SpriteSheet(BASE + 'pyromancer_cast.png', 50, 50, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
   },
   zombie: {
-    idle:   new SpriteSheet(BASE + 'zombie_idle.png',   64,  64, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
-    walk:   new SpriteSheet(BASE + 'zombie_walk.png',  128,  48, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
-    attack: new SpriteSheet(BASE + 'zombie_attack.png', 128, 48, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
+    idle:   new SpriteSheet(BASE + 'zombie_idle.png',   50, 50, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
+    walk:   new SpriteSheet(BASE + 'zombie_walk.png',   50, 50, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
+    attack: new SpriteSheet(BASE + 'zombie_attack.png', 50, 50, 4, 4, { drawW: CHAR_DRAW_W, drawH: CHAR_DRAW_H }),
   },
   fireball: new AnimStrip(BASE + 'fireball.png',    100, 50, 6, 2, { drawW: FB_DRAW_W, drawH: FB_DRAW_H }),
-  impact:   new AnimStrip(BASE + 'fire_impact.png',  64, 64, 6, 6, { drawW: IMPACT_DRAW_W, drawH: IMPACT_DRAW_H }),
+  impact:   new AnimStrip(BASE + 'fire_impact.png',  67, 100, 6, 3, { drawW: IMPACT_DRAW_W, drawH: IMPACT_DRAW_H }),
   floor:    new TileSheet(BASE + 'tileset_floor.png', 128, 128, 2, { drawW: TILE_DRAW, drawH: TILE_DRAW }),
   wall:     new TileSheet(BASE + 'tileset_wall.png',   60, 120, 4, { drawW: TILE_DRAW, drawH: TILE_DRAW }),
 };
@@ -382,7 +388,6 @@ export async function loadAllSprites(canvas) {
     ctx.fillText('Loading assets...', canvas.width / 2, canvas.height / 2);
   }
 
-  // Collect all loadable objects
   const allSheets = [
     sprites.pyromancer.idle,
     sprites.pyromancer.walk,
@@ -420,11 +425,11 @@ export function spritesReady() {
  *  80ms = ~4.8 → round to 5
  */
 export const ANIM_TICKS = Object.freeze({
-  idle:   7,  // ~120ms/frame
-  walk:   6,  // ~100ms/frame
-  cast:   5,  // ~80ms/frame
-  attack: 5,
-  death:  8,
+  idle:   22, // ~367ms/frame — slow breathing bob, not jittery
+  walk:   9,  // ~150ms/frame — deliberate step
+  cast:   5,
+  attack: 6,
+  death:  10,
 });
 
 /**
@@ -461,9 +466,21 @@ export function velToDir(vx, vy, fallback = 0) {
   const speed = vx * vx + vy * vy;
   if (speed < 0.001) return fallback;
 
-  // Determine predominant axis
-  if (Math.abs(vx) >= Math.abs(vy)) {
+  const ax = Math.abs(vx);
+  const ay = Math.abs(vy);
+
+  // Hysteresis: stay on the current axis unless the other axis dominates by
+  // ≥1.35×. Prevents rapid dir flips when movement is near-diagonal (e.g. an
+  // enemy chasing a moving player). Without this the sprite would strobe
+  // between facings every tick.
+  const HYST = 1.35;
+  const curIsHorizontal = fallback === DIR_INDEX.E || fallback === DIR_INDEX.W;
+
+  if (curIsHorizontal) {
+    if (ay > ax * HYST) return vy > 0 ? DIR_INDEX.S : DIR_INDEX.N;
     return vx > 0 ? DIR_INDEX.E : DIR_INDEX.W;
+  } else {
+    if (ax > ay * HYST) return vx > 0 ? DIR_INDEX.E : DIR_INDEX.W;
+    return vy > 0 ? DIR_INDEX.S : DIR_INDEX.N;
   }
-  return vy > 0 ? DIR_INDEX.S : DIR_INDEX.N;
 }

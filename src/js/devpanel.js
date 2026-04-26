@@ -13,7 +13,7 @@ const SESSION_KEY = 'vdev_auth';
 
 // Пароль сравнивается через простую функцию — не хранится голым строком на виду
 function _checkPassword(input) {
-  return input === ['veyra', 'dev', '2026'].join('_');
+  return input === ['V3yr@', 'D4rk#', 'L3y71'].join('!');
 }
 
 // Ссылки на DOM-элементы панели (создаются один раз)

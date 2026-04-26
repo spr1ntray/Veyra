@@ -613,6 +613,66 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 
 ---
 
+## Сессия 2026-04-26
+
+### [FEEDBACK] Pivot-прототип — 7 замечаний пользователя
+- **1. Застревание персонажа** около тайла карты (физика)
+- **2. Анимация ходьбы** только E↔W, нет N/S (хотя кадры в спрайте есть)
+- **3. Нет зума колесом мыши** (нужна масштабируемость)
+- **4. Не вся игра на английском** (есть RU комменты)
+- **5. Лобби башни выглядит багованно** (HTML скрыт, CSS не подключён)
+- **6. Пользователь хочет рисовать карты сам** (нужен bridge editor↔game)
+- **7. Не нравится "ячейковая" сетка** (хочет TILE_SIZE=32 вместо 12)
+
+### [ARCH] ADR `design/adr-tile-rework.md` — 5 решений
+1. **TILE_SIZE 12→32**: масштаб 1:1 со спрайтами тайлсета
+2. **Collision: AABB вместо 9-point radius**: проще, меньше зигзагов в A*
+3. **Dead-zone walk anim 6→13px**: стабильность 4-направлений на tile=32
+4. **JSON schema v1 для карт**: base64 walls, компактность editor↔game
+5. **Bridge через veyra:loadMap localStorage**: одноразовый ключ, procedural по умолчанию
+
+### [DONE] Tile rework — все модули (Coder #1)
+- **src/js/engine/config.js**: TILE_SIZE 12→32, CAVE_COLS 200→75, CAVE_ROWS 140→52
+- **src/js/engine/tilemap.js**: AABB collision (вместо 9-point), пересчёт процедурных размеров (MIN_W 20→8, MAX_W 32→13, corridor 4→2)
+- **src/js/dungeon/player.js**: PLAYER_COLLISION_HALF=12, dead-zone 6→13px, dirIndex из moveTarget
+- **src/js/dungeon/enemy.js**: collisionHalf отдельно от radius (combat hit); aggroRange/attackRange пересчитаны; velToDir оставлен (враги без moveTarget)
+- **src/js/dungeon/dungeon.js**: CAVE_COLS/ROWS обновлены под тайл 32
+
+### [DONE] Zoom — колесо мыши (Coder #2)
+- **src/js/engine/render.js**: `_zoomLevel`, ZOOM_MIN=0.5, MAX=2.5, STEP=1.1, ctx.save/scale/restore в draw()
+- **src/js/engine/input.js**: wheel listener (passive:false), ctrl+wheel pass-through
+- **src/js/engine/ai.js**: screen→world коорды / zoom для click-to-move
+- **src/js/dungeon/dungeon.js**: `_updateCamera()` учитывает zoom
+
+### [DONE] Локализация на English (Coder #3)
+- **index.html**: "Tower of Truths", "Preparation Hall", Name/Level/Class/Spell Power/Back/Enter
+- **src/js/main.js**: классы Pyromancer/Stormcaller/Tidecaster/Geomancer, "not chosen"
+- **src/js/combat.js**: notification messages ("Grimoire is empty", "No compatible spells", etc.)
+
+### [DONE] Лобби башни — редизайн (Coder #4)
+- **src/css/lobby.css**: новый файл, полный редизайн. Баг: портрет (img + clip-path scale(4)) бесконтрольно расширялся → заменено на background-image на .lobby-character-frame с overflow:hidden. Все размеры через clamp(), arch width min(44vw, 520px), torch positions clamp(40px, 12vw, 140px), #screen-tower-lobby.active { display: flex } для приоритета.
+- **index.html**: скрытое ранее лобби теперь подключено, стилизовано
+- **TODO**: ассет lobby_bg.png не существует (фон сейчас CSS-only: gradient + SVG noise)
+
+### [DONE] Bridge editor↔game (Coder #5)
+- **NEW src/js/dungeon/map_format.js**: JSON schema v1 (schemaVersion, tileSize=32, cols, rows, biome, biomeSeed, walls base64, markers). serializeMap/deserializeMap/validateMap. v0→v1 миграция.
+- **NEW src/js/dungeon/custom_map.js**: importCustomMap (validate→Tilemap→biome paint→BFS→split markers), loadPendingCustomMap (одноразовый veyra:loadMap ключ)
+- **src/js/dungeon/dungeon.js**: startRun() первой строкой пробует loadPendingCustomMap(); иначе procedural
+- **index.html**: #lobby-btn-load-map + скрытый #lobby-map-file-input
+- **src/css/lobby.css**: .lobby-custom-map, .lobby-btn-custom (синеватый accent)
+- **src/js/main.js**: file input handler → localStorage.setItem('veyra:loadMap', ...) → enterCombat()
+- **map-editor.html**: кнопка ▶ Send to Game, buildJSON v1, base64 walls, compat v0
+
+### [VERIFY] Researcher × 2
+- TILE=32 подтверждён, 9-point collision отменён
+- dirIndex правильный, N/S анимации будут работать
+- Zoom отсутствовал — добавлен
+- User-facing уже EN (только комменты RU)
+- Лобби HTML где-то спрятано + lobby.css не подключён (оба фиксены)
+- map-editor генерит JSON, importCustomMap() теперь существует
+
+---
+
 ## 7. История решений
 
 | Дата | Решение | Причина |
@@ -659,17 +719,28 @@ Root cause найден в `src/js/combat.js::scheduleNextCast()`. При поп
 | 2026-04-19 | Pseudo-MMO (каждый в своём инстансе, async PvP на v1.1+) | Пользователь: "real-time не нужен, давай pseudo". GitHub Pages остаётся рабочим хостом |
 | 2026-04-19 | Мана убрана, только CD на скиллах | Пользователь: "давай уберём пока". В D2/D3 мана раздражала больше, чем регулировала темп |
 | 2026-04-19 | Canvas 2D vanilla без либ; Pixi — план B при perf-проблемах | Architect: контроль над fixed timestep + zero build stack + легко мигрировать позже |
+| 2026-04-26 | TILE_SIZE 12 → 32 | AABB collision проще, A* меньше зигзагов, 1:1 со спрайтами тайлсета |
+| 2026-04-26 | Collision: AABB вместо 9-point radius | Радиус-сэмплинг застревает у углов; AABB + split-axis slide стабильнее |
+| 2026-04-26 | Map format JSON schema v1 (base64 walls) | Единый контракт editor↔game; компактнее plain Array |
+| 2026-04-26 | Bridge через одноразовый localStorage ключ | Игрок один раз отправил карту из редактора → играет; следующий запуск — procedural |
+| 2026-04-26 | Player.dirIndex из moveTarget, dead-zone 13px | Стабильность направлений при tile=32, 4 направления N/S/E/W работают |
 
 ---
 
 ## 8. Открытые задачи / TODO
 
+### Tile rework (2026-04-26)
+- [ ] **Ассет lobby_bg.png**: не существует, фон сейчас CSS-only (gradient + SVG noise). Низкий приоритет, есть fallback.
+- [ ] **Sprite-preview в map-editor**: отложено в ADR Decision 5 (low priority)
+- [ ] **Edge cases tile rework**: проверить визуально на 3-5 сидах cave/room (возможны косяки спавна врагов на пересчитанных размерах)
+
 ### Pivot Action RPG (2026-04-19)
-- [ ] **Pivot prototype — user-test фидбек и итерация** (визуальный feel, спрайт-оффсеты, feel боёвки)
 - [ ] **BUG-020 seed-детерминизм**: startRun должен принимать seed из аргумента (нужно для Abstract on-chain verify)
 - [ ] **BUG-025, 027, 028**: double-loop-stop, Dash (Space), Hard timeout 10 мин
 - [ ] **P1 ассеты**: Skeleton Archer, Death-анимации, UI frames, Portal/Stairs (~62 кредита, остаток 166)
 - [ ] **Pivot v1.1**: 2-й биом, Deep Portal (risk-extraction), mini-boss, 2-й класс
+- ~~**BUG-019, BUG-022, BUG-023**: исправлены в сессии 2026-04-19~~
+- ~~**Pivot prototype — user-test фидбек**: получены 7 замечаний, обработаны в сессии 2026-04-26~~
 
 ### Основной контент (AFTER PIVOT STABILIZATION)
 - [ ] **Abstract migration Phase 1**: Storage Provider абстракция в state.js (подготовка к on-chain миграции)

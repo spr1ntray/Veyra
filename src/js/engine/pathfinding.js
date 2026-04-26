@@ -51,7 +51,7 @@ export function findPath(tilemap, startX, startY, goalX, goalY) {
 
   const startIdx = idx(sc, sr);
   g[startIdx] = 0;
-  f[startIdx] = _manhattan(sc, sr, gc, gr);
+  f[startIdx] = _octile(sc, sr, gc, gr);
 
   // Open set: array-based min-heap by f value
   const open = new MinHeap();
@@ -59,8 +59,12 @@ export function findPath(tilemap, startX, startY, goalX, goalY) {
 
   const goalIdx = idx(gc, gr);
 
-  // 4-connected neighbours (no diagonals — simpler collision with walls)
-  const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+  // 8-connected neighbours — diagonals use √2 cost; corner-cutting is blocked below
+  const SQRT2 = Math.SQRT2;
+  const DIRS  = [
+    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],                          // cardinal, cost 1
+    [1, 1, SQRT2], [-1, 1, SQRT2], [1, -1, SQRT2], [-1, -1, SQRT2],        // diagonal, cost √2
+  ];
 
   while (!open.isEmpty()) {
     const cur = open.pop();
@@ -71,19 +75,24 @@ export function findPath(tilemap, startX, startY, goalX, goalY) {
     const cc = cur % cols;
     const cr = (cur / cols) | 0;
 
-    for (const [dc, dr] of DIRS) {
+    for (const [dc, dr, dcost] of DIRS) {
       const nc = cc + dc;
       const nr = cr + dr;
       if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) continue;
       if (tilemap.isWall(nc, nr)) continue;
 
+      // Prevent diagonal corner-cutting: both adjacent cardinal tiles must be passable
+      if (dc !== 0 && dr !== 0) {
+        if (tilemap.isWall(cc + dc, cr) || tilemap.isWall(cc, cr + dr)) continue;
+      }
+
       const ni = idx(nc, nr);
       if (closed[ni]) continue;
 
-      const ng = g[cur] + 1; // uniform cost (all passable tiles cost 1)
+      const ng = g[cur] + dcost;
       if (ng < g[ni]) {
         g[ni]      = ng;
-        f[ni]      = ng + _manhattan(nc, nr, gc, gr);
+        f[ni]      = ng + _octile(nc, nr, gc, gr);
         parent[ni] = cur;
         open.push(ni, f[ni]);
       }
@@ -101,18 +110,48 @@ export function findPath(tilemap, startX, startY, goalX, goalY) {
   }
   tilePath.reverse();
 
-  // Convert tile indices to pixel centers
-  return tilePath.map(i => {
+  // Convert tile indices to pixel centers, then smooth
+  const pixelPath = tilePath.map(i => {
     const c = i % cols;
     const r = (i / cols) | 0;
     return { x: c * T + T / 2, y: r * T + T / 2 };
   });
+  return _smoothPath(pixelPath, tilemap);
 }
 
 // --- helpers ---
 
-function _manhattan(c1, r1, c2, r2) {
-  return Math.abs(c1 - c2) + Math.abs(r1 - r2);
+/** Octile heuristic — consistent with diagonal cost √2. */
+function _octile(c1, r1, c2, r2) {
+  const dx = Math.abs(c1 - c2);
+  const dy = Math.abs(r1 - r2);
+  return Math.max(dx, dy) + (Math.SQRT2 - 1) * Math.min(dx, dy);
+}
+
+/**
+ * String-pull smoothing: removes intermediate waypoints that lie on a
+ * straight unobstructed line between their neighbours.
+ * Looks ahead up to 10 waypoints to find the furthest reachable via LOS.
+ *
+ * @param {{ x: number, y: number }[]} path
+ * @param {import('./tilemap.js').Tilemap} tilemap
+ * @returns {{ x: number, y: number }[]}
+ */
+function _smoothPath(path, tilemap) {
+  if (path.length <= 2) return path;
+  const result = [path[0]];
+  let i = 0;
+  while (i < path.length - 1) {
+    // Look ahead up to 10 waypoints for the furthest reachable via LOS
+    let j = Math.min(i + 10, path.length - 1);
+    while (j > i + 1) {
+      if (tilemap.hasLOS(path[i].x, path[i].y, path[j].x, path[j].y)) break;
+      j--;
+    }
+    result.push(path[j]);
+    i = j;
+  }
+  return result;
 }
 
 /** Finds nearest non-wall tile via BFS. */

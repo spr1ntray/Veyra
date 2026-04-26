@@ -9,6 +9,8 @@
  * It must NEVER flow into game-logic code.
  */
 
+import { getZoomLevel, setZoomLevel, ZOOM_STEP } from './render.js';
+
 // Raw accumulated state (mutated by event handlers)
 const _raw = {
   // Latest mouse position relative to the canvas (pixel coords)
@@ -18,6 +20,9 @@ const _raw = {
   // Clicks queued since last snapshot
   leftClicks:  [],  // [{x, y}]
   rightClicks: [], // [{x, y}]
+
+  // True while the left mouse button is physically held down
+  leftButtonDown: false,
 
   // Keys currently held down
   keysDown: new Set(),
@@ -37,10 +42,12 @@ let _canvasOffY = 0;
 // Without this, each startRun() call stacks another copy of every listener.
 let _handlers = {
   mousemove:   null,
-  click:       null,
+  mousedown:   null,
+  mouseup:     null,
   contextmenu: null,
   keydown:     null,
   keyup:       null,
+  wheel:       null, // zoom wheel
   // The container element the first three are bound to
   container:   null,
 };
@@ -56,17 +63,21 @@ export function destroyInput() {
   const c = _handlers.container;
   if (c) {
     if (_handlers.mousemove)   c.removeEventListener('mousemove',   _handlers.mousemove);
-    if (_handlers.click)       c.removeEventListener('click',       _handlers.click);
+    if (_handlers.mousedown)   c.removeEventListener('mousedown',   _handlers.mousedown);
+    if (_handlers.mouseup)     c.removeEventListener('mouseup',     _handlers.mouseup);
     if (_handlers.contextmenu) c.removeEventListener('contextmenu', _handlers.contextmenu);
+    if (_handlers.wheel)       c.removeEventListener('wheel',       _handlers.wheel);
   }
   if (_handlers.keydown) window.removeEventListener('keydown', _handlers.keydown);
   if (_handlers.keyup)   window.removeEventListener('keyup',   _handlers.keyup);
 
   _handlers.mousemove   = null;
-  _handlers.click       = null;
+  _handlers.mousedown   = null;
+  _handlers.mouseup     = null;
   _handlers.contextmenu = null;
   _handlers.keydown     = null;
   _handlers.keyup       = null;
+  _handlers.wheel       = null;
   _handlers.container   = null;
 }
 
@@ -91,12 +102,23 @@ export function initInput(canvas, container) {
   };
   container.addEventListener('mousemove', _handlers.mousemove);
 
-  _handlers.click = (e) => {
+  // mousedown starts movement immediately (vs click which fires on release)
+  _handlers.mousedown = (e) => {
+    if (e.button !== 0) return;
+    // Ignore clicks that originated from UI overlays (popup buttons, hotbar, etc.)
+    // Only register movement when clicking directly on the game canvas or bare container.
+    if (e.target.id !== 'action-canvas' && e.target !== container) return;
     e.preventDefault();
+    _raw.leftButtonDown = true;
     const coords = _domToCanvas(e, container);
-    _raw.leftClicks.push({ x: coords.x, y: coords.y });
+    _raw.leftClicks.push({ x: coords.x, y: coords.y }); // immediate path update
   };
-  container.addEventListener('click', _handlers.click);
+  container.addEventListener('mousedown', _handlers.mousedown);
+
+  _handlers.mouseup = (e) => {
+    if (e.button === 0) _raw.leftButtonDown = false;
+  };
+  container.addEventListener('mouseup', _handlers.mouseup);
 
   _handlers.contextmenu = (e) => {
     e.preventDefault();
@@ -115,6 +137,24 @@ export function initInput(canvas, container) {
     _raw.keysDown.delete(e.key);
   };
   window.addEventListener('keyup', _handlers.keyup);
+
+  // --- Wheel → zoom ---
+  // Only plain wheel (not ctrl+wheel, which is the browser's native page zoom).
+  // Bound to container so it only fires when the dungeon viewport is focused/hovered.
+  // `{ passive: false }` required so preventDefault() actually suppresses page scroll.
+  _handlers.wheel = (e) => {
+    // Let ctrl+wheel pass through — that's the browser zoom shortcut
+    if (e.ctrlKey) return;
+    e.preventDefault();
+    // deltaY > 0  = scroll down = zoom out
+    // deltaY < 0  = scroll up   = zoom in
+    const current = getZoomLevel();
+    const next    = e.deltaY < 0
+      ? current * ZOOM_STEP           // zoom in: multiply
+      : current / ZOOM_STEP;          // zoom out: divide
+    setZoomLevel(next);               // setZoomLevel clamps to [ZOOM_MIN, ZOOM_MAX]
+  };
+  container.addEventListener('wheel', _handlers.wheel, { passive: false });
 }
 
 /**
@@ -146,12 +186,13 @@ function _domToCanvas(e, container) {
  */
 export function snapshotInput() {
   const snap = {
-    mouseX:       _raw.mouseX,
-    mouseY:       _raw.mouseY,
-    leftClicks:   _raw.leftClicks.splice(0),  // drain
-    rightClicks:  _raw.rightClicks.splice(0), // drain
-    keysDown:     new Set(_raw.keysDown),
-    keysPressed:  new Set(_raw.keysPressed),
+    mouseX:          _raw.mouseX,
+    mouseY:          _raw.mouseY,
+    leftClicks:      _raw.leftClicks.splice(0),  // drain
+    rightClicks:     _raw.rightClicks.splice(0), // drain
+    keysDown:        new Set(_raw.keysDown),
+    keysPressed:     new Set(_raw.keysPressed),
+    leftButtonDown:  _raw.leftButtonDown,
   };
   _raw.keysPressed.clear();
   return snap;
@@ -165,4 +206,5 @@ export function clearInput() {
   _raw.rightClicks.length = 0;
   _raw.keysPressed.clear();
   _raw.keysDown.clear();
+  _raw.leftButtonDown = false;
 }

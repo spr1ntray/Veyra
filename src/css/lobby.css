@@ -1,0 +1,359 @@
+/* lobby.css — Tower waiting room (preparation hall) */
+
+/* Override .screen base: position:fixed so it sits above everything correctly */
+#screen-tower-lobby {
+  position: fixed;
+  inset: 0;
+  display: none;           /* hidden by default, shown via .screen.active → display:flex */
+  flex-direction: column;
+  overflow: hidden;
+  background: #08060f;
+}
+#screen-tower-lobby.active {
+  display: flex;
+}
+
+/* ─── Atmospheric background layers ──────────────────────────────────────── */
+
+.lobby-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(60, 35, 80, 0.60) 0%, transparent 55%),
+    radial-gradient(ellipse at 20% 90%, rgba(120, 70, 30, 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(120, 70, 30, 0.20) 0%, transparent 55%),
+    linear-gradient(180deg, #100c1c 0%, #060410 65%, #02010a 100%);
+  z-index: 0;
+}
+
+/* SVG-noise stone texture overlay */
+.lobby-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.75' numOctaves='3' seed='7'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.15'/></svg>");
+  mix-blend-mode: overlay;
+  opacity: 0.45;
+}
+
+/* Bottom vignette */
+.lobby-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center 100%, transparent 30%, rgba(0,0,0,0.90) 95%),
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 25%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ─── Stone arch silhouette ───────────────────────────────────────────────── */
+
+.lobby-arch {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(44vw, 520px);
+  height: 82%;
+  border-radius: min(22vw, 260px) min(22vw, 260px) 0 0;
+  border: 6px solid rgba(70, 55, 100, 0.50);
+  border-bottom: none;
+  background: linear-gradient(180deg, rgba(35, 25, 55, 0.30), transparent 55%);
+  box-shadow:
+    inset 0 0 100px rgba(20, 10, 40, 0.65),
+    0 0 80px rgba(100, 70, 160, 0.14);
+  z-index: 2;
+}
+
+/* ─── Glowing rune row ────────────────────────────────────────────────────── */
+
+.lobby-runes {
+  position: absolute;
+  top: 11%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(14px, 1.6vw, 22px);
+  color: rgba(201, 168, 76, 0.80);
+  letter-spacing: clamp(8px, 1.2vw, 16px);
+  text-shadow: 0 0 18px rgba(201, 168, 76, 0.65);
+  z-index: 4;
+  animation: lobby-rune-pulse 4s ease-in-out infinite;
+}
+@keyframes lobby-rune-pulse {
+  0%, 100% { opacity: 0.60; text-shadow: 0 0 10px rgba(201, 168, 76, 0.45); }
+  50%      { opacity: 1.00; text-shadow: 0 0 24px rgba(201, 168, 76, 0.95); }
+}
+
+/* ─── Flanking torches ───────────────────────────────────────────────────── */
+
+.lobby-torch {
+  position: absolute;
+  top: 17%;
+  width: 52px;
+  height: 180px;
+  z-index: 3;
+}
+.lobby-torch-left  { left: clamp(40px, 12vw, 140px); }
+.lobby-torch-right { right: clamp(40px, 12vw, 140px); }
+
+/* Torch handle (::before pseudo) */
+.lobby-torch::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 100px;
+  background: linear-gradient(180deg, #5a4a30 0%, #2a1f12 100%);
+  border-radius: 2px;
+}
+
+.lobby-torch-flame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 44px;
+  background: radial-gradient(ellipse at 50% 85%, #ffce5a 0%, #ff7a30 45%, transparent 78%);
+  border-radius: 50% 50% 38% 38%;
+  filter: blur(2px);
+  animation: lobby-flame 0.4s ease-in-out infinite alternate;
+}
+.lobby-torch-glow {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 170, 60, 0.30) 0%, transparent 60%);
+  pointer-events: none;
+  animation: lobby-glow 2s ease-in-out infinite;
+}
+@keyframes lobby-flame {
+  0%   { transform: translateX(-50%) scaleX(1.00) scaleY(1.00) rotate(-2deg); }
+  100% { transform: translateX(-50%) scaleX(1.12) scaleY(1.08) rotate(2deg); }
+}
+@keyframes lobby-glow {
+  0%, 100% { opacity: 0.80; }
+  50%      { opacity: 1.00; }
+}
+
+/* ─── Main content column ────────────────────────────────────────────────── */
+
+.lobby-content {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;   /* vertically center the stack */
+  gap: clamp(10px, 1.4vh, 20px);
+  padding: 4vh 24px 3vh;
+  box-sizing: border-box;
+}
+
+/* ─── Title / subtitle ───────────────────────────────────────────────────── */
+
+.lobby-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 700;
+  letter-spacing: clamp(4px, 0.6vw, 10px);
+  color: #e8d5a0;
+  text-shadow:
+    0 0 28px rgba(201, 168, 76, 0.55),
+    0 4px 0 rgba(0, 0, 0, 0.85);
+  line-height: 1;
+}
+
+.lobby-subtitle {
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  font-size: clamp(14px, 1.6vw, 22px);
+  color: rgba(201, 168, 76, 0.65);
+  letter-spacing: clamp(4px, 0.6vw, 8px);
+  margin-top: -4px;
+}
+
+/* ─── Character portrait ─────────────────────────────────────────────────── */
+
+/*
+ * pyromancer_idle.png is a 201×201 spritesheet: 4 cols × 4 rows, each frame 50×50.
+ * We use background-image on the frame container to isolate frame [col=0, row=0]
+ * (south-facing idle, frame 0) and scale it up by 3× without any overflow issues.
+ * The <img> tag is hidden; we keep it in markup for semantic / alt text only.
+ */
+.lobby-character-frame {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background:
+    /* sprite: col0, row0 → background-position 0 0, bg-size = sheet scaled to 4×frame */
+    url('../../assets/generated/pixel/pivot/pyromancer_idle.png') no-repeat 0 0 / calc(150px * 4) calc(150px * 4),
+    radial-gradient(circle at 50% 75%, rgba(201, 168, 76, 0.15), transparent 65%);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  /* Pedestal glow */
+  filter: drop-shadow(0 6px 18px rgba(201, 168, 76, 0.35));
+}
+
+/* Pedestal shadow below character */
+.lobby-character-frame::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 14px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.75) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+/* Hide the <img> — portrait is rendered via background-image above */
+.lobby-char-portrait {
+  display: none;
+}
+
+/* ─── Stat info card ─────────────────────────────────────────────────────── */
+
+.lobby-info {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 8px 36px;
+  background: rgba(8, 5, 20, 0.82);
+  border: 1px solid rgba(201, 168, 76, 0.30);
+  border-radius: 10px;
+  padding: 14px 28px;
+  font-family: 'Crimson Text', serif;
+  font-size: clamp(15px, 1.4vw, 18px);
+  color: #d8c79a;
+  box-shadow:
+    0 8px 36px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.lobby-info-row {
+  white-space: nowrap;
+}
+.lobby-info-label {
+  color: rgba(201, 168, 76, 0.65);
+  font-family: 'Cinzel', serif;
+  font-size: clamp(10px, 0.85vw, 13px);
+  letter-spacing: 2px;
+  margin-right: 6px;
+  text-transform: uppercase;
+}
+
+/* ─── Warning line ───────────────────────────────────────────────────────── */
+
+.lobby-warning {
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  font-size: clamp(13px, 1.2vw, 16px);
+  color: rgba(220, 100, 100, 0.80);
+  text-align: center;
+  max-width: 560px;
+  padding: 0 20px;
+  line-height: 1.5;
+}
+
+/* ─── Action buttons ─────────────────────────────────────────────────────── */
+
+.lobby-actions {
+  display: flex;
+  gap: clamp(14px, 2vw, 28px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lobby-btn {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: clamp(13px, 1.2vw, 17px);
+  letter-spacing: clamp(2px, 0.25vw, 4px);
+  padding: clamp(10px, 1.2vh, 14px) clamp(20px, 2.5vw, 36px);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.lobby-btn-back {
+  background: rgba(18, 14, 32, 0.90);
+  border-color: rgba(201, 168, 76, 0.40);
+  color: #c9a76f;
+}
+.lobby-btn-back:hover {
+  background: rgba(38, 28, 58, 0.96);
+  border-color: rgba(201, 168, 76, 0.80);
+  box-shadow: 0 0 16px rgba(201, 168, 76, 0.25);
+}
+
+.lobby-btn-enter {
+  background: linear-gradient(180deg, #6a2a18 0%, #3a1408 100%);
+  border-color: rgba(255, 130, 60, 0.65);
+  color: #ffd9a8;
+  text-shadow: 0 0 8px rgba(255, 100, 30, 0.55);
+  box-shadow: 0 0 20px rgba(220, 80, 30, 0.30);
+}
+.lobby-btn-enter:hover {
+  background: linear-gradient(180deg, #8a3820 0%, #4a1c0c 100%);
+  box-shadow: 0 0 32px rgba(255, 110, 40, 0.55);
+  transform: translateY(-2px);
+}
+.lobby-btn-enter:active {
+  transform: translateY(0);
+  box-shadow: 0 0 14px rgba(220, 80, 30, 0.35);
+}
+
+/* ─── Custom map loader section ──────────────────────────────────────────── */
+
+.lobby-custom-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.lobby-btn-custom {
+  background: rgba(14, 20, 30, 0.90);
+  border-color: rgba(100, 160, 220, 0.45);
+  color: #90c8f0;
+  font-size: clamp(11px, 1vw, 14px);
+  letter-spacing: clamp(1px, 0.2vw, 3px);
+  padding: clamp(8px, 0.9vh, 11px) clamp(16px, 2vw, 28px);
+}
+.lobby-btn-custom:hover {
+  background: rgba(24, 36, 54, 0.96);
+  border-color: rgba(100, 180, 255, 0.80);
+  box-shadow: 0 0 14px rgba(80, 160, 240, 0.25);
+}
+
+.lobby-custom-hint {
+  font-family: 'Crimson Text', serif;
+  font-size: clamp(11px, 1vw, 13px);
+  color: rgba(180, 160, 120, 0.55);
+  font-style: italic;
+  text-align: center;
+}
+.lobby-custom-hint a {
+  color: rgba(140, 200, 240, 0.70);
+  text-decoration: none;
+}
+.lobby-custom-hint a:hover {
+  color: rgba(140, 200, 240, 1.00);
+  text-decoration: underline;
+}

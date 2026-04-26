@@ -233,8 +233,8 @@ function renderGrid() {
     ? ownedItems.filter(({ item }) => item.slot === _activeFilter)
     : ownedItems;
 
-  // Фиксированный размер страницы: 5 колонок × 6 строк = 30 ячеек
-  const PAGE_SIZE = 30;
+  // Dynamic page size: 5 cols × however many rows fit in the panel
+  const PAGE_SIZE = GRID_COLS * _dynamicRows;
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
 
   // Сбрасываем страницу если вышла за пределы (например при смене фильтра)

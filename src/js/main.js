@@ -4,7 +4,7 @@
  * управление локациями и popup-ами.
  */
 
-import { loadState, getState, saveState } from './state.js';
+import { loadState, getState, saveState, getStats } from './state.js';
 import { initDevPanel } from './devpanel.js';
 import { initBattle, getFightsRemaining, setOnBattleEnd } from './combat.js';
 import { initGrimoire, bindGrimoireEvents, updateHudClassBadge } from './grimoire.js';
@@ -128,6 +128,34 @@ function updateLocationActions(locationId) {
   }
 }
 
+const CLASS_NAMES_RU = {
+  pyromancer:  'Pyromancer',
+  stormcaller: 'Stormcaller',
+  tidecaster:  'Tidecaster',
+  geomancer:   'Geomancer',
+};
+
+/**
+ * Открывает зал ожидания перед входом в башню.
+ * Показывает имя/уровень/класс/силу заклинаний и две кнопки.
+ */
+function openTowerLobby() {
+  const state = getState();
+  const stats = getStats();
+
+  const nameEl  = document.getElementById('lobby-name');
+  const levelEl = document.getElementById('lobby-level');
+  const classEl = document.getElementById('lobby-class');
+  const powerEl = document.getElementById('lobby-power');
+
+  if (nameEl)  nameEl.textContent  = state.name || '—';
+  if (levelEl) levelEl.textContent = String(state.level || 1);
+  if (classEl) classEl.textContent = state.classType ? CLASS_NAMES_RU[state.classType] : 'not chosen';
+  if (powerEl) powerEl.textContent = `+${stats.spellDamageBonus || 0}`;
+
+  showScreen('screen-tower-lobby');
+}
+
 /**
  * Инициализация игры при загрузке страницы
  */
@@ -181,7 +209,7 @@ function startGame() {
   initMapScreen({
     onGoToSquare: () => goToLocation('square'),
     onGoToHome:   () => goToLocation('home'),
-    onGoToTower:  () => openTowerScreen()
+    onGoToTower:  () => openTowerLobby()
   });
 
   initEquipmentZones();
@@ -432,7 +460,39 @@ function bindEvents() {
 
   // TEST: Action Dungeon button (on map screen)
   document.getElementById('btn-test-action-dungeon')?.addEventListener('click', () => {
+    openTowerLobby();
+  });
+
+  // Tower lobby buttons
+  document.getElementById('lobby-btn-back')?.addEventListener('click', () => {
+    showScreen('screen-map');
+  });
+  document.getElementById('lobby-btn-enter')?.addEventListener('click', () => {
     enterCombat();
+  });
+
+  // Load Custom Map — file input → write to localStorage → start run
+  const lobbyMapFile = document.getElementById('lobby-map-file-input');
+  document.getElementById('lobby-btn-load-map')?.addEventListener('click', () => {
+    lobbyMapFile?.click();
+  });
+  lobbyMapFile?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        // Basic parse check — importCustomMap in dungeon will validate fully
+        JSON.parse(reader.result);
+        localStorage.setItem('veyra:loadMap', reader.result);
+        enterCombat();
+      } catch (err) {
+        showNotification('Invalid map file: ' + err.message, 'warning');
+      }
+    };
+    reader.readAsText(file);
+    // Reset so same file can be re-selected after returning from run
+    e.target.value = '';
   });
 
   // Дом / инвентарь
